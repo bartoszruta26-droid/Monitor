@@ -324,7 +324,8 @@ VenueSessionNotice parse_xetra_session_notice_text(
         throw std::invalid_argument("Metadane komunikatu PDF Xetra są niekompletne lub nieprawidłowe.");
 
     const auto text=normalized(std::string(extracted_text));
-    const auto market_start=text.find("market deutsche börse xetra");
+    auto market_start=text.find("market deutsche börse xetra");
+    if(market_start==std::string::npos) market_start=text.find("market deutsche boerse xetra");
     if(market_start==std::string::npos)
         throw std::invalid_argument("Ogłoszenie PDF nie zawiera sekcji rynku Deutsche Börse Xetra.");
     auto market_end=text.find("availability",market_start);
