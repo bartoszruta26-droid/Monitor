@@ -914,6 +914,23 @@ void JsonMarketDataRepository::write_unlocked(const MarketDataSnapshot& input,bo
         if(found==s.source_objects.end() || encode(*found)!=encode(old_object))
             throw std::invalid_argument("Nie można usunąć ani zmienić niezmiennego obiektu źródłowego.");
     }
+    for(const auto& old_notice:previous.venue_session_notices) {
+        const auto found=std::find_if(s.venue_session_notices.begin(),s.venue_session_notices.end(),
+            [&](const auto& candidate) {
+                return venue_session_notice_key(candidate)==venue_session_notice_key(old_notice);
+            });
+        if(found==s.venue_session_notices.end() || !same_venue_session_notice(old_notice,*found))
+            throw std::invalid_argument("Nie można usunąć ani zmienić opublikowanej rewizji komunikatu sesyjnego.");
+    }
+    for(const auto& candidate:s.venue_session_notices) {
+        std::uint32_t previous_latest=0U;
+        for(const auto& old:previous.venue_session_notices)
+            if(old.notice_id==candidate.notice_id) previous_latest=std::max(previous_latest,old.revision);
+        const bool existed=std::any_of(previous.venue_session_notices.begin(),previous.venue_session_notices.end(),
+            [&](const auto& old){return venue_session_notice_key(old)==venue_session_notice_key(candidate);});
+        if(!existed && previous_latest>0U && candidate.revision<=previous_latest)
+            throw std::invalid_argument("Nowa rewizja komunikatu sesyjnego musi mieć większy numer.");
+    }
     for (const auto& old_calendar : previous.venue_calendars) {
         const auto found=std::find_if(s.venue_calendars.begin(),s.venue_calendars.end(),
             [&](const auto& candidate) {
@@ -1046,6 +1063,26 @@ std::uint64_t JsonMarketDataRepository::upsert_batch(const MarketDataBatch& batc
             throw std::invalid_argument("Nowa rewizja kalendarza venue musi mieć większy numer.");
         snapshot.venue_calendars.push_back(item);
     }
+    std::set<std::string> incoming_venue_notices;
+    for(const auto& item:batch.venue_session_notices) {
+        validate_venue_session_notice(item);
+        const auto key=venue_session_notice_key(item);
+        if(!incoming_venue_notices.insert(key).second)
+            throw std::invalid_argument("Powielona rewizja komunikatu sesyjnego w jednej partii.");
+        const auto found=std::find_if(snapshot.venue_session_notices.begin(),snapshot.venue_session_notices.end(),
+            [&](const auto& value){return venue_session_notice_key(value)==key;});
+        if(found!=snapshot.venue_session_notices.end()) {
+            if(!same_venue_session_notice(*found,item))
+                throw std::invalid_argument("Opublikowana rewizja komunikatu sesyjnego jest niezmienna.");
+            continue;
+        }
+        std::uint32_t latest=0U;
+        for(const auto& value:snapshot.venue_session_notices)
+            if(value.notice_id==item.notice_id) latest=std::max(latest,value.revision);
+        if(item.revision<=latest)
+            throw std::invalid_argument("Nowa rewizja komunikatu sesyjnego musi mieć większy numer.");
+        snapshot.venue_session_notices.push_back(item);
+    }
     validate_snapshot(snapshot);
     write_unlocked(snapshot,true);
     return load_unlocked().revision;
@@ -1070,6 +1107,9 @@ std::uint64_t JsonMarketDataRepository::upsert_venue_calendar(const VenueSession
 }
 std::uint64_t JsonMarketDataRepository::upsert_source_object(const SourceArchiveObject& item) {
     MarketDataBatch batch;batch.source_objects.push_back(item);return upsert_batch(batch);
+}
+std::uint64_t JsonMarketDataRepository::upsert_venue_session_notice(const VenueSessionNotice& item) {
+    MarketDataBatch batch;batch.venue_session_notices.push_back(item);return upsert_batch(batch);
 }
 std::vector<SourceArchiveObject> find_orphaned_source_objects(
     const MarketDataSnapshot& snapshot) {
