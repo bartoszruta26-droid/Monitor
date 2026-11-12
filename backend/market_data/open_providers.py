@@ -24,21 +24,25 @@ def _chunks_93(start: date, end: date):
         cursor=stop+timedelta(days=1)
 
 def init_provider_tables():
-    storage.execute("""CREATE TABLE IF NOT EXISTS fx_rates (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, source_id INTEGER NOT NULL,
+    """Create provider tables using DDL compatible with SQLite and PostgreSQL."""
+    sqlite = storage.DATABASE_URL.startswith("sqlite:///")
+    id_column = "INTEGER PRIMARY KEY AUTOINCREMENT" if sqlite else "BIGSERIAL PRIMARY KEY"
+    storage.execute(f"""CREATE TABLE IF NOT EXISTS fx_rates (
+      id {id_column}, source_id BIGINT NOT NULL,
       provider TEXT NOT NULL, rate_date TEXT NOT NULL, base TEXT NOT NULL,
-      quote TEXT NOT NULL, mid REAL, bid REAL, ask REAL, rate_kind TEXT NOT NULL,
-      received_at TEXT NOT NULL, UNIQUE(provider,rate_date,base,quote,rate_kind)
+      quote TEXT NOT NULL, mid DOUBLE PRECISION, bid DOUBLE PRECISION, ask DOUBLE PRECISION,
+      rate_kind TEXT NOT NULL, received_at TEXT NOT NULL,
+      UNIQUE(provider,rate_date,base,quote,rate_kind)
     )""")
-    storage.execute("""CREATE INDEX IF NOT EXISTS ix_fx_pair_date ON fx_rates(base,quote,rate_date)""")
-    storage.execute("""CREATE TABLE IF NOT EXISTS metal_prices (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, source_id INTEGER NOT NULL,
+    storage.execute("CREATE INDEX IF NOT EXISTS ix_fx_pair_date ON fx_rates(base,quote,rate_date)")
+    storage.execute(f"""CREATE TABLE IF NOT EXISTS metal_prices (
+      id {id_column}, source_id BIGINT NOT NULL,
       provider TEXT NOT NULL, symbol TEXT NOT NULL, price_date TEXT NOT NULL,
-      price REAL NOT NULL, currency TEXT NOT NULL, unit TEXT NOT NULL,
+      price DOUBLE PRECISION NOT NULL, currency TEXT NOT NULL, unit TEXT NOT NULL,
       frequency TEXT NOT NULL, price_kind TEXT NOT NULL, received_at TEXT NOT NULL,
       UNIQUE(provider,symbol,price_date,price_kind)
     )""")
-    storage.execute("""CREATE INDEX IF NOT EXISTS ix_metal_symbol_date ON metal_prices(symbol,price_date)""")
+    storage.execute("CREATE INDEX IF NOT EXISTS ix_metal_symbol_date ON metal_prices(symbol,price_date)")
 
 def _insert_fx(source_id, provider, row):
     now=datetime.now(timezone.utc).isoformat()
