@@ -175,6 +175,55 @@ int main(){
     JsonMarketDataRepository legacy(legacy_file);
     require(legacy.load().session_calendars.empty(),"stary dokument schema v1 bez kalendarzy jest odczytywany");
 
+    require(legacy.load().venue_calendars.empty(),
+            "stary dokument schema v1 bez kalendarzy venue pozostaje zgodny");
+    JsonMarketDataRepository venue_repo(dir/"venue-calendars.json");
+    SourceCalendarDocument venue_source;
+    venue_source.document_id="deutsche-boerse-xetra-2026";
+    venue_source.venue="XETRA";
+    venue_source.version=1U;
+    venue_source.valid_from=parse_date("2026-01-01");
+    venue_source.valid_to_exclusive=parse_date("2027-01-01");
+    venue_source.timezone="Europe/Berlin";
+    venue_source.source_uri="https://www.cashmarket.deutsche-boerse.com/cash-en/trading/trading-calendar-and-trading-hours";
+    venue_source.attribution="Deutsche Börse Cash Market";
+    auto venue_calendar=build_xetra_2026_calendar(venue_source);
+    require(venue_repo.upsert_venue_calendar(venue_calendar)==1U,
+            "first venue calendar version is persisted");
+    auto venue_loaded=venue_repo.load();
+    require(venue_loaded.venue_calendars.size()==1U &&
+            venue_loaded.venue_calendars.front().days.size()==365U &&
+            venue_loaded.venue_calendars.front().source.venue=="XETRA",
+            "venue calendar source metadata and all daily sessions round-trip");
+    require(venue_repo.upsert_venue_calendar(venue_calendar)==2U,
+            "identical venue calendar version can be replayed idempotently");
+    auto edited_venue=venue_calendar;
+    edited_venue.source.attribution="Changed attribution";
+    throws([&]{(void)venue_repo.upsert_venue_calendar(edited_venue);},
+           "published venue calendar version cannot be modified");
+    require(venue_repo.load().revision==2U,
+            "rejected venue calendar edit leaves repository revision unchanged");
+    auto venue_v2=venue_calendar;
+    venue_v2.source.version=2U;
+    venue_v2.source.retrieved_at=parse_utc_timestamp("2026-11-12T22:00:00Z");
+    require(venue_repo.upsert_venue_calendar(venue_v2)==3U,
+            "new venue calendar version is appended without replacing v1");
+    venue_loaded=venue_repo.load();
+    require(venue_loaded.venue_calendars.size()==2U &&
+            venue_loaded.venue_calendars[0].source.version==1U &&
+            venue_loaded.venue_calendars[1].source.version==2U,
+            "both immutable venue calendar versions remain available");
+    auto venue_delete=venue_repo.load();
+    venue_delete.venue_calendars.erase(venue_delete.venue_calendars.begin());
+    throws([&]{(void)venue_repo.replace(venue_delete);},
+           "replace cannot delete a published venue calendar version");
+    auto venue_edit=venue_repo.load();
+    venue_edit.venue_calendars.front().days.front().status=VenueDayStatus::Trading;
+    throws([&]{(void)venue_repo.replace(venue_edit);},
+           "replace cannot edit a published venue calendar day");
+    require(venue_repo.load().revision==3U,
+            "rejected venue calendar replace operations do not mutate repository");
+
     std::filesystem::remove_all(dir);
     std::cout<<"All JSON repository tests passed.\n";
 }
