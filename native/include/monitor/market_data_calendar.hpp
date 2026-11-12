@@ -27,6 +27,7 @@ struct LocalTimeOfDay {
 
 struct LocalSessionSchedule {
     std::string calendar_id;
+    // Source-document version; legacy records also used this as calendar revision.
     std::uint32_t version{1};
     std::string instrument_id;
     std::string provider_id;
