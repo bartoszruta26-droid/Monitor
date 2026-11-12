@@ -79,6 +79,26 @@ int main() {
     require(parsed_2027.days.at(363).date==parse_date("2027-12-30") &&
             parsed_2027.days.at(363).requires_official_notice,
             "extraordinary-hours marker is derived from an explicit year-specific notice");
+    auto source_2028=source_2027;
+    source_2028.document_id="xetra-2028-leap-fixture";
+    source_2028.valid_from=parse_date("2028-01-01");
+    source_2028.valid_to_exclusive=parse_date("2029-01-01");
+    const auto parsed_2028=parse_xetra_html_calendar(html,source_2028);
+    require(parsed_2028.days.size()==366U &&
+            parsed_2028.days.at(59).date==parse_date("2028-02-29") &&
+            parsed_2028.parser_version=="xetra-html-2028-v1",
+            "dynamic year parser handles leap-year ranges and February 29");
+    auto wrong_year_html=html;
+    const auto wrong_year_date=wrong_year_html.find("Friday Mar 26, 2027");
+    require(wrong_year_date!=std::string::npos,"2027 date fixture marker exists");
+    wrong_year_html.replace(wrong_year_date,std::string("Friday Mar 26, 2027").size(),"Friday Mar 26, 2026");
+    throws([&]{(void)parse_xetra_html_calendar(wrong_year_html,source_2027);},
+           "reject a table date whose year differs from the selected column");
+    auto missing_year_html=html;
+    const auto missing_year_date=missing_year_html.find("Friday Mar 26, 2027");
+    missing_year_html.replace(missing_year_date,std::string("Friday Mar 26, 2027").size(),"Friday Mar 26");
+    throws([&]{(void)parse_xetra_html_calendar(missing_year_html,source_2027);},
+           "reject a table date without an explicit year");
     auto unsupported_year=source_2027;
     unsupported_year.valid_to_exclusive=parse_date("2027-12-31");
     throws([&]{(void)parse_xetra_html_calendar(html,unsupported_year);},
