@@ -110,8 +110,9 @@ int main() {
     require(adapter.import(repository,next)==1U,"identical content hash is not imported as a new version");
     require(repository.load().venue_calendars.size()==1U,
             "identical content is deduplicated across requested versions");
-    require(std::filesystem::exists(archive_root/("2-"+sha256_hex(html)+".html")),
-            "each source version request archives its exact response");
+    require(std::filesystem::exists(archive_v1) &&
+            std::distance(std::filesystem::directory_iterator(archive_root),std::filesystem::directory_iterator{})==1,
+            "identical bytes reuse one content-addressed archive object");
     transport.response.body=html+"\\n";
     require(adapter.import(repository,next)==2U,"changed exact bytes append a new version");
     const auto final_snapshot=repository.load();
@@ -119,14 +120,14 @@ int main() {
             final_snapshot.venue_calendars.back().source.version==2U &&
             final_snapshot.venue_calendars.back().source.content_sha256==sha256_hex(html+"\\n"),
             "new byte hash creates a new immutable version while preserving v1");
-    require(std::filesystem::exists(archive_root/("2-"+sha256_hex(html+"\\n")+".html")),
-            "new source version is archived under its content hash");
-    const auto manifest=final_snapshot.venue_calendars.back().source;
-    require(manifest.archive_relative_path.has_value() &&
-            manifest.content_length_bytes==std::optional<std::uint64_t>(static_cast<std::uint64_t>((html+"\\n").size())) &&
-            manifest.content_type==std::optional<std::string>("text/html"),
-            "persist relative archive path, exact byte length and original content type");
-    const auto latest_archive=archive_root/("2-"+sha256_hex(html+"\\n")+".html");
+    require(final_snapshot.source_objects.size()==2U,
+            "changed bytes create a second immutable source object");
+    const auto manifest=final_snapshot.source_objects.back();
+    require(manifest.archive_relative_path==std::string("calendar.json.sources/objects/")+sha256_hex(html+"\\n")+".html" &&
+            manifest.content_length_bytes==static_cast<std::uint64_t>((html+"\\n").size()) &&
+            manifest.content_type=="text/html",
+            "source object stores relative archive path, exact byte length and original content type");
+    const auto latest_archive=archive_root/(sha256_hex(html+"\\n")+".html");
     const auto original_json=[&] {
         std::ifstream input(folder/"calendar.json",std::ios::binary);
         return std::string((std::istreambuf_iterator<char>(input)),{});
@@ -141,6 +142,7 @@ int main() {
         legacy_source.erase("archive_relative_path");
         legacy_source.erase("content_length_bytes");
         legacy_source.erase("content_type");
+        legacy_source.erase("source_object_id");
         std::ofstream output(folder/"calendar.json",std::ios::binary|std::ios::trunc);
         output<<legacy_json.dump(2);
     }
@@ -190,14 +192,15 @@ int main() {
     throws([&]{(void)repository.load();},"reject manifest path traversal");
     restore_json();
     require(repository.load().venue_calendars.size()==2U,"valid archive manifest loads after tamper recovery");
-    const auto archive_directory=folder/"calendar.json.sources";
-    const auto real_archive_directory=folder/"calendar.json.sources.real";
+    const auto archive_directory=folder/"calendar.json.sources"/"objects";
+    const auto real_archive_directory=folder/"calendar.json.sources"/"objects.real";
     std::filesystem::rename(archive_directory,real_archive_directory);
     std::filesystem::create_directory_symlink(real_archive_directory,archive_directory);
     throws([&]{(void)repository.load();},"reject symlinked parent directory in archive path");
     std::filesystem::remove(archive_directory);
     std::filesystem::rename(real_archive_directory,archive_directory);
-    require(repository.load().venue_calendars.size()==2U,
+    require(repository.load().venue_calendars.size()==2U &&
+            repository.load().source_objects.size()==2U,
             "archive verifies after symlinked parent directory is restored");
     std::filesystem::remove_all(folder);
     std::cout<<"Xetra HTTPS source adapter tests passed\n";
