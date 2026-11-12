@@ -205,6 +205,37 @@ int main() {
     require(repository.load().venue_calendars.size()==2U &&
             repository.load().source_objects.size()==2U,
             "archive verifies after symlinked parent directory is restored");
+
+    // New API: source document version is independent from semantic calendar revision.
+    const auto revision_folder=folder/"independent-revisions";
+    std::filesystem::create_directories(revision_folder);
+    JsonMarketDataRepository revision_repository(revision_folder/"calendar.json");
+    transport.response.body=html;
+    auto source_v1=source();
+    source_v1.version=1U;
+    require(adapter.import(revision_repository,source_v1,"XETRA-2026",10U)==1U,
+            "publish calendar revision 10 from source document version 1");
+    require(adapter.import(revision_repository,source_v1,"XETRA-2026",11U)==2U,
+            "publish calendar revision 11 from the same source document version");
+    auto source_v2=source();
+    source_v2.version=2U;
+    require(adapter.import(revision_repository,source_v2,"XETRA-2026",12U)==3U,
+            "publish calendar revision 12 from source document version 2");
+    const auto revision_snapshot=revision_repository.load();
+    require(revision_snapshot.venue_calendars.size()==3U &&
+            revision_snapshot.venue_calendars[0].calendar_id=="XETRA-2026" &&
+            revision_snapshot.venue_calendars[0].revision==10U &&
+            revision_snapshot.venue_calendars[1].revision==11U &&
+            revision_snapshot.venue_calendars[2].revision==12U &&
+            revision_snapshot.venue_calendars[0].source.version==1U &&
+            revision_snapshot.venue_calendars[1].source.version==1U &&
+            revision_snapshot.venue_calendars[2].source.version==2U,
+            "source document versions and semantic calendar revisions remain independent");
+    require(revision_snapshot.source_objects.size()==1U &&
+            revision_snapshot.venue_calendars[0].source.source_object_id==
+                revision_snapshot.venue_calendars[2].source.source_object_id,
+            "multiple semantic revisions share the same content-addressed source object");
+
     std::filesystem::remove_all(folder);
     std::cout<<"Xetra HTTPS source adapter tests passed\n";
 }
