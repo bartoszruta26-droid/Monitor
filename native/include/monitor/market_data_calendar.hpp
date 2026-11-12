@@ -2,6 +2,7 @@
 
 #include "monitor/market_data.hpp"
 
+#include <string_view>
 #include <vector>
 
 namespace monitor::market {
@@ -76,6 +77,9 @@ struct VenueSessionCalendar {
     SourceCalendarDocument source;
     std::vector<VenueCalendarDay> days;
 };
+
+// Computes lowercase SHA-256 over the exact byte sequence supplied by the caller.
+[[nodiscard]] std::string sha256_hex(std::string_view bytes);
 
 void validate_source_calendar_document(const SourceCalendarDocument& document);
 
