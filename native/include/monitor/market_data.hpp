@@ -42,6 +42,15 @@ struct MarketObservation {
     std::optional<std::string> provider_record_id;
     std::optional<std::string> source_uri;
 };
+struct MarketSessionCalendar {
+    std::string calendar_id;
+    std::uint32_t version{1};
+    std::string instrument_id;
+    std::string provider_id;
+    Frequency source_frequency{Frequency::Daily};
+    std::string timezone{"UTC"};
+    std::vector<UtcTimestamp> expected_observation_times;
+};
 struct SeriesMetadata {
     std::string instrument_id;
     std::string provider_id;

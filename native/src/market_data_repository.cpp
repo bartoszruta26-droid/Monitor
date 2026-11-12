@@ -8,6 +8,7 @@
 #include <cerrno>
 #include <chrono>
 #include <cmath>
+#include <cctype>
 #include <cstring>
 #include <fcntl.h>
 #include <fstream>
@@ -183,6 +184,60 @@ std::string observation_key(const MarketObservation& x) {
     return x.instrument_id+"\x1f"+x.provider_id+"\x1f"+std::to_string(x.observed_at.unix_seconds)+"\x1f"+
         enum_name(x.price_kind)+"\x1f"+enum_name(x.frequency);
 }
+
+json encode(const MarketSessionCalendar& x) {
+    json times=json::array();
+    for(const auto timestamp:x.expected_observation_times) times.push_back(format_utc_timestamp(timestamp));
+    return {{"calendar_id",x.calendar_id},{"version",x.version},{"instrument_id",x.instrument_id},
+        {"provider_id",x.provider_id},{"source_frequency",enum_name(x.source_frequency)},
+        {"timezone",x.timezone},{"expected_observation_times",std::move(times)}};
+}
+MarketSessionCalendar decode_session_calendar(const json& j) {
+    MarketSessionCalendar x;
+    x.calendar_id=j.at("calendar_id").get<std::string>();
+    x.version=j.at("version").get<std::uint32_t>();
+    x.instrument_id=j.at("instrument_id").get<std::string>();
+    x.provider_id=j.at("provider_id").get<std::string>();
+    x.source_frequency=parse_enum<Frequency>(j.at("source_frequency").get<std::string>());
+    x.timezone=j.at("timezone").get<std::string>();
+    for(const auto& value:j.at("expected_observation_times"))
+        x.expected_observation_times.push_back(parse_utc_timestamp(value.get<std::string>()));
+    return x;
+}
+std::string calendar_key(const MarketSessionCalendar& x) {
+    return x.calendar_id+"\x1f"+std::to_string(x.version);
+}
+bool same_calendar(const MarketSessionCalendar& a,const MarketSessionCalendar& b) {
+    if(a.calendar_id!=b.calendar_id||a.version!=b.version||a.instrument_id!=b.instrument_id||
+       a.provider_id!=b.provider_id||a.source_frequency!=b.source_frequency||a.timezone!=b.timezone||
+       a.expected_observation_times.size()!=b.expected_observation_times.size()) return false;
+    for(std::size_t i=0;i<a.expected_observation_times.size();++i)
+        if(a.expected_observation_times[i].unix_seconds!=b.expected_observation_times[i].unix_seconds) return false;
+    return true;
+}
+void validate_calendar(const MarketSessionCalendar& x) {
+    if(x.calendar_id.empty()||x.version==0U||x.instrument_id.empty()||x.provider_id.empty()||
+       x.timezone.empty()||x.expected_observation_times.empty())
+        throw std::invalid_argument("Kalendarz wymaga identyfikatora, wersji, szeregu, strefy i terminów.");
+    if(x.timezone!="UTC"&&x.timezone.find('/')==std::string::npos)
+        throw std::invalid_argument("Strefa musi być identyfikatorem IANA albo UTC.");
+    for(const unsigned char c:x.timezone)
+        if(!(std::isalnum(c)||c=='/'||c=='_'||c=='-'||c=='+'))
+            throw std::invalid_argument("Nieprawidłowy zapis identyfikatora strefy.");
+    switch(x.source_frequency) {
+    case Frequency::Minute: case Frequency::Hour: case Frequency::Daily: case Frequency::Weekly:
+    case Frequency::Monthly: case Frequency::Quarterly: case Frequency::SemiAnnual: case Frequency::Annual: break;
+    case Frequency::Tick: case Frequency::Irregular:
+    default: throw std::invalid_argument("Kalendarz wymaga regularnej częstotliwości źródłowej.");
+    }
+    bool first=true; std::int64_t previous=0;
+    for(const auto t:x.expected_observation_times) {
+        if(!first&&t.unix_seconds<=previous)
+            throw std::invalid_argument("Terminy kalendarza muszą być unikalne i ściśle rosnące.");
+        previous=t.unix_seconds; first=false;
+    }
+}
+
 void validate_snapshot(const MarketDataSnapshot& s) {
     if(s.schema_version!=json_document_schema_version)throw std::invalid_argument("Nieobsługiwana wersja dokumentu magazynu JSON.");
     std::map<std::string,const Instrument*> instruments;
@@ -197,6 +252,23 @@ void validate_snapshot(const MarketDataSnapshot& s) {
         validate_observation(*i->second,*p->second,x);
         if(!keys.insert(observation_key(x)).second)throw std::invalid_argument("Powielony klucz notowania w migawce.");
         if(!ids.insert(x.id).second)throw std::invalid_argument("Powielony identyfikator notowania.");
+    }
+    std::set<std::string> calendar_keys;
+    std::map<std::string,std::uint32_t> latest_versions;
+    std::map<std::string,std::pair<std::string,std::string>> calendar_owners;
+    for(const auto& x:s.session_calendars) {
+        validate_calendar(x);
+        if(!instruments.contains(x.instrument_id)||!providers.contains(x.provider_id))
+            throw std::invalid_argument("Kalendarz wskazuje nieznany instrument lub dostawcę.");
+        if(!calendar_keys.insert(calendar_key(x)).second)
+            throw std::invalid_argument("Powielona wersja kalendarza.");
+        const auto owner=std::make_pair(x.instrument_id,x.provider_id);
+        const auto [owner_it,inserted]=calendar_owners.emplace(x.calendar_id,owner);
+        if(!inserted&&owner_it->second!=owner)
+            throw std::invalid_argument("Wersje kalendarza muszą dotyczyć tego samego szeregu.");
+        auto& latest=latest_versions[x.calendar_id];
+        if(x.version<=latest) throw std::invalid_argument("Wersje kalendarza muszą być rosnące.");
+        latest=x.version;
     }
     std::set<std::string> series_keys;
     for(const auto& x:s.series_metadata) {
@@ -215,16 +287,17 @@ void validate_snapshot(const MarketDataSnapshot& s) {
     }
 }
 json encode_snapshot(const MarketDataSnapshot& s) {
-    json instruments=json::array(),providers=json::array(),observations=json::array(),series=json::array(),history=json::array();
+    json instruments=json::array(),providers=json::array(),observations=json::array(),series=json::array(),history=json::array(),calendars=json::array();
     for(const auto& x:s.instruments)instruments.push_back(encode(x));
     for(const auto& x:s.providers)providers.push_back(encode(x));
     for(const auto& x:s.observations)observations.push_back(encode(x));
     for(const auto& x:s.series_metadata)series.push_back(encode(x));
     for(const auto& x:s.observation_history)history.push_back(encode(x));
+    for(const auto& x:s.session_calendars)calendars.push_back(encode(x));
     return {{"document_type","monitor.market_data"},{"schema_version",s.schema_version},{"revision",s.revision},
         {"updated_at",format_utc_timestamp(s.updated_at)},{"instruments",std::move(instruments)},
         {"providers",std::move(providers)},{"observations",std::move(observations)},
-        {"series_metadata",std::move(series)},{"observation_history",std::move(history)}};
+        {"series_metadata",std::move(series)},{"observation_history",std::move(history)},{"session_calendars",std::move(calendars)}};
 }
 MarketDataSnapshot decode_snapshot(const json& j) {
     if(!j.is_object()||j.at("document_type").get<std::string>()!="monitor.market_data")
@@ -238,6 +311,7 @@ MarketDataSnapshot decode_snapshot(const json& j) {
     for(const auto& x:j.at("observations"))s.observations.push_back(decode_observation(x));
     for(const auto& x:j.at("series_metadata"))s.series_metadata.push_back(decode_series(x));
     for(const auto& x:j.at("observation_history"))s.observation_history.push_back(decode_revision(x));
+    if(j.contains("session_calendars")) for(const auto& x:j.at("session_calendars")) s.session_calendars.push_back(decode_session_calendar(x));
     validate_snapshot(s);return s;
 }
 std::string read_file(const std::filesystem::path& path,std::size_t limit,bool missing_ok) {
@@ -353,6 +427,21 @@ void JsonMarketDataRepository::write_unlocked(const MarketDataSnapshot& input,bo
     if(primary_exists&&existing.empty())throw std::runtime_error("Dokument magazynu JSON jest pusty.");
     const auto previous=existing.empty()?MarketDataSnapshot{}:decode_snapshot(json::parse(existing));
     if(previous.revision==std::numeric_limits<std::uint64_t>::max())throw std::overflow_error("Przekroczono licznik rewizji magazynu.");
+    for(const auto& old_calendar:previous.session_calendars) {
+        const auto found=std::find_if(s.session_calendars.begin(),s.session_calendars.end(),
+            [&](const auto& candidate){return candidate.calendar_id==old_calendar.calendar_id&&candidate.version==old_calendar.version;});
+        if(found==s.session_calendars.end()||!same_calendar(old_calendar,*found))
+            throw std::invalid_argument("Nie można usunąć ani zmienić opublikowanej wersji kalendarza.");
+    }
+    for(const auto& candidate:s.session_calendars) {
+        std::uint32_t previous_latest=0U;
+        for(const auto& old:previous.session_calendars)
+            if(old.calendar_id==candidate.calendar_id) previous_latest=std::max(previous_latest,old.version);
+        const bool existed=std::any_of(previous.session_calendars.begin(),previous.session_calendars.end(),
+            [&](const auto& old){return old.calendar_id==candidate.calendar_id&&old.version==candidate.version;});
+        if(!existed&&previous_latest>0U&&candidate.version<=previous_latest)
+            throw std::invalid_argument("Nowa wersja kalendarza musi być większa od poprzednich.");
+    }
     if(!existing.empty()&&rotate_backup&&config_.backup_on_write) {
         const auto backup=backup_path();
         durable_write(backup,existing);
@@ -414,6 +503,22 @@ std::uint64_t JsonMarketDataRepository::upsert_batch(const MarketDataBatch& batc
                 value.provider_id==item.provider_id&&value.frequency==item.frequency;});
         if(it==snapshot.series_metadata.end())snapshot.series_metadata.push_back(item);else *it=item;
     }
+    for(const auto& item:batch.session_calendars) {
+        validate_calendar(item);
+        if(std::none_of(snapshot.instruments.begin(),snapshot.instruments.end(),[&](const auto& x){return x.id==item.instrument_id;})||
+           std::none_of(snapshot.providers.begin(),snapshot.providers.end(),[&](const auto& x){return x.id==item.provider_id;}))
+            throw std::invalid_argument("Kalendarz wymaga istniejącego instrumentu i dostawcy.");
+        const auto found=std::find_if(snapshot.session_calendars.begin(),snapshot.session_calendars.end(),
+            [&](const auto& x){return x.calendar_id==item.calendar_id&&x.version==item.version;});
+        if(found!=snapshot.session_calendars.end()) {
+            if(!same_calendar(*found,item)) throw std::invalid_argument("Opublikowana wersja kalendarza jest niezmienna.");
+            continue;
+        }
+        std::uint32_t latest=0U;
+        for(const auto& x:snapshot.session_calendars) if(x.calendar_id==item.calendar_id) latest=std::max(latest,x.version);
+        if(item.version<=latest) throw std::invalid_argument("Nowa wersja kalendarza musi mieć większy numer.");
+        snapshot.session_calendars.push_back(item);
+    }
     validate_snapshot(snapshot);
     write_unlocked(snapshot,true);
     return load_unlocked().revision;
@@ -429,6 +534,9 @@ std::uint64_t JsonMarketDataRepository::upsert_observation(const MarketObservati
 }
 std::uint64_t JsonMarketDataRepository::upsert_series_metadata(const SeriesMetadata& item) {
     MarketDataBatch batch;batch.series_metadata.push_back(item);return upsert_batch(batch);
+}
+std::uint64_t JsonMarketDataRepository::upsert_session_calendar(const MarketSessionCalendar& item) {
+    MarketDataBatch batch;batch.session_calendars.push_back(item);return upsert_batch(batch);
 }
 MarketDataSnapshot JsonMarketDataRepository::restore_backup() {
     FileLock lock(file_path_.string()+".lock");

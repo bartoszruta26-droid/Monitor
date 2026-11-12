@@ -79,6 +79,20 @@ int main(){
     batch_second.id="batch-2";
     batch_second.observed_at.unix_seconds+=86400;
     batch.observations={batch_first,batch_second};
+
+    MarketSessionCalendar session_calendar;
+    session_calendar.calendar_id="NBP-EURPLN";
+    session_calendar.version=1U;
+    session_calendar.instrument_id=fx.id;
+    session_calendar.provider_id=nbp.id;
+    session_calendar.source_frequency=Frequency::Daily;
+    session_calendar.timezone="Europe/Warsaw";
+    session_calendar.expected_observation_times={
+        parse_utc_timestamp("2026-11-12T11:00:00Z"),
+        parse_utc_timestamp("2026-11-13T11:00:00Z")
+    };
+    batch.session_calendars.push_back(session_calendar);
+
     batch.series_metadata.push_back(SeriesMetadata{fx.id,nbp.id,Frequency::Daily,
         batch_first.observed_at,batch_second.observed_at,2,2,SeriesCompleteness::Complete});
     require(batch_repo.upsert_batch(batch)==1,"provider batch is committed as one revision");
@@ -88,14 +102,29 @@ int main(){
             "atomic batch persists all adapter result collections");
     require(batch_repo.upsert_batch(batch)==2,"replaying a batch is safe and revisioned");
     batch_loaded=batch_repo.load();
-    require(batch_loaded.observations.size()==2&&batch_loaded.observation_history.empty(),
-            "replayed identical batch does not duplicate observations");
+    require(batch_loaded.observations.size()==2&&batch_loaded.observation_history.empty()&&batch_loaded.session_calendars.size()==1,
+            "powtórna partia nie duplikuje kalendarza");
+    auto changed_calendar=session_calendar;
+    changed_calendar.expected_observation_times.push_back(parse_utc_timestamp("2026-11-16T11:00:00Z"));
+    throws([&]{(void)batch_repo.upsert_session_calendar(changed_calendar);},"opublikowana wersja kalendarza jest niezmienna");
+    require(batch_repo.load().revision==2,"konflikt wersji nie zmienia rewizji");
+    auto next_calendar=changed_calendar; next_calendar.version=2U;
+    require(batch_repo.upsert_session_calendar(next_calendar)==3,"nowa wersja kalendarza jest zapisywana");
+    batch_loaded=batch_repo.load();
+    require(batch_loaded.session_calendars.size()==2,"starsza wersja pozostaje zachowana");
+    auto invalid_calendar=next_calendar; invalid_calendar.calendar_id="bad-frequency"; invalid_calendar.version=1U;
+    invalid_calendar.source_frequency=Frequency::Irregular;
+    throws([&]{(void)batch_repo.upsert_session_calendar(invalid_calendar);},"odrzucana jest nieregularna częstotliwość");
+    invalid_calendar=next_calendar; invalid_calendar.calendar_id="bad-reference"; invalid_calendar.version=1U;
+    invalid_calendar.provider_id="missing-provider";
+    throws([&]{(void)batch_repo.upsert_session_calendar(invalid_calendar);},"odrzucany jest nieznany dostawca");
+    require(batch_repo.load().revision==3,"błędne kalendarze nie zmieniają rewizji");
     MarketDataBatch invalid_batch;
     auto orphan=observation(4.5,4000);
     orphan.provider_id="missing-provider";
     invalid_batch.observations.push_back(orphan);
     throws([&]{(void)batch_repo.upsert_batch(invalid_batch);},"invalid batch rejected as a whole");
-    require(batch_repo.load().revision==2,"failed batch leaves committed revision unchanged");
+    require(batch_repo.load().revision==3,"failed batch leaves committed revision unchanged");
 
     const auto raw_before=std::filesystem::file_size(file);
     throws([&]{auto bad=loaded;bad.instruments.front().quote_currency="PL";(void)repo.replace(bad);},"invalid snapshot rejected");
@@ -129,6 +158,13 @@ int main(){
     {std::ofstream out(version_file);out<<R"({"document_type":"monitor.market_data","schema_version":99})";}
     JsonMarketDataRepository future(version_file);
     throws([&]{(void)future.load();},"unknown future schema rejected");
+
+
+    const auto legacy_file=dir/"legacy-v1.json";
+    {std::ofstream out(legacy_file);
+     out<<R"({"document_type":"monitor.market_data","schema_version":1,"revision":0,"updated_at":"2026-11-12T00:00:00Z","instruments":[],"providers":[],"observations":[],"series_metadata":[],"observation_history":[]})";}
+    JsonMarketDataRepository legacy(legacy_file);
+    require(legacy.load().session_calendars.empty(),"stary dokument schema v1 bez kalendarzy jest odczytywany");
 
     std::filesystem::remove_all(dir);
     std::cout<<"All JSON repository tests passed.\n";
