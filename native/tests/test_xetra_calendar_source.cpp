@@ -380,11 +380,11 @@ int main() {
     wrong_venue_html.replace(wrong_venue_html.find("Venue: XETRA"),13U,"Venue: EUREX");
     throws([&]{(void)parse_xetra_session_notice_html(wrong_venue_html,notice_metadata);},
            "reject a notice whose venue differs from the selected calendar");
-    auto missing_hours_html=override_html;
-    const auto session_row=missing_hours_html.find("<tr><td>xetra_regular</td><td>09:00</td><td>13:00</td></tr>");
+    auto notice_missing_hours_html=override_html;
+    const auto session_row=notice_missing_hours_html.find("<tr><td>xetra_regular</td><td>09:00</td><td>13:00</td></tr>");
     require(session_row!=std::string::npos,"override fixture has explicit session row");
-    missing_hours_html.erase(session_row,std::string("<tr><td>xetra_regular</td><td>09:00</td><td>13:00</td></tr>").size());
-    throws([&]{(void)parse_xetra_session_notice_html(missing_hours_html,notice_metadata);},
+    notice_missing_hours_html.erase(session_row,std::string("<tr><td>xetra_regular</td><td>09:00</td><td>13:00</td></tr>").size());
+    throws([&]{(void)parse_xetra_session_notice_html(notice_missing_hours_html,notice_metadata);},
            "reject a trading override without explicit product hours");
     auto unknown_product_html=override_html;
     const auto product_at=unknown_product_html.find("xetra_regular");
@@ -441,7 +441,7 @@ int main() {
             "rejected notice source conflict does not publish a dangling object");
     auto invalid_notice_metadata=notice_to_import;
     invalid_notice_metadata.notice_id="xetra-2026-dec30-invalid";
-    transport.response.body=missing_hours_html;
+    transport.response.body=notice_missing_hours_html;
     throws([&]{(void)adapter.import_notice(notice_repository,invalid_notice_metadata,notice_url);},
            "invalid notice HTML is rejected before archive publication");
     require(notice_repository.load().revision==revision_before_notice_replay,
