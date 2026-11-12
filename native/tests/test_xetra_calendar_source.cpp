@@ -339,6 +339,51 @@ int main() {
         if(!input) throw std::runtime_error("Missing synthetic notice fixture: "+name);
         return std::string(std::istreambuf_iterator<char>(input),std::istreambuf_iterator<char>());
     };
+    const auto final_session_text=read_fixture("xetra_final_session_2026.synthetic.txt");
+    VenueSessionNotice pdf_notice_metadata;
+    pdf_notice_metadata.notice_id="xetra-2026-final-session-pdf";
+    pdf_notice_metadata.revision=1U;
+    pdf_notice_metadata.calendar_id="XETRA-2026";
+    pdf_notice_metadata.venue="XETRA";
+    pdf_notice_metadata.effective_date=parse_date("2026-12-30");
+    pdf_notice_metadata.source_object_id="sha256:"+sha256_hex(final_session_text);
+    pdf_notice_metadata.source_uri=source().source_uri;
+    pdf_notice_metadata.attribution="Deutsche Börse Cash Market";
+    const auto parsed_pdf_notice=parse_xetra_session_notice_text(final_session_text,pdf_notice_metadata);
+    require(parsed_pdf_notice.kind==VenueSessionNoticeKind::SessionOverride &&
+            parsed_pdf_notice.day_status==VenueDayStatus::Trading &&
+            parsed_pdf_notice.product_sessions.empty() &&
+            parsed_pdf_notice.phase_events.size()==9U,
+            "PDF text parser creates a phase-only session override with all nine official milestones");
+    const auto& phase_events=parsed_pdf_notice.phase_events;
+    require(phase_events.at(0).kind==VenueSessionPhaseEventKind::PreTradingStart &&
+            phase_events.at(0).at.hour==7U &&
+            phase_events.at(2).kind==VenueSessionPhaseEventKind::OpeningAuctionCall &&
+            phase_events.at(2).at.hour==8U && phase_events.at(2).at.minute==55U &&
+            phase_events.at(3).at.hour==13U &&
+            phase_events.at(4).at.hour==14U &&
+            phase_events.at(5).at.minute==5U &&
+            phase_events.at(6).at.minute==10U &&
+            phase_events.at(7).at.minute==59U &&
+            phase_events.at(8).at.hour==15U,
+            "PDF parser converts AM/PM times and preserves the official phase order");
+    require(phase_events.at(6).scope=="DAX, MDAX, SDAX" &&
+            phase_events.at(7).scope=="TES OTC, TES LIS, Xetra EnLight",
+            "PDF parser preserves product and service scopes for final-session events");
+    auto wrong_mic_text=final_session_text;
+    wrong_mic_text.replace(wrong_mic_text.find("MIC: XETR"),9U,"MIC: XEUR");
+    throws([&]{(void)parse_xetra_session_notice_text(wrong_mic_text,pdf_notice_metadata);},
+           "reject a PDF notice whose market MIC is not XETR");
+    auto missing_phase_text=final_session_text;
+    const auto missing_phase_line=std::string("from 1.00 p.m. Start of intraday auction call");
+    missing_phase_text.erase(missing_phase_text.find(missing_phase_line),missing_phase_line.size());
+    throws([&]{(void)parse_xetra_session_notice_text(missing_phase_text,pdf_notice_metadata);},
+           "reject a PDF notice with an incomplete phase schedule");
+    auto wrong_notice_date=pdf_notice_metadata;
+    wrong_notice_date.effective_date=parse_date("2026-12-31");
+    throws([&]{(void)parse_xetra_session_notice_text(final_session_text,wrong_notice_date);},
+           "reject a PDF notice whose date differs from the expected session date");
+
     const auto override_html=read_fixture("xetra_notice_2026_dec30_override.synthetic.html");
     VenueSessionNotice notice_metadata;
     notice_metadata.notice_id="xetra-2026-dec30-circular";
