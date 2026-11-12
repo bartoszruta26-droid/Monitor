@@ -652,3 +652,28 @@ Etap 2 można zamknąć dopiero po kompilacji w CI, przejściu testów adapteró
 2. Rozszerzyć testy o dzienne, kwartalne, półroczne i roczne okresy oraz testy graniczne dla instrumentów o różnych kalendarzach.
 3. Przygotować fixture porównawcze C++/Pine na identycznych danych i parametrach.
 4. Dopiero po tych testach udostępnić wspólny kontrakt obliczeń wykresom i klientom GUI.
+
+
+## 17. Audyt kontrolny i Etap 8 — kalendarz sesyjny oraz kompletność HTF
+
+### Wynik ponownego przeglądu repozytorium (2026-11-12)
+- Gałąź main wskazuje na commit 8b7264e08fe946824304bea190dd76322166c8be; ostatni CI dla tego SHA zakończył się powodzeniem (7/7).
+- Brak dodatkowych gałęzi, otwartych PR i Issues. Nie ma niezałączonych zmian do scalenia.
+- CMake buduje aktywny rdzeń C++20; katalogi serwera i czterech klientów nadal nie istnieją.
+- Poprzedni etap HTF rozpoznawał brak całego okresu kalendarzowego, ale nie rozróżniał brakującej sesji od dnia wolnego.
+
+### Etap 8 — jawny kalendarz sesyjny (v1)
+- Dodano MarketSessionCalendar z identyfikatorem, instrumentem, dostawcą, częstotliwością źródłową i oczekiwanymi znacznikami UTC.
+- Dodano session_aware_rolling_regression. Okres HTF jest używany wyłącznie wtedy, gdy wszystkie zaplanowane sloty istnieją, mają status Complete i jakość Validated.
+- Weekend i święto nie tworzą luki, jeśli nie mają oczekiwanych slotów w harmonogramie.
+- Brak slotu lub obserwacja Suspect, Unreviewed, Partial albo Provisional przerywa segment.
+- Obserwacje spoza harmonogramu, pomieszane szeregi, powtórzone czasy i nieuporządkowany kalendarz są odrzucane.
+- Kalendarz dostarcza terminy UTC po rozstrzygnięciu strefy czasowej, DST i wyjątków. Generator reguł, pobieranie świąt i gotowe kalendarze instrumentów pozostają do wykonania.
+- Testy obejmują weekendy, święto pominięte w harmonogramie, brak oczekiwanej sesji, podejrzaną jakość, obserwację poza kalendarzem i błędną kolejność terminów.
+
+### Kolejny etap
+1. Dodać wersjonowany magazyn kalendarzy i import kalendarzy sesyjnych z plików/adapterów.
+2. Zapewnić generator terminów UTC z jawnie nazwanej strefy IANA i reguł sesji.
+3. Dodać odrębne kalendarze dla NBP, metali spot i instrumentów giełdowych; nie stosować jednego uniwersalnego kalendarza.
+4. Zdefiniować jawne polityki jakości i ewentualne tolerancje brakujących slotów.
+5. Przygotować fixture wspólne dla C++ i Pine oraz niezależnie skompilować Pine w TradingView.

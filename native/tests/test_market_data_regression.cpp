@@ -192,6 +192,64 @@ int main() {
                 "każda metoda HTF odpowiada wspólnemu silnikowi regresji");
     }
 
+
+    // Harmonogram sesji pomija weekendy i święto 2024-01-09.
+    MarketSessionCalendar session_calendar;
+    session_calendar.calendar_id = "XAU-UTC-weekday-fixture-v1";
+    session_calendar.instrument_id = "XAU";
+    session_calendar.provider_id = "fixture";
+    session_calendar.source_frequency = Frequency::Daily;
+    const std::vector<std::string> session_dates{
+        "2024-01-01T12:00:00Z", "2024-01-02T12:00:00Z",
+        "2024-01-03T12:00:00Z", "2024-01-04T12:00:00Z",
+        "2024-01-05T12:00:00Z",
+        "2024-01-08T12:00:00Z", "2024-01-10T12:00:00Z",
+        "2024-01-11T12:00:00Z", "2024-01-12T12:00:00Z",
+        "2024-01-15T12:00:00Z", "2024-01-16T12:00:00Z",
+        "2024-01-17T12:00:00Z", "2024-01-18T12:00:00Z",
+        "2024-01-19T12:00:00Z"
+    };
+    std::vector<MarketObservation> session_data;
+    for (std::size_t i = 0; i < session_dates.size(); ++i) {
+        session_calendar.expected_observation_times.push_back(parse_utc_timestamp(session_dates[i]));
+        session_data.push_back(observation("session-" + std::to_string(i),
+                                           session_dates[i].c_str(),
+                                           static_cast<double>(i + 1U)));
+    }
+    const auto session_windows = session_aware_rolling_regression(
+        session_data, session_calendar, Frequency::Weekly, 2U, WidthMethod::SampleSd);
+    require(session_windows.size() == 2U,
+            "weekendy i święto wyłączone z harmonogramu nie przerywają serii");
+    require(session_windows[0].source_observation_ids.size() == 9U,
+            "pochodzenie zawiera wszystkie sesje dwóch tygodni");
+
+    auto missing_session_data = session_data;
+    missing_session_data.erase(missing_session_data.begin() + 6);
+    const auto missing_session_windows = session_aware_rolling_regression(
+        missing_session_data, session_calendar, Frequency::Weekly, 2U, WidthMethod::SampleSd);
+    require(missing_session_windows.empty(),
+            "brak zaplanowanej sesji rozdziela segmenty");
+
+    auto suspect_session_data = session_data;
+    suspect_session_data[6].quality = QualityStatus::Suspect;
+    const auto suspect_windows = session_aware_rolling_regression(
+        suspect_session_data, session_calendar, Frequency::Weekly, 2U, WidthMethod::SampleSd);
+    require(suspect_windows.empty(),
+            "podejrzana obserwacja rozdziela segmenty");
+
+    auto outside_calendar = session_data;
+    outside_calendar.push_back(observation("outside", "2024-01-06T12:00:00Z", 99.0));
+    throws([&] { (void)session_aware_rolling_regression(
+        outside_calendar, session_calendar, Frequency::Weekly, 2U, WidthMethod::SampleSd); },
+        "obserwacja spoza harmonogramu jest odrzucana");
+
+    auto unsorted_calendar = session_calendar;
+    std::swap(unsorted_calendar.expected_observation_times[0],
+              unsorted_calendar.expected_observation_times[1]);
+    throws([&] { (void)session_aware_rolling_regression(
+        session_data, unsorted_calendar, Frequency::Weekly, 2U, WidthMethod::SampleSd); },
+        "nieuporządkowany harmonogram jest odrzucany");
+
     std::cout << "Wszystkie testy regresji czasowej HTF zakończone powodzeniem.\n";
     return EXIT_SUCCESS;
 }

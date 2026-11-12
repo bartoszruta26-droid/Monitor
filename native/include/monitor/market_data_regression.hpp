@@ -9,6 +9,16 @@
 
 namespace monitor::market {
 
+// Harmonogram oczekiwanych obserwacji jednego szeregu w UTC.
+// Święta i zamknięcia rynku pomija dostawca kalendarza; nie są wywnioskowywane.
+struct MarketSessionCalendar {
+    std::string calendar_id;
+    std::string instrument_id;
+    std::string provider_id;
+    Frequency source_frequency{Frequency::Daily};
+    std::vector<UtcTimestamp> expected_observation_times;
+};
+
 enum class HtfSamplePolicy {
     FirstObservation,
     LastObservation
@@ -32,6 +42,17 @@ struct TimeAwareRollingRegressionPoint {
 [[nodiscard]] std::vector<TimeAwareRollingRegressionPoint>
 time_aware_rolling_regression(
     const std::vector<MarketObservation>& observations,
+    Frequency target_frequency,
+    std::size_t window_size,
+    WidthMethod method,
+    HtfSamplePolicy sample_policy = HtfSamplePolicy::LastObservation);
+
+// Okres HTF wymaga wszystkich zaplanowanych obserwacji ze statusem Complete
+// i jakością Validated. Nieplanowane dni zamknięcia rynku nie tworzą luk.
+[[nodiscard]] std::vector<TimeAwareRollingRegressionPoint>
+session_aware_rolling_regression(
+    const std::vector<MarketObservation>& observations,
+    const MarketSessionCalendar& calendar,
     Frequency target_frequency,
     std::size_t window_size,
     WidthMethod method,
