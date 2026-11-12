@@ -263,6 +263,10 @@ int main(){
     conflicting_object.content_type="application/pdf";
     throws([&]{(void)venue_repo.upsert_source_object(conflicting_object);},
            "same SHA-256 with conflicting object metadata is rejected");
+    auto misplaced_object=source_object;
+    misplaced_object.archive_relative_path="venue-calendars.json.sources/objects/not-the-hash.html";
+    throws([&]{(void)venue_repo.upsert_source_object(misplaced_object);},
+           "source archive filename must be content-addressed by its SHA-256");
     auto missing_source_calendar=venue_v4;
     missing_source_calendar.source.version=5U;
     missing_source_calendar.source.source_object_id="sha256:"+std::string(64U,'0');
