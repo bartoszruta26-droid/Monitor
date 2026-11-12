@@ -100,3 +100,19 @@ Rewizja jest niezmienna. Zmiana bajtów źródła nie musi automatycznie zmienia
 - Rozdzielić `calendar_id + revision` od `document_id` i ewentualnej wersji dokumentu źródłowego. Nie zmieniać klucza legacy `document_id + version` bez migracji.
 - Umożliwić nową interpretację/parser revision dla istniejącego `source_object_id` bez ponownego pobierania i kopiowania pliku.
 - Wprowadzić migrację zgodną z JSON v1, testy wielokrotnego wskazania jednego źródła oraz reguły konfliktów rewizji semantycznych.
+### Etap 15C — oddzielne wersjonowanie źródła i kalendarza
+
+- `VenueSessionCalendar` ma własne `calendar_id` i `revision`; `SourceCalendarDocument.version` opisuje wersję dokumentu źródłowego. Dotychczasowy klucz `document_id + version` pozostaje ścieżką zgodności dla rekordów legacy.
+- Odczyt starszego JSON v1 bez `calendar_id` i `revision` materializuje te pola z `source.document_id` i `source.version`. Nowy zapis serializuje jawne pola kalendarza.
+- Walidacja wymaga rosnących rewizji w obrębie `calendar_id`, stabilnego przypisania kalendarza do jednego venue oraz niezmienności mapowania `document_id + source version -> SHA-256`.
+- `parser_version` jest zapisywany przy interpretacji kalendarza; parser Xetra oznacza obecnie wynik jako `xetra-html-2026-v1`.
+- Nowy overload `import(..., calendar_id, calendar_revision)` rozdziela źródłową wersję dokumentu od rewizji semantycznej. Stary overload zachowuje dotychczasowe zachowanie.
+- `publish_revision_from_archive(...)` umożliwia ponowne sparsowanie już zarchiwizowanych bajtów bez HTTP. Odczyt obiektu używa `openat(O_NOFOLLOW)` dla każdego komponentu, sprawdza typ pliku, rozmiar i SHA-256.
+- Testy obejmują trzy rewizje z tym samym źródłem, ponowną interpretację bez żądania HTTP, parser-version round-trip, migrację legacy, konflikt wersji źródła z innym SHA oraz odrzucenie podmiany już opublikowanej rewizji.
+- CI dla SHA `ae4a852fde232cb7108e5161ec396a1f80ea0072`: [43321359514](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43321359514) — Configure, Build i Test: success; CTest **9/9**.
+
+### Etap 16 — następny
+
+- Uogólnić parser Xetra z roku 2026 na zakres `valid_from` / `valid_to_exclusive`; rok nie może być zaszyty w selektorach, etykietach ani oczekiwanych datach.
+- Wprowadzić fixture offline dla każdego obsługiwanego roku i walidację niejednoznacznych tabel/lat.
+- Nie wyprowadzać dat sesji z samych nazw świąt; wymagane są dane źródłowe i oficjalne komunikaty dla skróconych/wyjątkowych sesji.
