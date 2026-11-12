@@ -24,9 +24,7 @@ Archiwum ma ścieżkę opartą o `document_id/version/hash`. Powtórne pobranie 
 - `archive_relative_path`: ścieżka względna do obiektu treści;
 - `content_length_bytes`;
 - `content_type`;
-- `source_uri`: adres, spod którego pobrano te bajty;
-- `retrieved_at`: czas konkretnego pobrania/zaobserwowania obiektu;
-- `attribution` i `license_status`.
+- Obiekt zawiera wyłącznie niezmienne metadane bajtów: skrót, długość, typ treści i ścieżkę archiwum. URI, czas pobrania, atrybucja i status licencji pozostają w metadanych pochodzenia kalendarza, ponieważ mogą różnić się między pobraniami tych samych bajtów.
 
 Obiekt jest niezmienny. Dwa kalendarze i wiele rewizji mogą wskazywać na ten sam obiekt źródłowy. Deduplikacja treści opiera się na SHA-256, nie na numerze rewizji kalendarza.
 
