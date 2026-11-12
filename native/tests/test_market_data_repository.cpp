@@ -261,6 +261,35 @@ int main(){
             "multiple calendar revisions can reuse one immutable source object");
     require(venue_repo.load().source_objects.size()==1U,
             "reusing source bytes does not duplicate source object records");
+    require(find_orphaned_source_objects(venue_repo.load()).empty(),
+            "all currently referenced source objects are absent from orphan report");
+    auto orphan_bytes=std::string("<html>unreferenced fixture</html>");
+    auto orphan_hash=sha256_hex(orphan_bytes);
+    SourceArchiveObject orphan_object;
+    orphan_object.source_object_id="sha256:"+orphan_hash;
+    orphan_object.content_sha256=orphan_hash;
+    orphan_object.archive_relative_path="venue-calendars.json.sources/objects/"+orphan_hash+".html";
+    orphan_object.content_length_bytes=orphan_bytes.size();
+    orphan_object.content_type="text/html";
+    const auto orphan_archive=venue_repo.file_path().parent_path()/orphan_object.archive_relative_path;
+    { std::ofstream output(orphan_archive,std::ios::binary); output<<orphan_bytes; }
+    require(venue_repo.upsert_source_object(orphan_object)==6U,
+            "unreferenced source object can be retained for diagnostic reporting");
+    const auto orphan_report=find_orphaned_source_objects(venue_repo.load());
+    require(orphan_report.size()==1U &&
+            orphan_report.front().source_object_id==orphan_object.source_object_id,
+            "orphan report identifies source objects without calendar references");
+    auto venue_v5=venue_v4;
+    venue_v5.revision=5U;
+    venue_v5.source.document_id="xetra-parser-fixture";
+    venue_v5.source.version=1U;
+    venue_v5.source.content_sha256=orphan_hash;
+    venue_v5.source.source_object_id=orphan_object.source_object_id;
+    venue_v5.source.retrieved_at=parse_utc_timestamp("2026-11-12T22:40:00Z");
+    require(venue_repo.upsert_venue_calendar(venue_v5)==7U,
+            "new calendar revision can reference previously orphaned source object");
+    require(find_orphaned_source_objects(venue_repo.load()).empty(),
+            "source object disappears from orphan report after a calendar references it");
     auto conflicting_object=source_object;
     conflicting_object.content_type="application/pdf";
     throws([&]{(void)venue_repo.upsert_source_object(conflicting_object);},
@@ -279,7 +308,7 @@ int main(){
     source_delete.source_objects.clear();
     throws([&]{(void)venue_repo.replace(source_delete);},
            "replace cannot delete an immutable source object");
-    require(venue_repo.load().revision==5U,
+    require(venue_repo.load().revision==7U,
             "rejected source object operations leave repository unchanged");
     std::filesystem::remove(source_archive);
     throws([&]{(void)venue_repo.load();},
