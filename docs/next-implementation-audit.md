@@ -470,3 +470,35 @@ Przebieg historyczny 43237592885 zakończył się niepowodzeniem na wcześniejsz
 **Etap 0: ukończony w zakresie audytu repozytorium i potwierdzenia CI.** Rozbieżność dokumentacji została rozstrzygnięta, a statusy funkcji zapisane powyżej. Ograniczenie: kompilacja i testy zostały potwierdzone przez GitHub Actions, bez osobnego uruchomienia lokalnego w tej sesji. Etap 0 nie oznacza, że adaptery lub magazyn są gotowe — przeciwnie, ich aktywna implementacja pozostaje do wykonania.
 
 **Następny etap: Etap 1 — wspólny model danych rynkowych w C++20.**
+
+
+## 10. Etap 1 — wspólny model danych rynkowych (implementacja v1)
+
+### Zakres dostarczony
+- Typy C++20 dla instrumentów walutowych, metali szlachetnych i surowców.
+- Jednostki walutowe, masy, tony metrycznej, baryłki i MWh; jawna konwersja gram/kg/uncja trojańska.
+- Waluty bazowe i kwotowane dla par FX oraz waluta wyceny dla metali/surowców.
+- Rodzaje ceny: referencyjna, średnia, bid, ask, mid, spot i transakcyjna.
+- Znacznik UTC, normalizacja ISO-8601 z offsetem, czas obserwacji, czas pobrania i lokalna data publikacji dostawcy.
+- Częstotliwość, status okresu, kompletność szeregu i status jakości.
+- Identyfikator dostawcy, identyfikator rekordu źródłowego, adres źródła i informacja licencyjna.
+- Walidacja identyfikatorów, kodów walut, jednostek, chronologii, wartości liczbowych, pochodzenia i wersji schematu.
+- Jawne schema_version = 1 w rekordzie notowania.
+- Testy C++ dla przypadków poprawnych, błędnych, granicznych, konwersji jednostek i czasu.
+
+### Pliki
+- native/include/monitor/market_data.hpp
+- native/src/market_data.cpp
+- native/tests/test_market_data.cpp
+- docs/market-data-model.md
+
+### Decyzje i ograniczenia
+- Model nie zależy od sieci, JSON, SQLite, MariaDB ani interfejsu.
+- Czas przechowywany jest jako sekundy Unix UTC; parser przyjmuje jawne Z lub ±HH:MM. Ułamki sekund są w wersji 1 obcinane.
+- Kurs FX oznacza jednostki waluty kwotowanej za jedną jednostkę waluty bazowej.
+- Konwersja automatyczna dotyczy wyłącznie masy: 1 troy oz = 31,1034768 g; 1 kg = 1000 g.
+- Brak obserwacji pozostaje luką, nie zerową ceną. Częstotliwość miesięczna nie jest zamieniana na dzienną.
+- Model nie implementuje jeszcze adapterów, magazynu, agregacji, świec, portfela ani API.
+
+### Kryteria ukończenia
+Etap 1 można zamknąć po kompilacji C++20, przejściu obu zestawów CTest oraz powodzeniu GitHub Actions na aktualnym main. Do czasu potwierdzenia CI status pozostaje „implementacja przygotowana — weryfikacja w toku”.

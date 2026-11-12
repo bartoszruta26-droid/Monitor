@@ -69,7 +69,9 @@ To wzór docelowy, a nie deklaracja implementacji. Serwer i oba adaptery magazyn
 
 ## Status
 
-Obecnie w repozytorium działa natywny rdzeń regresji C++20, program CLI, testy i CI. Serwer, magazyny JSON/MariaDB, adaptery, API i interfejsy pozostają do implementacji.
+Obecnie w repozytorium działa natywny rdzeń C++20: regresja, model danych rynkowych v1, walidacja, testy, CLI i CI. Serwer, magazyny JSON/MariaDB, adaptery, API i interfejsy pozostają do implementacji.
+
+Wspólny model danych rynkowych opisano w [docs/market-data-model.md](market-data-model.md). Typy domenowe znajdują się w native/include/monitor/market_data.hpp. Model jest niezależny od dostawców i magazynu.
 
 
 ## Integracja z Nextcloud — kierunek przyszły
