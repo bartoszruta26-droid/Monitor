@@ -429,7 +429,10 @@ void validate_venue_calendar(const VenueSessionCalendar& x) {
     validate_source_calendar_document(x.source);
     if(x.calendar_id.empty()!=(x.revision==0U))
         throw std::invalid_argument("Kalendarz wymaga jednocześnie identyfikatora i dodatniego numeru rewizji albo klucza legacy.");
-    if(!x.calendar_id.empty() && x.calendar_id.find_first_of("\r\n")!=std::string::npos)
+    if(!x.calendar_id.empty() &&
+       (x.calendar_id.size()>128U || std::any_of(x.calendar_id.begin(),x.calendar_id.end(),[](unsigned char ch) {
+           return ch<0x20U || ch==0x7fU;
+       })))
         throw std::invalid_argument("Identyfikator kalendarza zawiera niedozwolone znaki.");
     using namespace std::chrono;
     const sys_days begin{year{x.source.valid_from.year}/month{x.source.valid_from.month}/day{x.source.valid_from.day}};
