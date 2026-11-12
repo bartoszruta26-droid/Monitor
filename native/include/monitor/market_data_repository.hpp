@@ -27,6 +27,7 @@ struct MarketDataBatch {
     std::vector<SeriesMetadata> series_metadata;
     std::vector<MarketSessionCalendar> session_calendars;
     std::vector<VenueSessionCalendar> venue_calendars;
+    std::vector<SourceArchiveObject> source_objects;
 };
 
 struct MarketDataSnapshot {
@@ -40,6 +41,7 @@ struct MarketDataSnapshot {
     std::vector<MarketObservationRevision> observation_history;
     std::vector<MarketSessionCalendar> session_calendars;
     std::vector<VenueSessionCalendar> venue_calendars;
+    std::vector<SourceArchiveObject> source_objects;
 };
 
 struct JsonRepositoryConfig {
@@ -60,6 +62,7 @@ public:
     [[nodiscard]] virtual std::uint64_t upsert_series_metadata(const SeriesMetadata& metadata) = 0;
     [[nodiscard]] virtual std::uint64_t upsert_session_calendar(const MarketSessionCalendar& calendar) = 0;
     [[nodiscard]] virtual std::uint64_t upsert_venue_calendar(const VenueSessionCalendar& calendar) = 0;
+    [[nodiscard]] virtual std::uint64_t upsert_source_object(const SourceArchiveObject& source_object) = 0;
 };
 
 class JsonMarketDataRepository final : public MarketDataRepository {
@@ -76,6 +79,7 @@ public:
     [[nodiscard]] std::uint64_t upsert_series_metadata(const SeriesMetadata& metadata) override;
     [[nodiscard]] std::uint64_t upsert_session_calendar(const MarketSessionCalendar& calendar) override;
     [[nodiscard]] std::uint64_t upsert_venue_calendar(const VenueSessionCalendar& calendar) override;
+    [[nodiscard]] std::uint64_t upsert_source_object(const SourceArchiveObject& source_object) override;
 
     // Explicit recovery only. A corrupt primary file is never silently replaced.
     [[nodiscard]] MarketDataSnapshot restore_backup();
