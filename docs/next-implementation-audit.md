@@ -632,11 +632,23 @@ Etap 2 można zamknąć dopiero po kompilacji w CI, przejściu testów adapteró
 - Wersja 1 operuje na ciągłym segmencie wartości. Segmentację przy brakach oraz kontrolę rzeczywistych kalendarzowych interwałów HTF należy wykonać przed podaniem danych do regresji; okno nie może przekraczać luki.
 - Metoda n-2 nie jest automatycznie przedziałem ufności ani prognozy.
 
-## 16. Następny zakres — szeregi czasowe HTF
+## 16. Etap 7 — szeregi czasowe HTF (implementacja v1)
 
-1. Dodać adapter wartości wykresowych do regresji, zachowujący timestamp i identyfikatory źródeł.
-2. Segmentować szeregi przy brakujących okresach i zmianach częstotliwości.
-3. Zdefiniować jawne mapowanie LTF→HTF bez interpolacji i bez wypełniania luk.
-4. Testować okna przy granicach dni, tygodni, miesięcy, kwartałów i lat oraz w latach przestępnych.
-5. Zachować odrębne profile DGT, LonesomeTheBlue i klasyczną metodę n-2; porównać wyniki z referencyjnymi fixture.
-6. Dopiero po testach kontraktowych podłączyć obliczenia do wykresów i przyszłych klientów GUI.
+- Dodano `market_data_regression` jako adapter między obserwacjami, agregacją OHLC i regresją.
+- Obsługiwane są jawne polityki `FirstObservation` i `LastObservation`; domyślna jest ostatnia rzeczywista obserwacja okresu.
+- Każdy wynik zachowuje kalendarzowe granice okna UTC, rzeczywisty czas ostatniej próbki, wartość oraz identyfikatory wszystkich źródłowych obserwacji w oknie.
+- Brak całego okresu HTF rozdziela segmenty; okna regresji nie przekraczają luki.
+- Zachowano istniejące profile `PopulationRms`, `SampleSd` i `ResidualStandardErrorNMinus2` bez zmian.
+- Dodano testy granic ISO tygodnia, lutego przestępnego, granicy roku/miesiąca, luk, duplikatów czasu, polityk wyboru i zakazu upsamplingu.
+
+### Ograniczenia v1
+- Segmentacja odbywa się na poziomie całych okresów docelowych, nie sesji giełdowych wewnątrz okresu.
+- Nie ma kalendarza świąt, godzin handlu ani reguł instrument-specyficznych.
+- Tick i Irregular pozostają nieobsługiwane.
+- Weryfikacja porównawcza z Pine/TradingView i podłączenie do wykresów pozostają kolejnymi zadaniami.
+
+### Kryteria dalszego etapu
+1. Dodać kalendarze sesyjne i kontrolę kompletności LTF w okresie HTF.
+2. Rozszerzyć testy o dzienne, kwartalne, półroczne i roczne okresy oraz testy graniczne dla instrumentów o różnych kalendarzach.
+3. Przygotować fixture porównawcze C++/Pine na identycznych danych i parametrach.
+4. Dopiero po tych testach udostępnić wspólny kontrakt obliczeń wykresom i klientom GUI.
