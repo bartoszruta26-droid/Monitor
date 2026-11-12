@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <array>
 #include <charconv>
+#include <cctype>
 #include <cmath>
 #include <cstdint>
 #include <ctime>
@@ -153,6 +154,8 @@ std::string xml_text(xmlNode* node) {
 }
 std::string attr(xmlNode* node,const char* name) {
     xmlChar* raw=xmlGetProp(node,BAD_CAST name);
+    if(!raw && std::string_view{name}=="id")
+        raw=xmlGetNsProp(node,BAD_CAST "id",BAD_CAST "http://schemas.openxmlformats.org/officeDocument/2006/relationships");
     if(!raw) return {};
     std::string result(reinterpret_cast<const char*>(raw));
     xmlFree(raw);
@@ -323,31 +326,37 @@ HttpResponse HttpClient::get(const std::string& url,std::size_t max_bytes) {
     std::chrono::milliseconds backoff=config_.retry.initial_backoff;
     for(unsigned attempt=1;attempt<=config_.retry.max_attempts;++attempt) {
         throttle();
+        HttpResponse response;
         try {
-            auto response=transport_->get(request);
-            if(response.body.size()>request.max_response_bytes) throw std::runtime_error("Odpowiedź HTTP przekracza skonfigurowany limit rozmiaru.");
-            const long status=response.status_code;
-            if(status==404) return response;
-            if(status==429||status==500||status==502||status==503||status==504) {
-                if(attempt==config_.retry.max_attempts) throw std::runtime_error("Dostawca zwrócił HTTP "+std::to_string(status)+" po wyczerpaniu prób.");
-                auto wait=backoff;
-                const auto it=response.headers.find("retry-after");
-                if(it!=response.headers.end()) {
-                    long seconds_value{};
-                    const auto parsed=std::from_chars(it->second.data(),it->second.data()+it->second.size(),seconds_value);
-                    if(parsed.ec==std::errc{}&&seconds_value>=0) wait=std::min(milliseconds{seconds_value*1000},config_.retry.max_backoff);
-                }
-                std::this_thread::sleep_for(wait);
-                backoff=std::min(backoff*2,config_.retry.max_backoff);
-                continue;
-            }
-            if(status<200||status>=300) throw std::runtime_error("Żądanie HTTP zakończone kodem "+std::to_string(status)+".");
-            return response;
+            response=transport_->get(request);
         } catch(const std::exception&) {
             if(attempt==config_.retry.max_attempts) throw;
             std::this_thread::sleep_for(backoff);
             backoff=std::min(backoff*2,config_.retry.max_backoff);
+            continue;
         }
+        if(response.body.size()>request.max_response_bytes)
+            throw std::runtime_error("Odpowiedź HTTP przekracza skonfigurowany limit rozmiaru.");
+        const long status=response.status_code;
+        if(status==404) return response;
+        if(status==429||status==500||status==502||status==503||status==504) {
+            if(attempt==config_.retry.max_attempts)
+                throw std::runtime_error("Dostawca zwrócił HTTP "+std::to_string(status)+" po wyczerpaniu prób.");
+            auto wait=backoff;
+            const auto it=response.headers.find("retry-after");
+            if(it!=response.headers.end()) {
+                long seconds_value{};
+                const auto parsed=std::from_chars(it->second.data(),it->second.data()+it->second.size(),seconds_value);
+                if(parsed.ec==std::errc{}&&seconds_value>=0)
+                    wait=std::min(milliseconds{seconds_value*1000},config_.retry.max_backoff);
+            }
+            std::this_thread::sleep_for(wait);
+            backoff=std::min(backoff*2,config_.retry.max_backoff);
+            continue;
+        }
+        if(status<200||status>=300)
+            throw std::runtime_error("Żądanie HTTP zakończone kodem "+std::to_string(status)+".");
+        return response;
     }
     throw std::runtime_error("Nieoczekiwany koniec ponawiania żądania HTTP.");
 }
@@ -593,10 +602,14 @@ AdapterResult XausSpotAdapter::fetch_latest() {
             throw std::runtime_error("XAUS zwrócił nieobsługiwaną jednostkę ceny spot.");
         const auto instrument=metal_instrument(symbol,name,currency,unit);
         result.instruments.push_back(instrument);
-        result.observations.push_back(observation(p,instrument,date,received,number(item.at("price"),"price"),
+        auto quote=observation(p,instrument,date,received,number(item.at("price"),"price"),
             PriceKind::Spot,Frequency::Minute,date,url,as_of,stale?QualityStatus::Suspect:QualityStatus::Validated,
             stale?std::vector<std::string>{"provider_stale_snapshot","indicative_mid_market"}:
-                  std::vector<std::string>{"indicative_mid_market","provider_fresh"}));
+                  std::vector<std::string>{"indicative_mid_market","provider_fresh"});
+        quote.observed_at=observed;
+        quote.id=make_observation_id(p.id,instrument.id,observed,PriceKind::Spot);
+        validate_observation(instrument,p,quote);
+        result.observations.push_back(std::move(quote));
     };
     add_metal("xau","XAU","Złoto");
     add_metal("xag","XAG","Srebro");
@@ -604,10 +617,14 @@ AdapterResult XausSpotAdapter::fetch_latest() {
         if(payload.contains("spot_usd_oz")) {
             const auto instrument=metal_instrument("XAU","Złoto","USD",Unit::TroyOunce);
             result.instruments.push_back(instrument);
-            result.observations.push_back(observation(p,instrument,date,received,number(payload.at("spot_usd_oz"),"spot_usd_oz"),
+            auto quote=observation(p,instrument,date,received,number(payload.at("spot_usd_oz"),"spot_usd_oz"),
                 PriceKind::Spot,Frequency::Minute,date,url,as_of,stale?QualityStatus::Suspect:QualityStatus::Validated,
                 stale?std::vector<std::string>{"provider_stale_snapshot","indicative_mid_market"}:
-                      std::vector<std::string>{"indicative_mid_market","provider_fresh"}));
+                      std::vector<std::string>{"indicative_mid_market","provider_fresh"});
+            quote.observed_at=observed;
+            quote.id=make_observation_id(p.id,instrument.id,observed,PriceKind::Spot);
+            validate_observation(instrument,p,quote);
+            result.observations.push_back(std::move(quote));
         } else throw std::runtime_error("XAUS nie zwrócił rozpoznanych notowań XAU/XAG.");
     }
     return result;

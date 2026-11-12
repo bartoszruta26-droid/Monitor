@@ -4,6 +4,7 @@
 #include <archive_entry.h>
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <map>
@@ -123,6 +124,7 @@ int main() {
     auto spot=xaus.fetch_latest();
     require(spot.observations.size()==2,"XAUS returns XAU and XAG");
     require(spot.observations[0].price_kind==PriceKind::Spot,"XAUS values are spot indicative");
+    require(format_utc_timestamp(spot.observations[0].observed_at)=="2026-01-05T10:00:00Z","XAUS preserves intraday observation timestamp");
 
     auto duplicated=frank_data.observations;
     duplicated.push_back(duplicated.front());
