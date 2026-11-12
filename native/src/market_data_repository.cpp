@@ -161,7 +161,8 @@ void validate_snapshot(const MarketDataSnapshot& s) {
     for(const auto& x:s.providers){validate_provider(x);if(!providers.emplace(x.id,&x).second)throw std::invalid_argument("Powielony identyfikator dostawcy: "+x.id);}
     std::set<std::string> keys,ids;
     for(const auto& x:s.observations) {
-        const auto i=instruments.find(x.instrument_id),p=providers.find(x.provider_id);
+        const auto i=instruments.find(x.instrument_id);
+        const auto p=providers.find(x.provider_id);
         if(i==instruments.end()||p==providers.end())throw std::invalid_argument("Notowanie wskazuje nieznany instrument lub dostawcę.");
         validate_observation(*i->second,*p->second,x);
         if(!keys.insert(observation_key(x)).second)throw std::invalid_argument("Powielony klucz notowania w migawce.");
@@ -175,7 +176,8 @@ void validate_snapshot(const MarketDataSnapshot& s) {
         if(!series_keys.insert(key).second)throw std::invalid_argument("Powielone metadane szeregu.");
     }
     for(const auto& x:s.observation_history) {
-        const auto i=instruments.find(x.previous.instrument_id),p=providers.find(x.previous.provider_id);
+        const auto i=instruments.find(x.previous.instrument_id);
+        const auto p=providers.find(x.previous.provider_id);
         if(i==instruments.end()||p==providers.end())throw std::invalid_argument("Historia notowania wskazuje nieznany instrument lub dostawcę.");
         validate_observation(*i->second,*p->second,x.previous);
         if(x.superseded_by_id.empty()||x.superseded_at.unix_seconds<x.previous.received_at.unix_seconds)
