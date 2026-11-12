@@ -44,6 +44,11 @@ struct MarketDataSnapshot {
     std::vector<SourceArchiveObject> source_objects;
 };
 
+// Immutable source objects with no calendar revision references. This is a
+// manifest-level diagnostic only; it never removes files or scans unindexed files.
+[[nodiscard]] std::vector<SourceArchiveObject> find_orphaned_source_objects(
+    const MarketDataSnapshot& snapshot);
+
 struct JsonRepositoryConfig {
     std::size_t max_document_bytes{256U * 1024U * 1024U};
     bool backup_on_write{true};
