@@ -396,6 +396,56 @@ int main() {
     throws([&]{(void)parse_xetra_session_notice_html(invalid_time_html,notice_metadata);},
            "reject session times outside the local day");
 
+    const auto notice_import_folder=folder/"notice-import";
+    std::filesystem::create_directories(notice_import_folder);
+    JsonMarketDataRepository notice_repository(notice_import_folder/"calendar.json");
+    transport.response.status_code=200;
+    transport.response.headers={{"content-type","text/html"}};
+    transport.response.body=html;
+    require(adapter.import(notice_repository,source(),"XETRA-2026",1U)==1U,
+            "notice import test starts from a persisted base calendar");
+    transport.response.body=override_html;
+    VenueSessionNotice notice_to_import;
+    notice_to_import.notice_id="xetra-2026-dec30-imported";
+    notice_to_import.revision=1U;
+    notice_to_import.calendar_id="XETRA-2026";
+    notice_to_import.venue="XETRA";
+    notice_to_import.attribution="Deutsche Börse Cash Market";
+    const auto notice_url=source().source_uri;
+    require(adapter.import_notice(notice_repository,notice_to_import,notice_url)==2U,
+            "notice adapter archives exact HTML bytes and atomically publishes the parsed notice");
+    const auto notice_snapshot=notice_repository.load();
+    require(notice_snapshot.venue_session_notices.size()==1U &&
+            notice_snapshot.source_objects.size()==2U &&
+            notice_snapshot.venue_session_notices.front().source_object_id==
+                "sha256:"+sha256_hex(override_html),
+            "imported notice references its content-addressed archive object");
+    const auto imported_notice_object=std::find_if(notice_snapshot.source_objects.begin(),
+        notice_snapshot.source_objects.end(),[&](const SourceArchiveObject& object) {
+            return object.source_object_id=="sha256:"+sha256_hex(override_html);
+        });
+    require(imported_notice_object!=notice_snapshot.source_objects.end() &&
+            std::filesystem::exists(notice_import_folder/"calendar.json.sources"/"objects"/
+                (sha256_hex(override_html)+".html")),
+            "notice importer persists the exact source object before publication");
+    const auto revision_before_notice_replay=notice_repository.load().revision;
+    require(adapter.import_notice(notice_repository,notice_to_import,notice_url)==revision_before_notice_replay &&
+            notice_repository.load().venue_session_notices.size()==1U,
+            "re-importing the same notice revision is idempotent");
+    transport.response.body=override_html+"\n";
+    throws([&]{(void)adapter.import_notice(notice_repository,notice_to_import,notice_url);},
+           "changed bytes cannot overwrite an already published notice revision");
+    require(notice_repository.load().revision==revision_before_notice_replay &&
+            notice_repository.load().source_objects.size()==2U,
+            "rejected notice source conflict does not publish a dangling object");
+    auto invalid_notice_metadata=notice_to_import;
+    invalid_notice_metadata.notice_id="xetra-2026-dec30-invalid";
+    transport.response.body=missing_hours_html;
+    throws([&]{(void)adapter.import_notice(notice_repository,invalid_notice_metadata,notice_url);},
+           "invalid notice HTML is rejected before archive publication");
+    require(notice_repository.load().revision==revision_before_notice_replay,
+            "invalid notice does not change repository revision");
+
     std::filesystem::remove_all(folder);
     std::cout<<"Xetra HTTPS source adapter tests passed\n";
 }
