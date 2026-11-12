@@ -234,7 +234,9 @@ int main() {
     require(revision_snapshot.venue_calendars.size()==3U &&
             revision_snapshot.venue_calendars[0].calendar_id=="XETRA-2026" &&
             revision_snapshot.venue_calendars[0].revision==10U &&
+            revision_snapshot.venue_calendars[0].parser_version=="xetra-html-2026-v1" &&
             revision_snapshot.venue_calendars[1].revision==11U &&
+            revision_snapshot.venue_calendars[1].parser_version=="xetra-html-2026-v1" &&
             revision_snapshot.venue_calendars[2].revision==12U &&
             revision_snapshot.venue_calendars[0].source.version==1U &&
             revision_snapshot.venue_calendars[1].source.version==1U &&
@@ -264,6 +266,12 @@ int main() {
             changed_revision_snapshot.venue_calendars.back().source.version==3U &&
             changed_revision_snapshot.venue_calendars.back().revision==13U,
             "new source document version and new calendar revision are independently recorded");
+    transport.response.body=html+"\\n";
+    throws([&]{(void)adapter.import(revision_repository,source_v1,"XETRA-2026",14U);},
+           "one source document version cannot identify different downloaded bytes");
+    require(revision_repository.load().revision==4U &&
+            revision_repository.load().source_objects.size()==2U,
+            "conflicting source version is rejected without repository mutation");
 
     std::filesystem::remove_all(folder);
     std::cout<<"Xetra HTTPS source adapter tests passed\n";
