@@ -224,6 +224,64 @@ int main(){
     require(venue_repo.load().revision==3U,
             "rejected venue calendar replace operations do not mutate repository");
 
+    // Content-addressed source objects are immutable and can be shared by calendar revisions.
+    const std::string source_bytes="<html>official source fixture</html>";
+    const auto source_hash=sha256_hex(source_bytes);
+    const auto source_object_id="sha256:"+source_hash;
+    const auto source_relative_path=std::string("venue-calendars.json.sources/objects/")+source_hash+".html";
+    const auto source_archive=venue_repo.file_path().parent_path()/source_relative_path;
+    std::filesystem::create_directories(source_archive.parent_path());
+    { std::ofstream output(source_archive,std::ios::binary); output<<source_bytes; }
+    SourceArchiveObject source_object;
+    source_object.source_object_id=source_object_id;
+    source_object.content_sha256=source_hash;
+    source_object.archive_relative_path=source_relative_path;
+    source_object.content_length_bytes=source_bytes.size();
+    source_object.content_type="text/html";
+    source_object.source_uri=venue_source.source_uri;
+    source_object.retrieved_at=parse_utc_timestamp("2026-11-12T22:30:00Z");
+    source_object.attribution="Deutsche Börse Cash Market";
+    MarketDataBatch source_batch;
+    source_batch.source_objects.push_back(source_object);
+    auto venue_v3=venue_calendar;
+    venue_v3.source.version=3U;
+    venue_v3.source.content_sha256=source_hash;
+    venue_v3.source.source_object_id=source_object_id;
+    venue_v3.source.retrieved_at=source_object.retrieved_at;
+    source_batch.venue_calendars.push_back(venue_v3);
+    require(venue_repo.upsert_batch(source_batch)==4U,
+            "source object and its first calendar reference commit atomically");
+    auto source_loaded=venue_repo.load();
+    require(source_loaded.source_objects.size()==1U &&
+            source_loaded.source_objects.front().source_object_id==source_object_id &&
+            source_loaded.venue_calendars.back().source.source_object_id==source_object_id,
+            "content-addressed source object and calendar reference round-trip");
+    auto venue_v4=venue_v3;
+    venue_v4.source.version=4U;
+    require(venue_repo.upsert_venue_calendar(venue_v4)==5U,
+            "multiple calendar revisions can reuse one immutable source object");
+    require(venue_repo.load().source_objects.size()==1U,
+            "reusing source bytes does not duplicate source object records");
+    auto conflicting_object=source_object;
+    conflicting_object.content_type="application/pdf";
+    throws([&]{(void)venue_repo.upsert_source_object(conflicting_object);},
+           "same SHA-256 with conflicting object metadata is rejected");
+    auto missing_source_calendar=venue_v4;
+    missing_source_calendar.source.version=5U;
+    missing_source_calendar.source.source_object_id="sha256:"+std::string(64U,'0');
+    missing_source_calendar.source.content_sha256=std::string(64U,'0');
+    throws([&]{(void)venue_repo.upsert_venue_calendar(missing_source_calendar);},
+           "calendar revision cannot reference a missing source object");
+    auto source_delete=venue_repo.load();
+    source_delete.source_objects.clear();
+    throws([&]{(void)venue_repo.replace(source_delete);},
+           "replace cannot delete an immutable source object");
+    require(venue_repo.load().revision==5U,
+            "rejected source object operations leave repository unchanged");
+    std::filesystem::remove(source_archive);
+    throws([&]{(void)venue_repo.load();},
+           "missing content-addressed source archive blocks repository load");
+
     std::filesystem::remove_all(dir);
     std::cout<<"All JSON repository tests passed.\n";
 }
