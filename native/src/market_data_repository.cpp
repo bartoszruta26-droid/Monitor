@@ -330,12 +330,14 @@ json encode(const VenueSessionCalendar& x) {
             {"product_sessions",std::move(sessions)},{"requires_official_notice",day.requires_official_notice}});
     }
     return {{"calendar_id",x.calendar_id},{"revision",x.revision},
+            {"parser_version",x.parser_version},
             {"source",std::move(source_json)},{"days",std::move(days)}};
 }
 VenueSessionCalendar decode_venue_calendar(const json& j) {
     VenueSessionCalendar result;
     if(j.contains("calendar_id")) result.calendar_id=j.at("calendar_id").get<std::string>();
     if(j.contains("revision")) result.revision=j.at("revision").get<std::uint32_t>();
+    if(j.contains("parser_version")) result.parser_version=j.at("parser_version").get<std::string>();
     const auto& s = j.at("source");
     result.source.document_id=s.at("document_id").get<std::string>();
     result.source.venue=s.at("venue").get<std::string>();
@@ -434,6 +436,10 @@ void validate_venue_calendar(const VenueSessionCalendar& x) {
            return ch<0x20U || ch==0x7fU;
        })))
         throw std::invalid_argument("Identyfikator kalendarza zawiera niedozwolone znaki.");
+    if(x.parser_version.size()>64U || std::any_of(x.parser_version.begin(),x.parser_version.end(),[](unsigned char ch) {
+        return ch<0x20U || ch==0x7fU;
+    }))
+        throw std::invalid_argument("Wersja parsera kalendarza jest nieprawidłowa.");
     using namespace std::chrono;
     const sys_days begin{year{x.source.valid_from.year}/month{x.source.valid_from.month}/day{x.source.valid_from.day}};
     const sys_days end{year{x.source.valid_to_exclusive.year}/month{x.source.valid_to_exclusive.month}/day{x.source.valid_to_exclusive.day}};
@@ -545,6 +551,7 @@ void validate_snapshot(const MarketDataSnapshot& s) {
     std::set<std::string> venue_keys;
     std::map<std::string,std::uint32_t> latest_venue_versions;
     std::map<std::string,std::string> venue_by_calendar_id;
+    std::map<std::string,std::string> source_version_hashes;
     for (const auto& calendar : s.venue_calendars) {
         validate_venue_calendar(calendar);
         if(calendar.source.source_object_id) {
@@ -556,6 +563,14 @@ void validate_snapshot(const MarketDataSnapshot& s) {
         const auto key=venue_calendar_key(calendar);
         if (!venue_keys.insert(key).second)
             throw std::invalid_argument("Powielona wersja kalendarza sesyjnego venue.");
+        if(calendar.source.content_sha256) {
+            const auto source_version_key=calendar.source.document_id+"\\x1f"+
+                std::to_string(calendar.source.version);
+            const auto [source_it,source_inserted]=source_version_hashes.emplace(
+                source_version_key,*calendar.source.content_sha256);
+            if(!source_inserted && source_it->second!=*calendar.source.content_sha256)
+                throw std::invalid_argument("Ta sama wersja dokumentu źródłowego nie może wskazywać różnych bajtów.");
+        }
         const auto calendar_id=effective_venue_calendar_id(calendar);
         const auto revision=effective_venue_calendar_revision(calendar);
         const auto [venue_it,venue_inserted]=venue_by_calendar_id.emplace(calendar_id,calendar.source.venue);
