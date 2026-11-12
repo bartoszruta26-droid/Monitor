@@ -44,7 +44,8 @@ bool same_notice_payload(const VenueSessionNotice& a,const VenueSessionNotice& b
     if(a.notice_id!=b.notice_id || a.revision!=b.revision || a.calendar_id!=b.calendar_id ||
        a.venue!=b.venue || format_date(a.effective_date)!=format_date(b.effective_date) ||
        a.source_object_id!=b.source_object_id || a.source_uri!=b.source_uri ||
-       a.attribution!=b.attribution || a.license_status!=b.license_status || a.kind!=b.kind ||
+       a.parser_version!=b.parser_version || a.attribution!=b.attribution ||
+       a.license_status!=b.license_status || a.kind!=b.kind ||
        a.day_status!=b.day_status || a.cancels_notice_id!=b.cancels_notice_id ||
        a.cancels_revision!=b.cancels_revision || a.product_sessions.size()!=b.product_sessions.size() ||
        a.phase_events.size()!=b.phase_events.size())
