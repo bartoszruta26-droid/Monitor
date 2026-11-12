@@ -6,28 +6,29 @@ Jedna platforma rynkowa z jednym modelem domenowym, jednym serwerem wymiany dany
 ## Diagram logiczny
 
 ```text
-             NBP / Frankfurter / World Bank / inne źródła
-                              |
-                       Adaptery backendów
-                              |
-                              v
-+-------------------- Serwer wymiany danych --------------------+
-| API REST/JSON | WebSocket | autoryzacja | synchronizacja      |
-| normalizacja  | walidacja | wersjonowanie | audyt              |
-+------------------------------+--------------------------------+
-                               |
-                   Interfejs repozytorium danych
-                               |
-                 +-------------+-------------+
-                 |                           |
-          JSON (domyślnie)             MariaDB (opcjonalnie)
-                 |
-        +--------+--------+---------+----------+
-        |                 |         |          |
-     Linux GUI          WebUI      TUI      Android App
-        +-----------------+---------+----------+
+ NBP / Frankfurter / World Bank / inne źródła
+                    |
+             Adaptery backendów
+                    |
+                    v
++------------- Serwer wymiany danych --------------+
+| REST/JSON | WebSocket | autoryzacja | synchronizacja |
+| normalizacja | walidacja | wersjonowanie | audyt     |
++-------------------------+-----------------------+
                           |
-                   Wspólny rdzeń C++
+                Interfejs repozytorium
+                          |
+              +-----------+-----------+
+              |                       |
+       JSON (domyślnie)         MariaDB (opcjonalnie)
+
+          ^         ^          ^          ^
+          |         |          |          |
+       Linux GUI  WebUI       TUI      Android App
+                   |          |          /
+           +--------+----------+---------+
+                    |
+           Wspólny rdzeń C++
 ```
 
 Wszystkie klienty komunikują się z serwerem przez wspólny kontrakt API. Rdzeń C++ jest współdzielony tam, gdzie klient może wykonywać obliczenia lokalnie; logika autorytatywna, synchronizacja i zapis danych pozostają po stronie serwera.
@@ -62,28 +63,9 @@ MariaDB jest opcjonalnym backendem repozytorium. Wybór odbywa się przez konfig
 
 ## Konfiguracja docelowa
 
-```json
-{
-  "storage": {
-    "driver": "json",
-    "json": { "directory": "./data", "atomic_writes": true },
-    "mariadb": {
-      "host": "127.0.0.1",
-      "port": 3306,
-      "database": "monitor",
-      "username": "monitor",
-      "password_env": "MONITOR_DB_PASSWORD"
-    }
-  },
-  "server": {
-    "host": "127.0.0.1",
-    "port": 8080,
-    "api_prefix": "/api/v1"
-  }
-}
-```
+Wzór znajduje się w `config/monitor.example.json`. Domyślny sterownik to `json`. MariaDB jest wybierana przez ustawienie `storage.driver` na `mariadb`. Hasło pobierane jest ze zmiennej środowiskowej.
 
-To wzór docelowy, a nie deklaracja implementacji. Hasło pobierane jest ze zmiennej środowiskowej.
+To wzór docelowy, a nie deklaracja implementacji. Serwer i oba adaptery magazynu pozostają do zaimplementowania.
 
 ## Status
 
