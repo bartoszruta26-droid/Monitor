@@ -19,6 +19,13 @@ struct MarketObservationRevision {
     std::string superseded_by_id;
 };
 
+struct MarketDataBatch {
+    std::vector<Instrument> instruments;
+    std::vector<Provider> providers;
+    std::vector<MarketObservation> observations;
+    std::vector<SeriesMetadata> series_metadata;
+};
+
 struct MarketDataSnapshot {
     std::uint32_t schema_version{json_document_schema_version};
     std::uint64_t revision{};
@@ -41,6 +48,7 @@ public:
     virtual ~MarketDataRepository() = default;
     [[nodiscard]] virtual MarketDataSnapshot load() const = 0;
     [[nodiscard]] virtual std::uint64_t replace(const MarketDataSnapshot& snapshot) = 0;
+    [[nodiscard]] virtual std::uint64_t upsert_batch(const MarketDataBatch& batch) = 0;
     [[nodiscard]] virtual std::uint64_t upsert_instrument(const Instrument& instrument) = 0;
     [[nodiscard]] virtual std::uint64_t upsert_provider(const Provider& provider) = 0;
     [[nodiscard]] virtual std::uint64_t upsert_observation(const MarketObservation& observation) = 0;
@@ -54,6 +62,7 @@ public:
 
     [[nodiscard]] MarketDataSnapshot load() const override;
     [[nodiscard]] std::uint64_t replace(const MarketDataSnapshot& snapshot) override;
+    [[nodiscard]] std::uint64_t upsert_batch(const MarketDataBatch& batch) override;
     [[nodiscard]] std::uint64_t upsert_instrument(const Instrument& instrument) override;
     [[nodiscard]] std::uint64_t upsert_provider(const Provider& provider) override;
     [[nodiscard]] std::uint64_t upsert_observation(const MarketObservation& observation) override;
