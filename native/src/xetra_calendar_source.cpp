@@ -37,6 +37,25 @@ std::string lower(std::string value) {
     });
     return value;
 }
+bool same_notice_payload(const VenueSessionNotice& a,const VenueSessionNotice& b) {
+    if(a.notice_id!=b.notice_id || a.revision!=b.revision || a.calendar_id!=b.calendar_id ||
+       a.venue!=b.venue || format_date(a.effective_date)!=format_date(b.effective_date) ||
+       a.source_object_id!=b.source_object_id || a.source_uri!=b.source_uri ||
+       a.attribution!=b.attribution || a.license_status!=b.license_status || a.kind!=b.kind ||
+       a.day_status!=b.day_status || a.cancels_notice_id!=b.cancels_notice_id ||
+       a.cancels_revision!=b.cancels_revision || a.product_sessions.size()!=b.product_sessions.size())
+        return false;
+    for(std::size_t i=0;i<a.product_sessions.size();++i) {
+        const auto& x=a.product_sessions[i];
+        const auto& y=b.product_sessions[i];
+        if(x.product_group!=y.product_group ||
+           x.opens_at.hour!=y.opens_at.hour || x.opens_at.minute!=y.opens_at.minute ||
+           x.opens_at.second!=y.opens_at.second || x.closes_at.hour!=y.closes_at.hour ||
+           x.closes_at.minute!=y.closes_at.minute || x.closes_at.second!=y.closes_at.second)
+            return false;
+    }
+    return true;
+}
 struct DownloadedCalendar {
     VenueSessionCalendar calendar;
     std::string raw_html;
@@ -304,6 +323,16 @@ std::uint64_t XetraCalendarSourceAdapter::import_notice(
         std::chrono::system_clock::now().time_since_epoch()).count();
     notice.retrieved_at=UtcTimestamp{now};
     auto parsed_notice=parse_xetra_session_notice_html(response.body,std::move(notice));
+    const auto existing_snapshot=repository.load();
+    const auto existing_notice=std::find_if(existing_snapshot.venue_session_notices.begin(),
+        existing_snapshot.venue_session_notices.end(),[&](const VenueSessionNotice& item) {
+            return item.notice_id==parsed_notice.notice_id && item.revision==parsed_notice.revision;
+        });
+    if(existing_notice!=existing_snapshot.venue_session_notices.end()) {
+        if(!same_notice_payload(*existing_notice,parsed_notice))
+            throw std::invalid_argument("Opublikowana rewizja komunikatu Xetra wskazuje inną treść lub interpretację.");
+        return existing_snapshot.revision;
+    }
 
     const auto archive_root=repository.file_path().parent_path()/
         (repository.file_path().filename().string()+".sources")/"objects";
