@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <map>
 #include <memory>
 #include <regex>
@@ -158,17 +159,34 @@ VenueSessionCalendar parse_xetra_html_calendar(
             throw std::invalid_argument("Data święta Xetra 2026 nie zgadza się z oczekiwanym kalendarzem.");
     }
 
-    const std::string all_text = node_text(xmlDocGetRootElement(parsed.get()));
+    std::vector<xmlNode*> paragraphs;
+    collect_elements(xmlDocGetRootElement(parsed.get()), "p", paragraphs);
     const std::string notice_marker = "in the year 2026 regular stock exchange trading takes place";
-    const auto notice_position = normalized(all_text).find(notice_marker);
-    if (notice_position == std::string::npos)
+    const bool has_notice = std::any_of(paragraphs.begin(), paragraphs.end(), [&](xmlNode* node) {
+        return normalized(node_text(node)).find(notice_marker) != std::string::npos;
+    });
+    if (!has_notice)
         throw std::invalid_argument("Brak semantycznej informacji o handlu w święta 2026.");
-    const auto notice_dates = dates_in_text(all_text.substr(notice_position));
+    std::vector<xmlNode*> list_items;
+    collect_elements(xmlDocGetRootElement(parsed.get()), "li", list_items);
+    const std::map<std::string, std::string> named_trading{
+        {"ascension day","2026-05-14"},{"whit monday","2026-05-25"},{"corpus christi","2026-06-04"}
+    };
+    std::set<std::string> actual_trading;
+    for (xmlNode* item : list_items) {
+        const auto label = normalized(node_text(item));
+        for (const auto& [name, date] : named_trading) {
+            if (label.find(name) != std::string::npos) {
+                const auto parsed_dates = dates_in_text(node_text(item));
+                if (parsed_dates.size() != 1U || format_date(parsed_dates.front()) != date)
+                    throw std::invalid_argument("Data święta z handlem nie zgadza się z kalendarzem Xetra 2026.");
+                actual_trading.insert(date);
+            }
+        }
+    }
     const std::set<std::string> expected_trading{
         "2026-05-14", "2026-05-25", "2026-06-04"
     };
-    std::set<std::string> actual_trading;
-    for (const auto& date : notice_dates) actual_trading.insert(format_date(date));
     if (actual_trading != expected_trading)
         throw std::invalid_argument("Lista świąt z handlem Xetra 2026 jest niekompletna lub nieznana.");
 
