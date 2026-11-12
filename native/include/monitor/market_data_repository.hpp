@@ -39,6 +39,7 @@ struct MarketDataSnapshot {
     std::vector<SeriesMetadata> series_metadata;
     std::vector<MarketObservationRevision> observation_history;
     std::vector<MarketSessionCalendar> session_calendars;
+    std::vector<VenueSessionCalendar> venue_calendars;
 };
 
 struct JsonRepositoryConfig {
