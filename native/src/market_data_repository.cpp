@@ -589,6 +589,28 @@ void JsonMarketDataRepository::write_unlocked(const MarketDataSnapshot& input,bo
         if(!existed&&previous_latest>0U&&candidate.version<=previous_latest)
             throw std::invalid_argument("Nowa wersja kalendarza musi być większa od poprzednich.");
     }
+    for (const auto& old_calendar : previous.venue_calendars) {
+        const auto found=std::find_if(s.venue_calendars.begin(),s.venue_calendars.end(),
+            [&](const auto& candidate) {
+                return candidate.source.document_id==old_calendar.source.document_id &&
+                       candidate.source.version==old_calendar.source.version;
+            });
+        if (found==s.venue_calendars.end() || !same_venue_calendar(old_calendar,*found))
+            throw std::invalid_argument("Nie można usunąć ani zmienić opublikowanej wersji kalendarza venue.");
+    }
+    for (const auto& candidate : s.venue_calendars) {
+        std::uint32_t previous_latest=0U;
+        for (const auto& old : previous.venue_calendars)
+            if (old.source.document_id==candidate.source.document_id)
+                previous_latest=std::max(previous_latest,old.source.version);
+        const bool existed=std::any_of(previous.venue_calendars.begin(),previous.venue_calendars.end(),
+            [&](const auto& old) {
+                return old.source.document_id==candidate.source.document_id &&
+                       old.source.version==candidate.source.version;
+            });
+        if (!existed && previous_latest>0U && candidate.source.version<=previous_latest)
+            throw std::invalid_argument("Nowa wersja kalendarza venue musi być większa od poprzednich.");
+    }
     if(!existing.empty()&&rotate_backup&&config_.backup_on_write) {
         const auto backup=backup_path();
         durable_write(backup,existing);
@@ -666,6 +688,27 @@ std::uint64_t JsonMarketDataRepository::upsert_batch(const MarketDataBatch& batc
         if(item.version<=latest) throw std::invalid_argument("Nowa wersja kalendarza musi mieć większy numer.");
         snapshot.session_calendars.push_back(item);
     }
+    std::set<std::string> incoming_venue_calendars;
+    for (const auto& item : batch.venue_calendars) {
+        validate_venue_calendar(item);
+        const auto key=venue_calendar_key(item);
+        if (!incoming_venue_calendars.insert(key).second)
+            throw std::invalid_argument("Powielona wersja kalendarza venue w jednej partii.");
+        const auto found=std::find_if(snapshot.venue_calendars.begin(),snapshot.venue_calendars.end(),
+            [&](const auto& value) { return venue_calendar_key(value)==key; });
+        if (found!=snapshot.venue_calendars.end()) {
+            if (!same_venue_calendar(*found,item))
+                throw std::invalid_argument("Opublikowana wersja kalendarza venue jest niezmienna.");
+            continue;
+        }
+        std::uint32_t latest=0U;
+        for (const auto& value : snapshot.venue_calendars)
+            if (value.source.document_id==item.source.document_id)
+                latest=std::max(latest,value.source.version);
+        if (item.source.version<=latest)
+            throw std::invalid_argument("Nowa wersja kalendarza venue musi mieć większy numer.");
+        snapshot.venue_calendars.push_back(item);
+    }
     validate_snapshot(snapshot);
     write_unlocked(snapshot,true);
     return load_unlocked().revision;
@@ -684,6 +727,9 @@ std::uint64_t JsonMarketDataRepository::upsert_series_metadata(const SeriesMetad
 }
 std::uint64_t JsonMarketDataRepository::upsert_session_calendar(const MarketSessionCalendar& item) {
     MarketDataBatch batch;batch.session_calendars.push_back(item);return upsert_batch(batch);
+}
+std::uint64_t JsonMarketDataRepository::upsert_venue_calendar(const VenueSessionCalendar& item) {
+    MarketDataBatch batch;batch.venue_calendars.push_back(item);return upsert_batch(batch);
 }
 MarketDataSnapshot JsonMarketDataRepository::restore_backup() {
     FileLock lock(file_path_.string()+".lock");
