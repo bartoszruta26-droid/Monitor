@@ -238,16 +238,13 @@ int main(){
     source_object.archive_relative_path=source_relative_path;
     source_object.content_length_bytes=source_bytes.size();
     source_object.content_type="text/html";
-    source_object.source_uri=venue_source.source_uri;
-    source_object.retrieved_at=parse_utc_timestamp("2026-11-12T22:30:00Z");
-    source_object.attribution="Deutsche Börse Cash Market";
     MarketDataBatch source_batch;
     source_batch.source_objects.push_back(source_object);
     auto venue_v3=venue_calendar;
     venue_v3.source.version=3U;
     venue_v3.source.content_sha256=source_hash;
     venue_v3.source.source_object_id=source_object_id;
-    venue_v3.source.retrieved_at=source_object.retrieved_at;
+    venue_v3.source.retrieved_at=parse_utc_timestamp("2026-11-12T22:30:00Z");
     source_batch.venue_calendars.push_back(venue_v3);
     require(venue_repo.upsert_batch(source_batch)==4U,
             "source object and its first calendar reference commit atomically");
