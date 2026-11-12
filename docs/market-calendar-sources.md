@@ -175,3 +175,13 @@ Strefa sesji w modelu aplikacji powinna być zapisana jako `Europe/Berlin`, a ni
 Data publikacji PDF nie została potwierdzona w widocznym dokumencie/stronie, a warunki licencji ponownego rozpowszechniania danych kalendarza nie zostały jednoznacznie określone. Nie zapisujemy więc fikcyjnej daty publikacji, nie deklarujemy licencji open data i nie wyliczamy SHA-256 bez pobrania dokładnych bajtów pliku. Atrybucja powinna wskazywać Deutsche Börse; przed dystrybucją kopii źródłowego PDF należy sprawdzić warunki prawne.
 
 **Decyzja implementacyjna:** pierwsza wersja importera powinna wykorzystywać semantyczną tabelę HTML oficjalnej strony (dni bez handlu + jawne dni handlu w święta) albo jawny, kontrolowany plik źródłowy z potwierdzonym schematem. Nie parsować układu graficznego PDF heurystycznie. Rejestr źródła ma przechowywać URL, zakres roku, strefę `Europe/Berlin`, czas pobrania, SHA-256 rzeczywiście pobranej zawartości, status licencji/atrybucji i numer wersji. Zmiana dokumentu tworzy nową wersję.
+
+## 15. Wersjonowany model dokumentu źródłowego i fixture Xetra 2026
+
+Rdzeń udostępnia `SourceCalendarDocument` z identyfikatorem dokumentu, venue, wersją, półotwartym zakresem dat, strefą IANA, adresem HTTPS, opcjonalnym czasem pobrania, opcjonalnym SHA-256 dokładnych pobranych bajtów, atrybucją i statusem licencji. Walidator odrzuca niepoprawny zakres, brak atrybucji, nie-HTTPS i niepoprawny zapis SHA-256.
+
+Puste `content_sha256` oraz brak `retrieved_at` są dozwolone wyłącznie jako jawny stan niezweryfikowanego źródła; kod nie tworzy sumy kontrolnej z URL ani tekstu po parsowaniu. Status licencji pozostaje `Unknown`, dopóki warunki nie zostaną potwierdzone.
+
+`build_xetra_2026_calendar` tworzy 365-dniowy fixture w strefie `Europe/Berlin`, z odrębnymi statusami `Closed`, `Trading` i `SettlementOnly`. Uwzględnia zamknięcia 1 stycznia, Wielki Piątek, Poniedziałek Wielkanocny, 1 maja i 25 grudnia; 24 i 31 grudnia oznacza jako rozliczeniowe bez handlu. Dla 14 maja, 25 maja i 4 czerwca zapisuje jawne wyjątki handlowe: akcje/ETP do 20:00 oraz produkty strukturyzowane do 22:00. Dzień 30 grudnia jest oznaczony `requires_official_notice`, ponieważ operator zastrzega możliwość odmiennych godzin i publikacji okólnika.
+
+To jest wersjonowany fixture transkrybowany z oficjalnego źródła, a nie jeszcze automatyczny importer HTML/PDF. Wersja 1 nie przypisuje fikcyjnego czasu pobrania, sumy SHA-256 ani statusu licencji. Parser aktualizujący fixture musi w kolejnej iteracji pobrać dokładne bajty oficjalnej strony/dokumentu, policzyć SHA-256, zapisać czas pobrania i wykrywać zmiany semantyczne bez nadpisywania poprzedniej wersji.
