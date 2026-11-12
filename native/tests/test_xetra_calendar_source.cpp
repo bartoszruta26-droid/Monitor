@@ -141,7 +141,10 @@ int main() {
     };
     {
         auto legacy_json=nlohmann::json::parse(original_json);
-        auto& legacy_source=legacy_json.at("venue_calendars").at(1).at("source");
+        auto& legacy_calendar=legacy_json.at("venue_calendars").at(1);
+        legacy_calendar.erase("calendar_id");
+        legacy_calendar.erase("revision");
+        auto& legacy_source=legacy_calendar.at("source");
         legacy_source.erase("archive_relative_path");
         legacy_source.erase("content_length_bytes");
         legacy_source.erase("content_type");
@@ -153,8 +156,10 @@ int main() {
     require(legacy_loaded.venue_calendars.size()==2U &&
             !legacy_loaded.venue_calendars.back().source.archive_relative_path &&
             !legacy_loaded.venue_calendars.back().source.content_length_bytes &&
-            !legacy_loaded.venue_calendars.back().source.content_type,
-            "legacy schema-v1 venue source without archive manifest fields remains readable");
+            !legacy_loaded.venue_calendars.back().source.content_type &&
+            legacy_loaded.venue_calendars.back().calendar_id=="xetra-2026-official-html" &&
+            legacy_loaded.venue_calendars.back().revision==2U,
+            "legacy schema-v1 calendar key migrates from source document ID/version");
     restore_json();
     {
         std::ofstream damaged(latest_archive,std::ios::binary|std::ios::trunc);
@@ -239,6 +244,26 @@ int main() {
             revision_snapshot.venue_calendars[0].source.source_object_id==
                 revision_snapshot.venue_calendars[2].source.source_object_id,
             "multiple semantic revisions share the same content-addressed source object");
+    require(adapter.publish_revision_from_archive(revision_repository,source_v1,"XETRA-2026",11U,
+                "sha256:"+sha256_hex(html))==3U,
+            "re-publishing an existing calendar revision is idempotent");
+
+    transport.response.body=html+"\\n";
+    auto source_v3=source();
+    source_v3.version=3U;
+    throws([&]{(void)adapter.import(revision_repository,source_v3,"XETRA-2026",12U);},
+           "changed source bytes cannot overwrite an existing semantic revision");
+    require(revision_repository.load().revision==3U &&
+            revision_repository.load().source_objects.size()==1U,
+            "rejected source conflict does not publish a dangling object reference");
+    require(adapter.import(revision_repository,source_v3,"XETRA-2026",13U)==4U,
+            "changed source bytes publish only under a new semantic revision");
+    const auto changed_revision_snapshot=revision_repository.load();
+    require(changed_revision_snapshot.venue_calendars.size()==4U &&
+            changed_revision_snapshot.source_objects.size()==2U &&
+            changed_revision_snapshot.venue_calendars.back().source.version==3U &&
+            changed_revision_snapshot.venue_calendars.back().revision==13U,
+            "new source document version and new calendar revision are independently recorded");
 
     std::filesystem::remove_all(folder);
     std::cout<<"Xetra HTTPS source adapter tests passed\n";
