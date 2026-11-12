@@ -158,3 +158,20 @@ Odpowiedź HTTP 404 dla pojedynczego fragmentu jest interpretowana jako brak dan
 `received_at` jest teraz pobierany osobno po otrzymaniu każdej poprawnej odpowiedzi HTTP, zamiast raz na początku całego przebiegu `NbpAdapter::fetch`. Dzięki temu różne fragmenty i tabele zachowują własny rzeczywisty czas odebrania odpowiedzi. `provider_published_on` nadal pochodzi wyłącznie z daty zwróconej przez NBP; dla tabeli C `observed_at` zachowuje `tradingDate`, a `provider_published_on` — `effectiveDate`.
 
 Test offline sprawdza zakres 95-dniowy podzielony na fragmenty 93 + 2 dni, wszystkie cztery endpointy (złoto oraz tabele A/B/C), 404 dla pierwszego fragmentu i pustą odpowiedź 200 dla drugiego. Test nie wykonuje połączeń sieciowych.
+
+## 14. Xetra — potwierdzone źródło pierwotne i format
+
+Weryfikacja źródła 2026-11-12:
+- Oficjalna strona operatora: https://www.eurexgroup.com/xetra-en/newsroom/trading-calendar
+- Alternatywna oficjalna strona Deutsche Börse Cash Market: https://www.cashmarket.deutsche-boerse.com/cash-en/trading/trading-calendar-and-trading-hours
+- Oficjalny plik PDF 2026 (kalendarz dla Xetra i Börse Frankfurt): https://www.cashmarket.deutsche-boerse.com/resource/blob/4580826/3e974decb414d6769cc2bc8e601f6c9a/data/xetra-trading-calendar-2026.pdf
+
+Strona podaje regularne godziny Xetra 09:00–17:30 oraz odrębny harmonogram aukcji. Kalendarz dni bez handlu jest prezentowany dla Frankfurter Wertpapierbörse, a następnie osobno wymieniono dni świąteczne, w których Xetra i Börse Frankfurt jednak prowadzą regularny handel. W 2026 r. są to Wniebowstąpienie (14 maja), Zielone Świątki (25 maja) i Boże Ciało (4 czerwca). Nie wolno więc wyprowadzać kalendarza Xetra z niemieckiej listy świąt państwowych ani traktować każdej pozycji tabeli FWB jako automatycznego zamknięcia bez odczytania wyjątków dla Xetra.
+
+PDF jest kalendarzem rocznym w układzie graficznego kalendarza miesięcznego; nie jest tabelą CSV/XLSX o stabilnym schemacie. Strona HTML zawiera dodatkowo tabelę dni bez handlu i osobne listy dni z handlem w święta. To rozdzielenie jest istotne dla parsera: wyjątki handlowe muszą mieć pierwszeństwo nad ogólną regułą świąteczną. Godziny aukcji i wyjątkowe skrócenia sesji wymagają osobnego źródła/komunikatu, nie mogą być wyprowadzane z samego PDF kalendarza.
+
+Strefa sesji w modelu aplikacji powinna być zapisana jako `Europe/Berlin`, a nie stałe `CET`, aby poprawnie obsłużyć CEST i przejścia DST. Strona podaje godziny w terminologii CET, lecz sesja lokalna musi podążać za lokalną strefą giełdy.
+
+Data publikacji PDF nie została potwierdzona w widocznym dokumencie/stronie, a warunki licencji ponownego rozpowszechniania danych kalendarza nie zostały jednoznacznie określone. Nie zapisujemy więc fikcyjnej daty publikacji, nie deklarujemy licencji open data i nie wyliczamy SHA-256 bez pobrania dokładnych bajtów pliku. Atrybucja powinna wskazywać Deutsche Börse; przed dystrybucją kopii źródłowego PDF należy sprawdzić warunki prawne.
+
+**Decyzja implementacyjna:** pierwsza wersja importera powinna wykorzystywać semantyczną tabelę HTML oficjalnej strony (dni bez handlu + jawne dni handlu w święta) albo jawny, kontrolowany plik źródłowy z potwierdzonym schematem. Nie parsować układu graficznego PDF heurystycznie. Rejestr źródła ma przechowywać URL, zakres roku, strefę `Europe/Berlin`, czas pobrania, SHA-256 rzeczywiście pobranej zawartości, status licencji/atrybucji i numer wersji. Zmiana dokumentu tworzy nową wersję.
