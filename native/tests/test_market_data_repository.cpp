@@ -21,7 +21,8 @@ std::filesystem::path temp_dir() {
 }
 MarketObservation observation(double value,std::int64_t received) {
     MarketObservation x;x.id="nbp:eurpln:2026-11-12";x.instrument_id="FX:EUR/PLN";x.provider_id="nbp-a";
-    x.observed_at=parse_utc_timestamp("2026-11-12T12:00:00Z");x.received_at=UtcTimestamp{received};
+    x.observed_at=parse_utc_timestamp("2026-11-12T12:00:00Z");
+    x.received_at=UtcTimestamp{x.observed_at.unix_seconds+received};
     x.provider_published_on=parse_date("2026-11-12");x.frequency=Frequency::Daily;x.price_kind=PriceKind::Average;
     x.value=value;x.quality=QualityStatus::Validated;x.provider_record_id="A/220/A/NBP/2026";
     x.source_uri="https://api.nbp.pl/api/exchangerates/rates/a/eur/2026-11-12/";return x;
@@ -58,7 +59,7 @@ int main(){
     (void)repo.upsert_observation(observation(4.25,2100));
     loaded=repo.load();
     require(loaded.observations.size()==1&&loaded.observation_history.empty(),"identical data is deduplicated");
-    require(loaded.observations.front().received_at.unix_seconds==2100,"receipt timestamp refreshed");
+    require(loaded.observations.front().received_at.unix_seconds==observation(4.25,2100).received_at.unix_seconds,"receipt timestamp refreshed");
 
     // A changed value under the same stable key becomes a correction with preserved history.
     (void)repo.upsert_observation(observation(4.31,2200));
