@@ -182,7 +182,7 @@ int main() {
     }
     {
         auto tampered=original_json;
-        const auto marker=manifest.archive_relative_path.value();
+        const auto marker=manifest.archive_relative_path;
         const auto at=tampered.find(marker);
         require(at!=std::string::npos,"manifest path exists in persisted JSON");
         tampered.replace(at,marker.size(),"../escape.html");
