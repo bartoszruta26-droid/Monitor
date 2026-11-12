@@ -115,7 +115,10 @@ int main() {
     require(wb.observations.size()==2,"World Bank workbook emits gold and silver");
     require(wb.observations[0].frequency==Frequency::Monthly,"World Bank frequency stays monthly");
     require(wb.observations[0].price_kind==PriceKind::Average,"World Bank monthly prices are averages");
-    require(wb.observations[0].value==3400.5&&wb.observations[1].value==39.25,"World Bank XLSX numeric values");
+    const auto wb_gold=std::find_if(wb.observations.begin(),wb.observations.end(),[](const auto& o){return o.instrument_id=="METAL:XAU";});
+    const auto wb_silver=std::find_if(wb.observations.begin(),wb.observations.end(),[](const auto& o){return o.instrument_id=="METAL:XAG";});
+    require(wb_gold!=wb.observations.end()&&wb_gold->value==3400.5,"World Bank gold numeric value");
+    require(wb_silver!=wb.observations.end()&&wb_silver->value==39.25,"World Bank silver numeric value");
 
     const std::string xaus_url="https://xaus.com/api/v1/spot?compact=1";
     transport->responses[xaus_url]={response(200,
