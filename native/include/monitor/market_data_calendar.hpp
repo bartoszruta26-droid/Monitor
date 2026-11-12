@@ -40,6 +40,52 @@ struct LocalSessionSchedule {
     NonexistentLocalTimePolicy nonexistent_time_policy{NonexistentLocalTimePolicy::Reject};
 };
 
+enum class VenueDayStatus { Closed, Trading, SettlementOnly };
+enum class VenueCalendarLicenseStatus { Unknown, AttributionRequired, OpenData, Restricted };
+
+struct VenueProductSession {
+    std::string product_group;
+    LocalTimeOfDay opens_at;
+    LocalTimeOfDay closes_at;
+};
+
+struct VenueCalendarDay {
+    CivilDate date;
+    VenueDayStatus status{VenueDayStatus::Closed};
+    std::vector<VenueProductSession> product_sessions;
+    bool requires_official_notice{};
+};
+
+struct SourceCalendarDocument {
+    std::string document_id;
+    std::string venue;
+    std::uint32_t version{1};
+    CivilDate valid_from;
+    CivilDate valid_to_exclusive;
+    std::string timezone;
+    std::string source_uri;
+    std::optional<UtcTimestamp> retrieved_at;
+    // SHA-256 of the exact downloaded bytes. Empty until those bytes are
+    // actually acquired; a URL or parsed text is not a substitute for it.
+    std::optional<std::string> content_sha256;
+    std::string attribution;
+    VenueCalendarLicenseStatus license_status{VenueCalendarLicenseStatus::Unknown};
+};
+
+struct VenueSessionCalendar {
+    SourceCalendarDocument source;
+    std::vector<VenueCalendarDay> days;
+};
+
+void validate_source_calendar_document(const SourceCalendarDocument& document);
+
+// Reproducible 2026 Xetra calendar fixture transcribed from the official
+// Deutsche Börse calendar page. It is versioned and explicitly marked with
+// unknown redistribution terms until the source file's bytes and licence
+// terms have been verified.
+[[nodiscard]] VenueSessionCalendar build_xetra_2026_calendar(
+    const SourceCalendarDocument& document);
+
 enum class NbpPublicationTable { A, B, C };
 
 // Local publication interval, never an inferred observation timestamp.
