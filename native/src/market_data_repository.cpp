@@ -1129,6 +1129,7 @@ std::vector<SourceArchiveObject> find_orphaned_source_objects(
 }
 EffectiveVenueCalendarDay resolve_effective_venue_calendar_day(
     const MarketDataSnapshot& snapshot,std::string_view calendar_id,CivilDate date) {
+    validate_snapshot(snapshot);
     if(calendar_id.empty() || !is_valid_date(date))
         throw std::invalid_argument("Efektywny dzień kalendarza wymaga identyfikatora i poprawnej daty.");
     const VenueSessionCalendar* base_calendar=nullptr;
