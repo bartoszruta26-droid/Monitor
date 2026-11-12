@@ -699,6 +699,7 @@ MarketDataSnapshot JsonMarketDataRepository::load() const {
 void JsonMarketDataRepository::write_unlocked(const MarketDataSnapshot& input,bool rotate_backup) const {
     MarketDataSnapshot s=input;
     validate_snapshot(s);
+    verify_source_archives(s,file_path_);
     const bool primary_exists=std::filesystem::exists(file_path_);
     const auto existing=read_file(file_path_,config_.max_document_bytes,true);
     if(primary_exists&&existing.empty())throw std::runtime_error("Dokument magazynu JSON jest pusty.");
