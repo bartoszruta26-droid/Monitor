@@ -90,6 +90,10 @@ struct SourceArchiveObject {
 };
 
 struct VenueSessionCalendar {
+    // Stable calendar identity and semantic revision. Zero/empty means a
+    // legacy record whose key is source.document_id + source.version.
+    std::string calendar_id;
+    std::uint32_t revision{};
     SourceCalendarDocument source;
     std::vector<VenueCalendarDay> days;
 };
