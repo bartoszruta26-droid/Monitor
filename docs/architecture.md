@@ -65,13 +65,13 @@ MariaDB jest opcjonalnym backendem repozytorium. Wybór odbywa się przez konfig
 
 Wzór znajduje się w `config/monitor.example.json`. Domyślny sterownik to `json`. MariaDB jest wybierana przez ustawienie `storage.driver` na `mariadb`. Hasło pobierane jest ze zmiennej środowiskowej.
 
-To wzór docelowy, a nie deklaracja implementacji. Serwer i oba adaptery magazynu pozostają do zaimplementowania.
+To wzór docelowy, a nie deklaracja implementacji magazynów. Adaptery dostawców C++20 są już zaimplementowane; serwer i oba adaptery magazynu pozostają do wykonania.
 
 ## Status
 
-Obecnie w repozytorium działa natywny rdzeń C++20: regresja, model danych rynkowych v1, walidacja, testy, CLI i CI. Serwer, magazyny JSON/MariaDB, adaptery, API i interfejsy pozostają do implementacji.
+Obecnie w repozytorium działa natywny rdzeń C++20: regresja, model danych rynkowych v1, walidacja, testy, CLI, transport HTTP libcurl i adaptery NBP, Frankfurter, World Bank Pink Sheet oraz XAUS. Adaptery są budowane w monitor_core i objęte testami bez dostępu do sieci. Serwer, magazyny JSON/MariaDB, API i interfejsy pozostają do implementacji.
 
-Wspólny model danych rynkowych opisano w [docs/market-data-model.md](market-data-model.md). Typy domenowe znajdują się w native/include/monitor/market_data.hpp. Model jest niezależny od dostawców i magazynu.
+Wspólny model danych rynkowych opisano w [docs/market-data-model.md](market-data-model.md), a adaptery w [docs/cpp-provider-adapters.md](cpp-provider-adapters.md). Typy domenowe znajdują się w native/include/monitor/market_data.hpp, a kontrakt adapterów i transport HTTP w native/include/monitor/market_data_adapters.hpp. Adaptery zwracają rekordy domenowe; nie zapisują jeszcze do magazynu.
 
 
 ## Integracja z Nextcloud — kierunek przyszły

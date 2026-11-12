@@ -151,7 +151,10 @@ Aktywny rozwój odbywa się w C++20, Bash oraz językach niezbędnych dla interf
 - testy jednostkowe rdzenia;
 - skrypty Bash do budowania i testowania;
 - GitHub Actions budujące i testujące rdzeń C++ na Linux;
-- wskaźnik Pine Script v6 dla TradingView.
+- wskaźnik Pine Script v6 dla TradingView;
+- wspólny kontrakt adapterów dostawców C++20 i transport HTTP libcurl;
+- adaptery NBP A/B/C, Frankfurter v2, World Bank Pink Sheet oraz XAUS spot;
+- testy adapterów z atrapami HTTP i odpowiedziami wzorcowymi, bez dostępu do sieci.
 
 **Kierunek architektoniczny opisany, ale jeszcze niezaimplementowany:**
 - serwer wymiany danych i jego API;
@@ -160,9 +163,7 @@ Aktywny rozwój odbywa się w C++20, Bash oraz językach niezbędnych dla interf
 - adapter MariaDB;
 - autoryzacja, synchronizacja i kontrola konfliktów;
 - Linux GUI, WebUI, TUI i Android App;
-- adaptery dostawców danych w C++.
-
-Nie należy przedstawiać tych elementów jako działających, dopóki nie zostaną zaimplementowane i przetestowane.
+Nie należy przedstawiać pozostałych elementów jako działających, dopóki nie zostaną zaimplementowane i przetestowane.
 
 ## 7. Budowanie i testowanie obecnego rdzenia
 
@@ -172,7 +173,7 @@ Na Debianie/Ubuntu:
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y build-essential cmake ninja-build
+sudo apt-get install -y build-essential cmake ninja-build libcurl4-openssl-dev nlohmann-json3-dev libarchive-dev libxml2-dev
 ```
 
 Kompilacja i testy:
@@ -228,7 +229,7 @@ Mianowniki nie mogą być ujednolicone, ponieważ zmieniłoby to szerokość kan
 
 ## 9. Źródła danych i adaptery backendów
 
-Planowane adaptery C++:
+Zaimplementowane adaptery C++20:
 
 ### NBP
 - tabele A i B — kursy średnie;
@@ -251,6 +252,13 @@ API: https://api.frankfurter.dev/
 - częstotliwość miesięczna, bez sztucznego tworzenia świec dziennych.
 
 Źródło: https://www.worldbank.org/en/research/commodity-markets
+
+### XAUS spot
+- orientacyjne ceny spot XAU i XAG;
+- dokładny czas as_of, status świeżości i jawna semantyka indicative mid-market;
+- dane przeterminowane są oznaczane jako podejrzane.
+
+API: https://xaus.com/api/v1/spot
 
 Każdy adapter normalizuje odpowiedź dostawcy do wspólnego modelu. Dane źródłowe i przeliczone pozostają rozróżnialne. Dane miesięczne nie mogą być prezentowane jako dzienne OHLC.
 

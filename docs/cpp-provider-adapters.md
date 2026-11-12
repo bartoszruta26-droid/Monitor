@@ -1,7 +1,9 @@
 # Adaptery dostawców danych C++20 — Etap 2
 
 ## Status
-Implementacja Etapu 2 w C++20. Adaptery mapują odpowiedzi dostawców na wspólny model market_data.hpp v1. Nie zapisują danych do plików ani bazy — magazyn JSON pozostaje Etapem 3.
+<badge color="success">Etap 2 — ukończony i zweryfikowany w CI</badge>
+
+Implementacja Etapu 2 w C++20. Ostatni przebieg CI dla kodu: https://github.com/bartoszruta26-droid/Monitor/actions/runs/43250128831 (kompilacja oraz 3/3 testy CTest). Testy adapterów są offline; rzeczywiste zapytania sieciowe nie zostały uruchomione w tej sesji. Adaptery mapują odpowiedzi dostawców na wspólny model market_data.hpp v1. Nie zapisują danych do plików ani bazy — magazyn JSON pozostaje Etapem 3.
 
 ## Architektura
 - HttpTransport — interfejs transportu, umożliwia testowanie bez sieci.

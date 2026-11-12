@@ -545,3 +545,18 @@ libcurl, nlohmann-json, libarchive i libxml2; zależności instalowane w workflo
 
 ### Kryteria ukończenia
 Etap 2 można zamknąć dopiero po kompilacji w CI, przejściu testów adapterów i dotychczasowych testów rdzenia oraz kontroli dokumentacji. Rzeczywiste testy sieciowe są osobne i nie są warunkiem testów jednostkowych.
+
+
+### 11.1. Wynik weryfikacji i zamknięcie Etapu 2
+- Wspólny kontrakt adaptera, abstrakcja transportu i produkcyjny transport libcurl są włączone do biblioteki monitor_core.
+- Adapter NBP obsługuje tabele A/B/C oraz złoto PLN/g. A/B są zachowane jako Average; C jako osobne Bid/Ask, z rozdzieleniem tradingDate i effectiveDate.
+- Adapter Frankfurter v2 obsługuje serie historyczne oraz opcjonalne przypięcie dostawcy.
+- Adapter World Bank Pink Sheet odczytuje miesięczny XLSX w C++ (libarchive + libxml2) i zachowuje częstotliwość Monthly.
+- Adapter XAUS obsługuje aktualne orientacyjne notowania spot XAU/XAG, dokładny czas obserwacji oraz kontrolę stanu fresh/stale.
+- HttpClient ogranicza hosty i protokół do HTTPS, rozmiar odpowiedzi, czas żądania, tempo zapytań oraz ponawia błędy przejściowe i 429/wybrane 5xx.
+- Testy korzystają z atrap transportu i wzorcowych odpowiedzi; nie wykonują połączeń sieciowych.
+- Parser XLSX indeksuje elementy archiwum, ogranicza liczbę elementów i rozmiar danych po rozpakowaniu.
+- Commit aktualnej implementacji: 7f8bed02ab27a8255f8c2b4e56c8a27319bc57ce.
+- GitHub Actions: sukces; konfiguracja CMake, kompilacja i 3/3 testy CTest zakończone powodzeniem. [Przebieg CI](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43250128831).
+- Nie wykonano testu pobierania z rzeczywistymi usługami zewnętrznymi w tej sesji. Testy adapterów są deterministyczne i offline.
+- Etap 2 zamknięty. Następny etap to Etap 3 — magazyn JSON, wersjonowanie dokumentów, zapis atomowy, blokady, deduplikacja i kopie bezpieczeństwa.
