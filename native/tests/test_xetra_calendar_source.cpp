@@ -66,6 +66,9 @@ int main() {
     invalid=source();
     invalid.content_sha256=sha256_hex(html);
     throws([&]{(void)adapter.fetch(invalid);},"reject caller-supplied hash");
+    invalid=source();
+    invalid.source_object_id="sha256:"+sha256_hex(html);
+    throws([&]{(void)adapter.fetch(invalid);},"reject caller-supplied source object reference");
     transport.response.status_code=302;
     throws([&]{(void)adapter.fetch(source());},"reject redirects");
     transport.response.status_code=503;
