@@ -248,12 +248,14 @@ void durable_write(const std::filesystem::path& path,std::string_view data) {
     const auto temp=make_temp_path(path);
     const int fd=::open(temp.c_str(),O_WRONLY|O_CREAT|O_EXCL|O_CLOEXEC|O_NOFOLLOW,0600);
     if(fd<0)throw std::runtime_error("Nie można utworzyć pliku tymczasowego: "+std::string(std::strerror(errno)));
+    int open_fd=fd;
     try {
-        write_all(fd,data);
-        if(::fsync(fd)!=0)throw std::runtime_error("Nie można zsynchronizować pliku: "+std::string(std::strerror(errno)));
-        if(::close(fd)!=0)throw std::runtime_error("Nie można zamknąć pliku tymczasowego.");
+        write_all(open_fd,data);
+        if(::fsync(open_fd)!=0)throw std::runtime_error("Nie można zsynchronizować pliku: "+std::string(std::strerror(errno)));
+        if(::close(open_fd)!=0){open_fd=-1;throw std::runtime_error("Nie można zamknąć pliku tymczasowego.");}
+        open_fd=-1;
         if(::rename(temp.c_str(),path.c_str())!=0)throw std::runtime_error("Nie można atomowo podmienić pliku: "+std::string(std::strerror(errno)));
-    } catch(...) {::close(fd);::unlink(temp.c_str());throw;}
+    } catch(...) {if(open_fd>=0)::close(open_fd);::unlink(temp.c_str());throw;}
 }
 void sync_directory(const std::filesystem::path& dir) {
     const int fd=::open(dir.c_str(),O_RDONLY|O_DIRECTORY|O_CLOEXEC);
@@ -316,7 +318,9 @@ MarketDataSnapshot JsonMarketDataRepository::load() const {
 void JsonMarketDataRepository::write_unlocked(const MarketDataSnapshot& input,bool rotate_backup) const {
     MarketDataSnapshot s=input;
     validate_snapshot(s);
+    const bool primary_exists=std::filesystem::exists(file_path_);
     const auto existing=read_file(file_path_,config_.max_document_bytes,true);
+    if(primary_exists&&existing.empty())throw std::runtime_error("Dokument magazynu JSON jest pusty.");
     const auto previous=existing.empty()?MarketDataSnapshot{}:decode_snapshot(json::parse(existing));
     if(previous.revision==std::numeric_limits<std::uint64_t>::max())throw std::overflow_error("Przekroczono licznik rewizji magazynu.");
     if(!existing.empty()&&rotate_backup&&config_.backup_on_write) {

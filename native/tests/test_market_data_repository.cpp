@@ -86,9 +86,15 @@ int main(){
     const auto concurrent_snapshot=concurrent.load();
     require(concurrent_snapshot.instruments.size()==1&&concurrent_snapshot.providers.size()==1,"concurrent writers preserve shared dictionaries");
     require(concurrent_snapshot.observations.size()==4,"concurrent writes do not lose observations");
-    require(concurrent_snapshot.revision==8,"serialized writers produce monotonic revisions");
+    require(concurrent_snapshot.revision==12,"serialized writers produce monotonic revisions");
 
     // Unknown document versions are rejected instead of being guessed or downgraded.
+    const auto empty_file=dir/"empty.json";
+    {std::ofstream out(empty_file,std::ios::binary);}
+    JsonMarketDataRepository empty_repo(empty_file);
+    throws([&]{(void)empty_repo.load();},"empty existing document is corruption, not a new repository");
+    throws([&]{(void)empty_repo.replace(MarketDataSnapshot{});},"replace does not silently overwrite an empty corrupt file");
+
     const auto version_file=dir/"future.json";
     {std::ofstream out(version_file);out<<R"({"document_type":"monitor.market_data","schema_version":99})";}
     JsonMarketDataRepository future(version_file);
