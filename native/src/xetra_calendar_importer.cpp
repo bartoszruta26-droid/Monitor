@@ -344,7 +344,7 @@ VenueSessionNotice parse_xetra_session_notice_text(
     if(market_lines.empty())
         throw std::invalid_argument("Ogłoszenie PDF nie zawiera sekcji rynku Deutsche Börse Xetra.");
     std::string market_section;
-    for(const auto& line:market_lines) market_section+=line+"\\n";
+    for(const auto& line:market_lines) market_section+=line+"\n";
     if(market_section.find("mic: xetr")==std::string::npos &&
        market_section.find("mic xetr")==std::string::npos)
         throw std::invalid_argument("Sekcja ogłoszenia nie potwierdza MIC XETR.");
