@@ -227,3 +227,10 @@ Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na ma
 - Status kompilacji jest oparty na najnowszym zielonym CI dla SHA powyżej.
 - Nie ma otwartego PR ani dodatkowej gałęzi, z której należałoby teraz scalać zmiany.
 
+
+
+## 32. Etap 11 — testy modelu obserwowanych publikacji
+
+- Dodano testy fixture do `monitor-market-data-calendar-tests`: grupowanie wielu obserwacji walutowych z jednej publikacji, rozdzielenie tabeli A i złota, zachowanie rzeczywistego `received_at`, pomijanie rekordu bez `provider_published_on` oraz odrzucenie pustego `provider_id`.
+- Kod produkcyjny i dokumentacja modelu są już zapisane w commitach `7177c44` i `e7d4558`; testy dodano osobnym commitem, aby CI wskazywało jednoznacznie weryfikowany zakres.
+- Status Etapu 11 pozostaje w toku do zielonego CI dla najnowszego SHA.
