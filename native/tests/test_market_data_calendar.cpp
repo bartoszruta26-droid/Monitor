@@ -171,5 +171,58 @@ int main() {
     throws([&] { (void)build_observed_publications({invalid_observed}); },
            "observed publication rejects missing provider identity");
 
+
+    SourceCalendarDocument xetra_source;
+    xetra_source.document_id="deutsche-boerse-xetra-2026";
+    xetra_source.venue="XETRA";
+    xetra_source.version=1;
+    xetra_source.valid_from=parse_date("2026-01-01");
+    xetra_source.valid_to_exclusive=parse_date("2027-01-01");
+    xetra_source.timezone="Europe/Berlin";
+    xetra_source.source_uri="https://www.cashmarket.deutsche-boerse.com/cash-en/trading/trading-calendar-and-trading-hours";
+    xetra_source.attribution="Deutsche Börse Cash Market";
+    const auto xetra=build_xetra_2026_calendar(xetra_source);
+    require(xetra.days.size()==365U,"Xetra source calendar contains every civil date in 2026");
+    const auto xetra_day=[&](const char* date)->const VenueCalendarDay& {
+        const auto it=std::find_if(xetra.days.begin(),xetra.days.end(),[&](const auto& day) {
+            return format_date(day.date)==date;
+        });
+        if(it==xetra.days.end()) throw std::runtime_error("Missing Xetra fixture date");
+        return *it;
+    };
+    require(xetra_day("2026-01-01").status==VenueDayStatus::Closed,
+            "Xetra is closed on New Year's Day");
+    require(xetra_day("2026-04-03").status==VenueDayStatus::Closed&&
+            xetra_day("2026-04-06").status==VenueDayStatus::Closed,
+            "Xetra is closed on Good Friday and Easter Monday");
+    require(xetra_day("2026-05-14").status==VenueDayStatus::Trading&&
+            xetra_day("2026-05-14").product_sessions.size()==2U&&
+            xetra_day("2026-05-14").product_sessions[0].closes_at.hour==20U&&
+            xetra_day("2026-05-14").product_sessions[1].closes_at.hour==22U,
+            "Ascension Day has explicit trading sessions with product-specific closes");
+    require(xetra_day("2026-05-25").status==VenueDayStatus::Trading&&
+            xetra_day("2026-06-04").status==VenueDayStatus::Trading,
+            "Whit Monday and Corpus Christi are trading days on Xetra");
+    require(xetra_day("2026-12-24").status==VenueDayStatus::SettlementOnly&&
+            xetra_day("2026-12-31").status==VenueDayStatus::SettlementOnly,
+            "Christmas Eve and New Year's Eve are settlement-only dates");
+    require(xetra_day("2026-12-30").requires_official_notice,
+            "last trading session notice is required for 30 December");
+    require(xetra.source.license_status==VenueCalendarLicenseStatus::Unknown&&
+            !xetra.source.content_sha256.has_value(),
+            "unverified licence and source bytes are not fabricated");
+    auto bad_source=xetra_source;
+    bad_source.content_sha256="not-a-sha";
+    throws([&]{validate_source_calendar_document(bad_source);},
+           "invalid source SHA-256 is rejected");
+    bad_source=xetra_source;
+    bad_source.venue="FWB";
+    throws([&]{(void)build_xetra_2026_calendar(bad_source);},
+           "Xetra fixture rejects a different venue");
+    bad_source=xetra_source;
+    bad_source.timezone="CET";
+    throws([&]{(void)build_xetra_2026_calendar(bad_source);},
+           "Xetra fixture requires an IANA timezone rather than fixed CET");
+
     std::cout<<"All IANA and NBP publication calendar tests passed.\n";
 }
