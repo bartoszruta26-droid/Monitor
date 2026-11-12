@@ -379,6 +379,16 @@ int main(){
                       effective_cancelled.applied_notice_ids.end(),
                       override_notice.notice_id)==effective_cancelled.applied_notice_ids.end(),
             "cancellation removes the override and restores the unresolved base schedule");
+    auto newer_revision_snapshot=venue_repo.load();
+    auto newer_override=override_notice;
+    newer_override.revision=3U;
+    newer_override.product_sessions={{"xetra_regular",{9,0,0},{14,0,0}}};
+    newer_revision_snapshot.venue_session_notices.push_back(newer_override);
+    const auto effective_newer_revision=resolve_effective_venue_calendar_day(
+        newer_revision_snapshot,"deutsche-boerse-xetra-2026",parse_date("2026-12-30"));
+    require(effective_newer_revision.day.product_sessions.front().closes_at.hour==14U &&
+            !effective_newer_revision.requires_official_notice_unresolved,
+            "cancellation of an older notice revision does not cancel a later replacement revision");
     auto conflicting_snapshot=venue_repo.load();
     conflicting_snapshot.venue_session_notices.erase(
         std::remove_if(conflicting_snapshot.venue_session_notices.begin(),
