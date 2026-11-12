@@ -408,6 +408,13 @@ int main(){
     require(effective_newer_revision.day.product_sessions.front().closes_at.hour==14U &&
             !effective_newer_revision.requires_official_notice_unresolved,
             "cancellation of an older notice revision does not cancel a later replacement revision");
+    auto duplicate_cancellation_snapshot=venue_repo.load();
+    auto duplicate_cancellation=cancellation_notice;
+    duplicate_cancellation.notice_id="xetra-2026-dec30-cancellation-duplicate";
+    duplicate_cancellation_snapshot.venue_session_notices.push_back(duplicate_cancellation);
+    throws([&]{(void)resolve_effective_venue_calendar_day(
+        duplicate_cancellation_snapshot,"deutsche-boerse-xetra-2026",parse_date("2026-12-30"));},
+        "duplicate active cancellations of the same notice revision are rejected");
     auto conflicting_snapshot=venue_repo.load();
     conflicting_snapshot.venue_session_notices.erase(
         std::remove_if(conflicting_snapshot.venue_session_notices.begin(),
