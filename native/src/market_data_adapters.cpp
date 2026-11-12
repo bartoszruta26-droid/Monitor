@@ -43,7 +43,6 @@ CivilDate date_from_timestamp(UtcTimestamp t) {
                      static_cast<unsigned>(ymd.day())};
 }
 std::string date_string(const CivilDate& d) { return format_date(d); }
-std::string timestamp_string(const CivilDate& d) { return date_string(d) + "T00:00:00Z"; }
 void validate_range(const CivilDate& start, const CivilDate& end) {
     if (!is_valid_date(start) || !is_valid_date(end) || at_midnight(start).unix_seconds > at_midnight(end).unix_seconds)
         throw std::invalid_argument("Nieprawidłowy zakres dat adaptera.");
@@ -181,28 +180,30 @@ std::string month_date(const std::string& period) {
 }
 struct ZipArchive {
     archive* handle{archive_read_new()};
+    std::map<std::string,std::string> entries;
     explicit ZipArchive(const std::string& bytes) {
         archive_read_support_format_zip(handle);
         archive_read_support_filter_all(handle);
         if(archive_read_open_memory(handle,bytes.data(),bytes.size())!=ARCHIVE_OK)
             throw std::runtime_error("Nie można otworzyć skoroszytu XLSX jako ZIP.");
-    }
-    ~ZipArchive(){if(handle) archive_read_free(handle);}
-    std::string entry(const std::string& wanted) {
         archive_entry* item=nullptr;
         while(archive_read_next_header(handle,&item)==ARCHIVE_OK) {
             const char* name=archive_entry_pathname(item);
-            if(name&&wanted==name) {
-                std::string data;
-                std::array<char,16384> buffer{};
-                la_ssize_t count{};
-                while((count=archive_read_data(handle,buffer.data(),buffer.size()))>0) data.append(buffer.data(),static_cast<std::size_t>(count));
-                if(count<0) throw std::runtime_error("Błąd odczytu pliku XLSX.");
-                return data;
-            }
-            archive_read_data_skip(handle);
+            if(!name) { archive_read_data_skip(handle); continue; }
+            std::string data;
+            std::array<char,16384> buffer{};
+            la_ssize_t count{};
+            while((count=archive_read_data(handle,buffer.data(),buffer.size()))>0)
+                data.append(buffer.data(),static_cast<std::size_t>(count));
+            if(count<0) throw std::runtime_error("Błąd odczytu pliku XLSX.");
+            entries.emplace(name,std::move(data));
         }
-        throw std::runtime_error("Brak elementu skoroszytu XLSX: "+wanted);
+    }
+    ~ZipArchive(){if(handle) archive_read_free(handle);}
+    std::string entry(const std::string& wanted) const {
+        const auto it=entries.find(wanted);
+        if(it==entries.end()) throw std::runtime_error("Brak elementu skoroszytu XLSX: "+wanted);
+        return it->second;
     }
 };
 xmlDoc* parse_xml(const std::string& data) {
@@ -390,8 +391,13 @@ HttpResponse CurlHttpTransport::get(const HttpRequest& request) {
     curl_easy_setopt(curl,CURLOPT_URL,request.url.c_str());
     curl_easy_setopt(curl,CURLOPT_HTTPGET,1L);
     curl_easy_setopt(curl,CURLOPT_FOLLOWLOCATION,0L);
+#if LIBCURL_VERSION_NUM >= 0x075500
+    curl_easy_setopt(curl,CURLOPT_PROTOCOLS_STR,"https");
+    curl_easy_setopt(curl,CURLOPT_REDIR_PROTOCOLS_STR,"https");
+#else
     curl_easy_setopt(curl,CURLOPT_PROTOCOLS,CURLPROTO_HTTPS);
     curl_easy_setopt(curl,CURLOPT_REDIR_PROTOCOLS,CURLPROTO_HTTPS);
+#endif
     curl_easy_setopt(curl,CURLOPT_CONNECTTIMEOUT_MS,static_cast<long>(std::min<std::int64_t>(request.timeout.count(),10000)));
     curl_easy_setopt(curl,CURLOPT_TIMEOUT_MS,static_cast<long>(request.timeout.count()));
     curl_easy_setopt(curl,CURLOPT_SSL_VERIFYPEER,1L);
