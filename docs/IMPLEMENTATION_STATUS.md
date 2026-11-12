@@ -341,3 +341,16 @@ Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na ma
 - **CI:** w trakcie weryfikacji nowego SHA; nie oznaczać etapu jako zaliczonego do czasu zakończenia Configure/Build/Test.
 - **Ograniczenia:** nie przeprowadzono pobrania żywej strony; fixture HTML jest syntetyczny. Nie potwierdzono licencji źródła. Obecny importer obsługuje tylko rok 2026, a komunikat o godzinach 30 grudnia wymaga osobnego źródła.
 - Następne prace: weryfikacja najnowszego CI i poprawa ewentualnych regresji; rzeczywista walidacja struktury oficjalnej strony w kontrolowanym teście integracyjnym; zachowanie dokładnych bajtów HTML w archiwum źródeł; polityka odświeżania i deduplikacji wersji według SHA-256.
+
+
+## 41. Etap 13 — archiwizacja surowego HTML i deduplikacja SHA-256
+
+- Weryfikacja poprzedniego etapu 12: HEAD `13fb0e5c233182b774eb3f5fe9b2687dc9aa7fe8`, [CI 43314908943](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43314908943) — Configure, Build i Test: success.
+- Commit `87274f12821bb0c65aee3697593cb4d7fd406e8b`: importer zachowuje dokładne bajty HTML w katalogu obok repozytorium JSON: `<plik>.sources/<document_id>/<version>-<sha256>.html`.
+- Archiwizacja jest atomowa w obrębie katalogu (plik tymczasowy + rename); plik jest zapisywany przed publikacją metadanych kalendarza. Awaria może pozostawić osierocony obiekt archiwum, ale nie tworzy metadanych wskazujących na brakujące bajty.
+- Importer weryfikuje ponownie bajty, gdy ścieżka archiwum już istnieje. Identyczne `document_id + SHA-256` nie publikuje kolejnej wersji kalendarza; zmiana choćby jednego bajtu tworzy nowy skrót i może dopisać kolejną wersję.
+- Commit `1f3dfbd8313730e32f8946893f4641ab18fb26a2`: testy sprawdzają bitową zgodność archiwum z fixture, brak commitowania błędnego HTML, deduplikację identycznej treści przy innym numerze wersji oraz utworzenie wersji 2 po zmianie bajtów.
+- Commit `7c7e93f45a0873da25ad49a0dabe2920df56b796`: opisano strukturę archiwum i zasady deduplikacji w `docs/market-calendar-sources.md`.
+- **CI dla kodu archiwizacji, testów i dokumentacji:** oczekuje na zakończenie; etap pozostaje weryfikowany.
+- Ograniczenia: testy są offline; nie pobierano na żywo oficjalnej strony. Status licencji pozostaje Unknown. Obecny parser nadal dotyczy wyłącznie 2026.
+- Następny etap po zielonym CI: rozdzielenie identyfikacji dokumentu źródłowego od wydania kalendarza, rejestrowanie metadanych archiwum i kontrola integralności plików podczas ponownego uruchomienia; następnie rozszerzenie parsera na kolejne lata oraz osobny importer okólników.
