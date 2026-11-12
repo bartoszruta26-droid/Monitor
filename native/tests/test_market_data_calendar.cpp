@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cstdlib>
 #include <iostream>
+#include <fstream>
+#include <iterator>
 #include <stdexcept>
 
 namespace {
@@ -190,6 +192,50 @@ int main() {
     xetra_source.source_uri="https://www.cashmarket.deutsche-boerse.com/cash-en/trading/trading-calendar-and-trading-hours";
     xetra_source.attribution="Deutsche Börse Cash Market";
     const auto xetra=build_xetra_2026_calendar(xetra_source);
+
+    std::ifstream fixture_file(std::string(MONITOR_TEST_SOURCE_DIR) +
+        "/fixtures/xetra_2026_calendar.html", std::ios::binary);
+    require(fixture_file.good(), "offline Xetra HTML fixture is available");
+    const std::string fixture_html((std::istreambuf_iterator<char>(fixture_file)),
+                                   std::istreambuf_iterator<char>());
+    auto imported_source=xetra_source;
+    imported_source.content_sha256=sha256_hex(fixture_html);
+    const auto imported=parse_xetra_html_calendar(fixture_html, imported_source);
+    require(imported.days.size()==365U &&
+            imported.source.content_sha256==sha256_hex(fixture_html),
+            "HTML importer preserves a 365-day calendar and raw-byte SHA-256");
+    const auto imported_day=[&](const char* date)->const VenueCalendarDay& {
+        const auto it=std::find_if(imported.days.begin(),imported.days.end(),[&](const auto& day) {
+            return format_date(day.date)==date;
+        });
+        if(it==imported.days.end()) throw std::runtime_error("Missing imported Xetra date");
+        return *it;
+    };
+    require(imported_day("2026-01-01").status==VenueDayStatus::Closed &&
+            imported_day("2026-04-03").status==VenueDayStatus::Closed &&
+            imported_day("2026-04-06").status==VenueDayStatus::Closed,
+            "HTML semantic holiday rows determine exchange closures");
+    require(imported_day("2026-05-14").status==VenueDayStatus::Trading &&
+            imported_day("2026-05-14").product_sessions.size()==2U &&
+            imported_day("2026-06-04").product_sessions[1].closes_at.hour==22U,
+            "day-first holiday notices determine special trading sessions");
+    require(imported_day("2026-12-24").status==VenueDayStatus::SettlementOnly &&
+            imported_day("2026-12-31").status==VenueDayStatus::SettlementOnly,
+            "HTML importer distinguishes settlement-only days");
+    require(imported_day("2026-12-30").requires_official_notice,
+            "HTML importer retains year-end circular requirement");
+    auto incomplete_html=fixture_html;
+    const auto notice_at=incomplete_html.find("Corpus Christi (4 June 2026)");
+    require(notice_at!=std::string::npos,"fixture contains Corpus Christi notice");
+    incomplete_html.erase(notice_at, std::string("Corpus Christi (4 June 2026)").size());
+    throws([&]{(void)parse_xetra_html_calendar(incomplete_html,xetra_source);},
+           "incomplete special-holiday notice is rejected");
+    auto changed_html=fixture_html;
+    const auto year_at=changed_html.find("2026</th>");
+    require(year_at!=std::string::npos,"fixture contains year header");
+    changed_html.replace(year_at,4,"2025");
+    throws([&]{(void)parse_xetra_html_calendar(changed_html,xetra_source);},
+           "unknown or missing year column is rejected");
     require(xetra.days.size()==365U,"Xetra source calendar contains every civil date in 2026");
     const auto xetra_day=[&](const char* date)->const VenueCalendarDay& {
         const auto it=std::find_if(xetra.days.begin(),xetra.days.end(),[&](const auto& day) {
