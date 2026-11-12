@@ -49,6 +49,12 @@
 - CTest: 7/7; 100% testów zaliczonych; czas testów 0,09 s.
 - Commit zawiera dokumentację i rejestr, nie zmienia logiki aplikacji.
 
+## Dziennik weryfikacji etapu 9
+
+- Commit `68377875` — CI nieudany na etapie kompilacji: zduplikowana definicja `MarketSessionCalendar` w nagłówku regresji. Błąd został zidentyfikowany w logach GitHub Actions.
+- Commit `201ede21` — poprawiono definicję i dodano pochodzenie regresji, ale CI nadal wykrył tę samą definicję pozostawioną w nagłówku.
+- Commit `9b122aec3a26eff0bc7b516118cfb722770ae723` — usunięto duplikat; CI dla tego SHA oczekuje na wynik.
+
 ## Ostatnia aktualizacja — etap 9
 
 - Commit: `68377875d9d8a60b4bfbbf8cabfe08b989af541d`.

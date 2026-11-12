@@ -196,6 +196,8 @@ int main() {
     // Harmonogram sesji pomija weekendy i święto 2024-01-09.
     MarketSessionCalendar session_calendar;
     session_calendar.calendar_id = "XAU-UTC-weekday-fixture-v1";
+    session_calendar.version = 4U;
+    session_calendar.timezone = "Europe/Warsaw";
     session_calendar.instrument_id = "XAU";
     session_calendar.provider_id = "fixture";
     session_calendar.source_frequency = Frequency::Daily;
@@ -220,6 +222,9 @@ int main() {
         session_data, session_calendar, Frequency::Weekly, 2U, WidthMethod::SampleSd);
     require(session_windows.size() == 2U,
             "weekendy i święto wyłączone z harmonogramu nie przerywają serii");
+    require(session_windows[0].calendar_id == session_calendar.calendar_id &&
+            session_windows[0].calendar_version == session_calendar.version,
+            "wynik regresji zachowuje identyfikator i wersję kalendarza");
     require(session_windows[0].source_observation_ids.size() == 9U,
             "pochodzenie zawiera wszystkie sesje dwóch tygodni");
 

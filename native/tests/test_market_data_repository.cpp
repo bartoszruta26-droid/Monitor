@@ -119,6 +119,15 @@ int main(){
     invalid_calendar.provider_id="missing-provider";
     throws([&]{(void)batch_repo.upsert_session_calendar(invalid_calendar);},"odrzucany jest nieznany dostawca");
     require(batch_repo.load().revision==3,"błędne kalendarze nie zmieniają rewizji");
+    auto attempted_delete=batch_repo.load();
+    attempted_delete.session_calendars.pop_back();
+    throws([&]{(void)batch_repo.replace(attempted_delete);},
+           "replace nie może usuwać opublikowanej wersji kalendarza");
+    auto attempted_edit=batch_repo.load();
+    attempted_edit.session_calendars.front().timezone="UTC";
+    throws([&]{(void)batch_repo.replace(attempted_edit);},
+           "replace nie może modyfikować opublikowanej wersji kalendarza");
+    require(batch_repo.load().revision==3,"replace konflikt nie zmienia rewizji");
     MarketDataBatch invalid_batch;
     auto orphan=observation(4.5,4000);
     orphan.provider_id="missing-provider";
