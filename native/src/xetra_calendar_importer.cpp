@@ -90,10 +90,12 @@ const std::regex& year_date_pattern() {
     return pattern;
 }
 
-CivilDate date_from_cell(const std::string& text, int expected_year) {
-    std::smatch match;
-    if(!std::regex_search(text,match,year_date_pattern()))
-        throw std::invalid_argument("Brak jednoznacznej daty z rokiem w komórce tabeli Xetra.");
+CivilDate date_from_cell(const std::string& text,int expected_year) {
+    std::sregex_iterator it(text.begin(),text.end(),year_date_pattern()),end;
+    if(it==end) throw std::invalid_argument("Brak jednoznacznej daty z rokiem w komórce tabeli Xetra.");
+    const auto match=*it;
+    ++it;
+    if(it!=end) throw std::invalid_argument("Komórka tabeli Xetra zawiera więcej niż jedną datę.");
     return parse_year_date(match,expected_year);
 }
 
@@ -146,8 +148,12 @@ VenueSessionCalendar parse_xetra_html_calendar(
         std::size_t year_column = static_cast<std::size_t>(-1);
         for (xmlNode* row : rows) {
             const auto cells = direct_cells(row);
-            for (std::size_t i = 0; i < cells.size(); ++i) {
-                if(normalized(node_text(cells[i]))==std::to_string(calendar_year)) year_column=i;
+            for(std::size_t i=0;i<cells.size();++i) {
+                if(normalized(node_text(cells[i]))==std::to_string(calendar_year)) {
+                    if(year_column!=static_cast<std::size_t>(-1) && year_column!=i)
+                        throw std::invalid_argument("Tabela Xetra zawiera niejednoznaczną kolumnę roku.");
+                    year_column=i;
+                }
             }
             if (year_column == static_cast<std::size_t>(-1)) continue;
             found_year_table=true;
