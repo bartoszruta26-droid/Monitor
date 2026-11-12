@@ -2,13 +2,14 @@
 
 **Repozytorium:** `bartoszruta26-droid/Monitor`  
 **Gałąź:** `main`  
-**Ostatnia weryfikacja:** 2026-11-12  
+**Ostatnia weryfikacja:** 2026-11-12 22:18 Europe/Warsaw  
 **Zasada prowadzenia:** status etapu zmienia się na „zakończony” dopiero po sprawdzeniu kodu, testów i CI dla konkretnego SHA. Ten plik jest bieżącym rejestrem wykonania; szczegóły techniczne pozostają w dokumentach etapów.
 
 ## Stan repozytorium przy audycie
 
-- HEAD `main`: `95c53dc2a6a8519119480836d45eab189e69b801` (pierwsza implementacja reguł NBP; poprawka testu oczekuje na CI).
-- Ostatni workflow: [CI 43302839736](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43302839736), kompilacja nieudana w pliku testowym z powodu braku `#include <algorithm>`; moduł kalendarza skompilował się poprawnie, CTest pominięty.
+- HEAD `main`: `5ee3b1c22733ba4b7e589e5c8daa8f439bdb5ce3`.
+- Najnowszy workflow: [CI 43304376496](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43304376496), zakończony sukcesem; konfiguracja, kompilacja i CTest przeszły. Job `native-linux`: wszystkie kroki zakończone powodzeniem.
+- Poprzedni problem kompilacji testu kalendarza (brak `#include <algorithm>` w starszym SHA) został naprawiony; nie jest stanem bieżącym.
 - Poprzednie przebiegi obejmują jeden nieudany CI dla wcześniejszego SHA `aa3b7eb`, po którym późniejszy commit przeszedł poprawnie. Nie traktować błędu jako aktualnego, ale zachować go w historii.
 - Gałęzie: wyłącznie `main`.
 - Otwarte pull requesty: 0.
@@ -182,3 +183,47 @@ Przy każdym kolejnym poleceniu kontynuacji należy najpierw odczytać ten plik 
 - CI: [43304025796](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43304025796) — konfiguracja i kompilacja sukces; CTest **8/8, 100%** (0,13 s).
 - Testy potwierdzają automatyczne wyłączenie 11 listopada 2026 r. oraz Wigilii 24 grudnia 2025 r. i przesunięcie tabeli B na poprzedni dzień roboczy.
 - Reguły NBP A/B/C i ustawowe święta RP są zaimplementowane w module kalendarza. Etap 11 pozostaje w toku do dodania kalendarza faktycznie zaobserwowanych publikacji i importera oficjalnego kalendarza giełdowego.
+
+
+## 30. Audyt kontynuacyjny i stan na 2026-11-12 22:18 (Europe/Warsaw)
+
+### Potwierdzony stan GitHub
+- Repozytorium: `bartoszruta26-droid/Monitor`, gałąź docelowa `main`.
+- HEAD: `5ee3b1c22733ba4b7e589e5c8daa8f439bdb5ce3`.
+- Gałęzie: wyłącznie `main`; otwarte PR: 0; otwarte Issues: 0.
+- Najnowszy GitHub Actions: [43304376496](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43304376496) — sukces. Kroki Configure, Build i Test zakończone powodzeniem; job `native-linux` zakończony sukcesem.
+- Testy adapterów pozostają deterministycznymi testami offline. Zielone CI potwierdza kompilację i CTest, nie rzeczywistą dostępność zewnętrznych usług ani zgodność licencyjną feedów.
+
+### Stan funkcji potwierdzony przeglądem kodu
+- Model danych C++20: `native/include/monitor/market_data.hpp`.
+- Adaptery dostawców NBP A/B/C i złota, Frankfurter v2, World Bank Pink Sheet i XAUS: `native/src/market_data_adapters.cpp` i testy adapterów.
+- Magazyn JSON: `native/src/market_data_repository.cpp`; dokumentacja opisuje wersjonowanie, atomowy zapis, flock, kopie i historię korekt.
+- Agregacja próbkowanego OHLC: `native/src/market_data_aggregation.cpp`; nie zwiększa częstotliwości i jawnie zwraca luki.
+- Model wykresów: `native/src/market_data_chart.cpp`; to kontrakt danych, nie renderer GUI.
+- Regresja krocząca HTF, osobne metody n, n-1 i n-2 oraz tryb kalendarza sesyjnego: `native/src/market_data_regression.cpp`.
+- Kalendarz sesyjny IANA/DST i okna publikacji NBP ze świętami ustawowymi RP: `native/src/market_data_calendar.cpp`.
+- CMake zawiera testy dla rdzenia, modelu danych, adapterów, magazynu, agregacji, wykresów, regresji i kalendarzy.
+- Serwer API, autoryzacja, WebSocket, klienci Linux GUI/WebUI/TUI/Android i MariaDB pozostają niezaimplementowane. Pine Script nadal wymaga niezależnego potwierdzenia w TradingView Pine Editor.
+
+### Priorytet następnej pracy — domknięcie Etapu 11
+Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na małe, testowalne zmiany:
+1. Wprowadzić odrębny model kalendarza faktycznie zaobserwowanych publikacji NBP, z rozróżnieniem daty notowania, daty publikacji i czasu odpowiedzi. Nie konstruować sztucznej godziny publikacji z przedziału A/B/C.
+2. Dodać import danych kalendarza NBP z rzeczywistych odpowiedzi API z kontrolą 404 i limitu 93 dni, zachowując surową datę źródłową i pochodzenie.
+3. Dodać wersjonowany rejestr źródłowego dokumentu kalendarza giełdowego (najpierw Xetra): URL, data publikacji, zakres obowiązywania, strefa IANA, skrót SHA-256, licencja/atrybucja.
+4. Dodać importer Xetra dla jawnie wybranego oficjalnego formatu i utrzymywać skrócone sesje, dni handlowe w święta, zamknięcia i wyjątki jako osobne reguły.
+5. Zachować istniejący JSON schema v1 przez kompatybilny odczyt i jawną migrację przy zmianie formatu; opublikowane wersje kalendarzy pozostają niezmienne.
+6. Rozszerzyć testy o fixture offline: 404, brak danych, korekty źródła, zmiana wersji, nieznany format, skrócona sesja, handel w święto, zamknięcie oraz granice DST.
+7. Po implementacji uruchomić pełne CI i dopiero wtedy zmienić status Etapu 11.
+
+### Kontrole architektoniczne do kolejnego etapu
+- Dodać test przepływu adapter → `upsert_batch` JSON → ponowny `load` → agregacja → wykres/HTF, z zachowaniem identyfikatorów źródła i jakości.
+- Dodać test odporności na błędne lub częściowe rekordy: brak instrumentu/dostawcy, powtórzone klucze, niechronologiczne dane, wartości niefinitywne i błędne znaczniki czasu.
+- Sprawdzić, czy testy równoległego zapisu obejmują również konflikt równoczesnej korekty tego samego klucza notowania, a nie tylko różne notowania.
+- Dodać testy degradacji i odzyskiwania po awarii zapisu atomowego (błąd zapisu pliku tymczasowego, rename, backup i restore).
+- Zachować rozróżnienie świecy źródłowej OHLC od OHLC utworzonego z próbek punktowych.
+
+### Ograniczenia weryfikacji
+- Kod i historię sprawdzono przez GitHub; w tej sesji nie uruchomiono lokalnego kompilatora ani nie wykonano pobierania z rzeczywistych API NBP/Xetra.
+- Status kompilacji jest oparty na najnowszym zielonym CI dla SHA powyżej.
+- Nie ma otwartego PR ani dodatkowej gałęzi, z której należałoby teraz scalać zmiany.
+
