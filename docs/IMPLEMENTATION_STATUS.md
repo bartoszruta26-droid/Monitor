@@ -365,6 +365,7 @@ Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na ma
 - Rozszerzono metadane dokumentu źródłowego o względną ścieżkę archiwum, długość bajtową i typ treści. Pola są opcjonalne, aby zachować odczyt starszych dokumentów JSON schema v1.
 - Importer zapisuje metadane po trwałym utworzeniu archiwum i przed publikacją kalendarza.
 - Odczyt repozytorium weryfikuje manifest: ścieżkę względną, brak komponentów traversal i symlinków, zwykły plik, długość oraz SHA-256. Brakujące lub uszkodzone archiwum blokuje odczyt migawki.
-- Testy negatywne dla braku, skrócenia, podmiany, traversal i symlinków oraz test migracji starszego JSON są wymagane w tej iteracji; etap nie jest jeszcze zakończony.
+- Commit `43e1a0718f750def89cbb2dcba689b747816a68b`: dodano testy manifestu długości/MIME/ścieżki, uszkodzenia i braku archiwum, symlinku, traversal oraz odzyskania poprawnego JSON po negatywnych próbach. Zgodność starych dokumentów v1 bez pól manifestu pozostaje obsługiwana warunkowo w dekoderze; osobny fixture migracyjny wymaga jeszcze jawnego testu.
+- CI dla finalnego SHA z testami pozostaje w toku; etap nie jest jeszcze zakończony.
 - Ograniczenie: klucz `document_id + version` nadal wiąże dokument źródłowy z wersją interpretacji kalendarza; osobne wersjonowanie źródła i kalendarza pozostaje dalszą zmianą modelu.
 - Status: implementacja w toku; oczekuje na testy i CI dla nowego SHA.
