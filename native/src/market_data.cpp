@@ -24,7 +24,9 @@ bool valid_id(std::string_view s) noexcept {
  return true;
 }
 bool valid_currency(std::string_view s) noexcept {
- if(s.size()!=3)return false;for(char c:s)if(c<'A'||c>'Z')return false;return true;
+ if(s.size()!=3)return false;
+ for(char c:s)if(c<'A'||c>'Z')return false;
+ return true;
 }
 bool https(std::string_view s) noexcept{return s.size()>8&&s.substr(0,8)=="https://";}
 bool mass(Unit u) noexcept{return u==Unit::Gram||u==Unit::Kilogram||u==Unit::TroyOunce;}
@@ -43,12 +45,14 @@ bool is_valid_date(const CivilDate& d) noexcept {
 CivilDate parse_date(const std::string& s) {
  if(s.size()!=10||s[4]!='-'||s[7]!='-')throw std::invalid_argument("Data musi mieć format YYYY-MM-DD.");
  CivilDate d{parse_int(std::string_view{s}.substr(0,4),"rok"),parse_uint(std::string_view{s}.substr(5,2),"miesiąc"),parse_uint(std::string_view{s}.substr(8,2),"dzień")};
- if(!is_valid_date(d))throw std::invalid_argument("Niepoprawna data kalendarzowa.");return d;
+ if(!is_valid_date(d))throw std::invalid_argument("Niepoprawna data kalendarzowa.");
+ return d;
 }
 std::string format_date(const CivilDate& d) {
  if(!is_valid_date(d))throw std::invalid_argument("Niepoprawna data.");
  std::array<char,11>b{};const int n=std::snprintf(b.data(),b.size(),"%04d-%02u-%02u",d.year,d.month,d.day);
- if(n!=10)throw std::runtime_error("Błąd formatowania daty.");return b.data();
+ if(n!=10)throw std::runtime_error("Błąd formatowania daty.");
+ return b.data();
 }
 UtcTimestamp parse_utc_timestamp(const std::string& s) {
  if(s.size()<20||s[10]!='T'||s[13]!=':'||s[16]!=':')throw std::invalid_argument("Wymagany znacznik ISO-8601 ze strefą.");
@@ -64,8 +68,8 @@ UtcTimestamp parse_utc_timestamp(const std::string& s) {
   if(oh>14U||om>59U||(oh==14U&&om!=0U))throw std::invalid_argument("Przesunięcie UTC poza zakresem.");
   const int mag=static_cast<int>(oh*3600U+om*60U);offset=s[p]=='+'?mag:-mag;
  }else throw std::invalid_argument("Znacznik czasu wymaga końcówki Z lub ±HH:MM.");
- using namespace std::chrono;const sys_days day{year{d.year}/month{d.month}/day{d.day}};
- const auto count=duration_cast<seconds>(day.time_since_epoch()).count()+static_cast<std::int64_t>(h*3600U+m*60U+sec)-static_cast<std::int64_t>(offset);
+ using namespace std::chrono;const sys_days day_point{year{d.year}/month{d.month}/std::chrono::day{d.day}};
+ const auto count=duration_cast<seconds>(day_point.time_since_epoch()).count()+static_cast<std::int64_t>(h*3600U+m*60U+sec)-static_cast<std::int64_t>(offset);
  return UtcTimestamp{count};
 }
 std::string format_utc_timestamp(UtcTimestamp t) {
@@ -74,7 +78,8 @@ std::string format_utc_timestamp(UtcTimestamp t) {
  const int n=std::snprintf(b.data(),b.size(),"%04d-%02u-%02uT%02lld:%02lld:%02lldZ",
   static_cast<int>(d.year()),static_cast<unsigned>(d.month()),static_cast<unsigned>(d.day()),
   static_cast<long long>(tod.hours().count()),static_cast<long long>(tod.minutes().count()),static_cast<long long>(tod.seconds().count()));
- if(n!=20)throw std::runtime_error("Błąd formatowania UTC.");return b.data();
+ if(n!=20)throw std::runtime_error("Błąd formatowania UTC.");
+ return b.data();
 }
 void validate_instrument(const Instrument& x) {
  if(!valid_id(x.id)||!valid_id(x.symbol)||x.name.empty())throw std::invalid_argument("Niepoprawny identyfikator, symbol lub nazwa instrumentu.");
@@ -112,7 +117,8 @@ void validate_series_metadata(const SeriesMetadata& x) {
   throw std::invalid_argument("Niepełny szereg wymaga brakujących obserwacji.");
 }
 double convert_quantity(double value,Unit from,Unit to) {
- if(!std::isfinite(value))throw std::invalid_argument("Ilość musi być skończona.");if(from==to)return value;
+ if(!std::isfinite(value))throw std::invalid_argument("Ilość musi być skończona.");
+ if(from==to)return value;
  if(!mass(from)||!mass(to))throw std::invalid_argument("Brak jawnej reguły konwersji tych jednostek.");
  const long double g=grams(value,from);long double result{};
  if(to==Unit::Gram)result=g;else if(to==Unit::Kilogram)result=g/1000.0L;else result=g/31.1034768L;
