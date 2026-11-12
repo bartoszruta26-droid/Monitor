@@ -133,6 +133,7 @@ struct VenueSessionNotice {
     CivilDate effective_date;
     std::string source_object_id;
     std::string source_uri;
+    std::string parser_version{"manual-v1"};
     std::optional<UtcTimestamp> retrieved_at;
     std::string attribution;
     VenueCalendarLicenseStatus license_status{VenueCalendarLicenseStatus::Unknown};
