@@ -3,6 +3,7 @@
 #include "monitor/market_data.hpp"
 
 #include <string_view>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -99,6 +100,27 @@ struct VenueSessionCalendar {
     std::string parser_version;
     SourceCalendarDocument source;
     std::vector<VenueCalendarDay> days;
+};
+
+enum class VenueSessionNoticeKind { Informational, SessionOverride, Cancellation };
+
+// A separately versioned official notice. It never mutates the base calendar.
+struct VenueSessionNotice {
+    std::string notice_id;
+    std::uint32_t revision{1};
+    std::string calendar_id;
+    std::string venue;
+    CivilDate effective_date;
+    std::string source_object_id;
+    std::string source_uri;
+    std::optional<UtcTimestamp> retrieved_at;
+    std::string attribution;
+    VenueCalendarLicenseStatus license_status{VenueCalendarLicenseStatus::Unknown};
+    VenueSessionNoticeKind kind{VenueSessionNoticeKind::Informational};
+    std::optional<VenueDayStatus> day_status;
+    std::vector<VenueProductSession> product_sessions;
+    std::string cancels_notice_id;
+    std::uint32_t cancels_revision{};
 };
 
 // Computes lowercase SHA-256 over the exact byte sequence supplied by the caller.
