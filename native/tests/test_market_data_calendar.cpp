@@ -172,6 +172,14 @@ int main() {
            "observed publication rejects missing provider identity");
 
 
+    require(sha256_hex("")=="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "SHA-256 matches the standard empty-input test vector");
+    require(sha256_hex("abc")=="ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+            "SHA-256 matches the standard abc test vector");
+    require(sha256_hex(std::string(1000,'a'))==
+            "41edece42d63e8d9bf515a9ba6932e1c20cbc9f5a5d134645adb5db1b9737ea3",
+            "SHA-256 handles multi-block input");
+
     SourceCalendarDocument xetra_source;
     xetra_source.document_id="deutsche-boerse-xetra-2026";
     xetra_source.venue="XETRA";
