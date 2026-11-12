@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <fstream>
 #include <limits>
+#include <iterator>
 #include <map>
 #include <set>
 #include <stdexcept>
