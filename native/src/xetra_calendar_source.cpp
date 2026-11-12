@@ -8,6 +8,7 @@
 #include <chrono>
 #include <cctype>
 #include <cstring>
+#include <cstdlib>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
