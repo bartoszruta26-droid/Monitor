@@ -1,3 +1,5 @@
+> **Status wdrożenia (audyt 2026-11-12):** ten dokument opisuje funkcjonalność historycznego prototypu Python w katalogu `backend/`, a nie aktywne adaptery C++20. Endpointy `/providers/*` są trasami FastAPI i nie są budowane przez `native/CMakeLists.txt` ani uruchamiane przez workflow GitHub Actions. Magazyn prototypu używa SQLite domyślnie i opcjonalnie PostgreSQL; **nie jest to docelowy magazyn JSON ani MariaDB**. Importy i tabele opisane poniżej należy traktować jako prototyp referencyjny, nie jako ukończony etap aktywnej aplikacji. Nową implementację należy przenieść do C++20 po zatwierdzeniu wspólnego modelu danych.
+
 # Integracja źródeł NBP, Frankfurter i World Bank Pink Sheet (0.1.10)
 
 ## NBP
