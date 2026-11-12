@@ -43,7 +43,8 @@ bool same_notice_payload(const VenueSessionNotice& a,const VenueSessionNotice& b
        a.source_object_id!=b.source_object_id || a.source_uri!=b.source_uri ||
        a.attribution!=b.attribution || a.license_status!=b.license_status || a.kind!=b.kind ||
        a.day_status!=b.day_status || a.cancels_notice_id!=b.cancels_notice_id ||
-       a.cancels_revision!=b.cancels_revision || a.product_sessions.size()!=b.product_sessions.size())
+       a.cancels_revision!=b.cancels_revision || a.product_sessions.size()!=b.product_sessions.size() ||
+       a.phase_events.size()!=b.phase_events.size())
         return false;
     for(std::size_t i=0;i<a.product_sessions.size();++i) {
         const auto& x=a.product_sessions[i];
@@ -52,6 +53,13 @@ bool same_notice_payload(const VenueSessionNotice& a,const VenueSessionNotice& b
            x.opens_at.hour!=y.opens_at.hour || x.opens_at.minute!=y.opens_at.minute ||
            x.opens_at.second!=y.opens_at.second || x.closes_at.hour!=y.closes_at.hour ||
            x.closes_at.minute!=y.closes_at.minute || x.closes_at.second!=y.closes_at.second)
+            return false;
+    }
+    for(std::size_t i=0;i<a.phase_events.size();++i) {
+        const auto& x=a.phase_events[i];
+        const auto& y=b.phase_events[i];
+        if(x.kind!=y.kind || x.at.hour!=y.at.hour || x.at.minute!=y.at.minute ||
+           x.at.second!=y.at.second || x.scope!=y.scope)
             return false;
     }
     return true;
