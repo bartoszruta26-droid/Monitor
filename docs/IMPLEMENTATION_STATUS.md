@@ -611,7 +611,21 @@ Po zielonym CI 17B przejść do 17C: wyliczanie efektywnego dnia kalendarza prze
 - Dodano test odrzucania dwóch aktywnych anulowań wskazujących tę samą rewizję.
 - Zestaw regresji obejmuje już także: informacyjny komunikat bez zmiany godzin, jawne nadpisanie, przywrócenie bazowego harmonogramu po anulowaniu, konflikt dwóch nadpisań, nierozstrzygnięte daty i referencje obiektów źródłowych.
 - Commit testów: `8bec0c0eab653bdfeeb40386b0774ee99b9014e9`.
-- CI dla najnowszego testu jest uruchomiony; Etap 17D pozostaje otwarty do zielonego przebiegu i ewentualnych poprawek.
+- CI [43325240256](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43325240256) dla SHA `8bec0c0eab653bdfeeb40386b0774ee99b9014e9` — Configure/Build/Test success; testy konfliktów i anulowań przeszły.
 
 ### Kryterium zamknięcia Etapu 17
 Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulowanie komunikatów oraz raportowanie nierozstrzygniętych dni. Nie wykonywano pobierania rzeczywistych komunikatów na żywo i nie zatwierdzono godzin skróconej sesji 30 grudnia.
+
+## 57. Etap 17D zamknięty — wynik Etapu 17
+
+- Etap 17D: zakończony; testy regresji komunikatów, anulowań i konfliktów przeszły w CI [43325240256](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43325240256).
+- CI dokumentacji i trackera [43325289179](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43325289179) — success.
+- Etapy 17A–17D są zaimplementowane: model/JSON, parser HTML, archiwizujący importer, resolver efektywnego dnia, raport nierozstrzygniętych dat i regresje konfliktów.
+- Audyt repozytorium: wyłącznie gałąź `main`; brak otwartych PR i Issues.
+- Ograniczenie wdrożeniowe: parser komunikatów jest sprawdzony na syntetycznych fixture offline. Nie pobrano rzeczywistego okólnika i nie potwierdzono zgodności gramatyki parsera z aktualnym formatem publikacji giełdy. Import na żywo wymaga osobnej walidacji źródła.
+- Nie zatwierdzono godzin 30 grudnia ani żadnej innej skróconej sesji bez oficjalnego komunikatu. Kod nie dopisuje takich godzin automatycznie.
+
+### Następne etapy
+1. Etap 18: adaptacja parsera do rzeczywistego formatu oficjalnych komunikatów Xetra, po pobraniu i zarchiwizowaniu przykładowego komunikatu; fixture musi zachować dokładne bajty i atrybucję.
+2. Dodać możliwość ponownej interpretacji archiwizowanego komunikatu nową rewizją bez kolejnego HTTP, analogicznie do kalendarza.
+3. Etap 19: raport audytowy źródeł i sesji (pochodzenie, licencja, SHA-256, nierozstrzygnięte dni, zastosowane/anulowane komunikaty).
