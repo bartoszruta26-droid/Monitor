@@ -1121,6 +1121,8 @@ std::vector<SourceArchiveObject> find_orphaned_source_objects(
     for(const auto& calendar:snapshot.venue_calendars)
         if(calendar.source.source_object_id)
             referenced.insert(*calendar.source.source_object_id);
+    for(const auto& notice:snapshot.venue_session_notices)
+        referenced.insert(notice.source_object_id);
     std::vector<SourceArchiveObject> orphaned;
     for(const auto& object:snapshot.source_objects)
         if(!referenced.contains(object.source_object_id))
