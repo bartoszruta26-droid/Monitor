@@ -331,7 +331,7 @@ VenueSessionNotice parse_xetra_session_notice_text(
             throw std::invalid_argument(std::string("Ogłoszenie PDF nie zawiera godziny zdarzenia: ")+event_name);
         const unsigned hour12=static_cast<unsigned>(std::stoul(match[1].str()));
         const unsigned minute=static_cast<unsigned>(std::stoul(match[2].str()));
-        const auto meridiem=lower(match[3].str());
+        const auto meridiem=normalized(match[3].str());
         if(hour12<1U || hour12>12U || minute>59U)
             throw std::invalid_argument("Godzina zdarzenia w ogłoszeniu PDF jest nieprawidłowa.");
         unsigned hour=hour12%12U;
