@@ -204,14 +204,16 @@ int main(){
     require(venue_repo.load().revision==2U,
             "rejected venue calendar edit leaves repository revision unchanged");
     auto venue_v2=venue_calendar;
-    venue_v2.source.version=2U;
+    venue_v2.revision=2U;
     venue_v2.source.retrieved_at=parse_utc_timestamp("2026-11-12T22:00:00Z");
     require(venue_repo.upsert_venue_calendar(venue_v2)==3U,
             "new venue calendar version is appended without replacing v1");
     venue_loaded=venue_repo.load();
     require(venue_loaded.venue_calendars.size()==2U &&
+            venue_loaded.venue_calendars[0].revision==1U &&
+            venue_loaded.venue_calendars[1].revision==2U &&
             venue_loaded.venue_calendars[0].source.version==1U &&
-            venue_loaded.venue_calendars[1].source.version==2U,
+            venue_loaded.venue_calendars[1].source.version==1U,
             "both immutable venue calendar versions remain available");
     auto venue_delete=venue_repo.load();
     venue_delete.venue_calendars.erase(venue_delete.venue_calendars.begin());
@@ -241,7 +243,7 @@ int main(){
     MarketDataBatch source_batch;
     source_batch.source_objects.push_back(source_object);
     auto venue_v3=venue_calendar;
-    venue_v3.source.version=3U;
+    venue_v3.revision=3U;
     venue_v3.source.content_sha256=source_hash;
     venue_v3.source.source_object_id=source_object_id;
     venue_v3.source.retrieved_at=parse_utc_timestamp("2026-11-12T22:30:00Z");
@@ -254,7 +256,7 @@ int main(){
             source_loaded.venue_calendars.back().source.source_object_id==source_object_id,
             "content-addressed source object and calendar reference round-trip");
     auto venue_v4=venue_v3;
-    venue_v4.source.version=4U;
+    venue_v4.revision=4U;
     require(venue_repo.upsert_venue_calendar(venue_v4)==5U,
             "multiple calendar revisions can reuse one immutable source object");
     require(venue_repo.load().source_objects.size()==1U,
@@ -268,7 +270,7 @@ int main(){
     throws([&]{(void)venue_repo.upsert_source_object(misplaced_object);},
            "source archive filename must be content-addressed by its SHA-256");
     auto missing_source_calendar=venue_v4;
-    missing_source_calendar.source.version=5U;
+    missing_source_calendar.revision=5U;
     missing_source_calendar.source.source_object_id="sha256:"+std::string(64U,'0');
     missing_source_calendar.source.content_sha256=std::string(64U,'0');
     throws([&]{(void)venue_repo.upsert_venue_calendar(missing_source_calendar);},
