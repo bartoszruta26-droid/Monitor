@@ -53,6 +53,10 @@ int main() {
     const auto parsed=adapter.fetch(source());
     require(parsed.days.size()==365U,"all days imported");
     require(parsed.parser_version=="xetra-html-2026-v1","parser ruleset is stamped with source calendar year");
+    require(parsed.days.at(1).product_sessions.front().opens_at.hour==9U &&
+            parsed.days.at(1).product_sessions.front().closes_at.hour==17U &&
+            parsed.days.at(1).product_sessions.front().closes_at.minute==30U,
+            "regular session hours are read from source text rather than fixed constants");
     auto source_2027=source();
     source_2027.document_id="xetra-2027-synthetic-html";
     source_2027.version=1U;
@@ -79,6 +83,11 @@ int main() {
     unsupported_year.valid_to_exclusive=parse_date("2027-12-31");
     throws([&]{(void)parse_xetra_html_calendar(html,unsupported_year);},
            "reject a source range that is not exactly one calendar year");
+    auto missing_hours_html=html;
+    const auto regular_hours_text=std::string("<p>Regular trading hours are from 09:00 to 17:30.</p>");
+    missing_hours_html.erase(missing_hours_html.find(regular_hours_text),regular_hours_text.size());
+    throws([&]{(void)parse_xetra_html_calendar(missing_hours_html,source_2027);},
+           "reject a calendar fixture with missing regular session hours");
     require(parsed.source.content_sha256==sha256_hex(html),"SHA-256 computed from exact response bytes");
     require(parsed.source.retrieved_at.has_value(),"retrieval time recorded");
     require(transport.calls==1U && transport.last_request.timeout.count()==15000 &&
