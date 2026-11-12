@@ -116,3 +116,7 @@ Rewizja jest niezmienna. Zmiana bajtów źródła nie musi automatycznie zmienia
 - Uogólnić parser Xetra z roku 2026 na zakres `valid_from` / `valid_to_exclusive`; rok nie może być zaszyty w selektorach, etykietach ani oczekiwanych datach.
 - Wprowadzić fixture offline dla każdego obsługiwanego roku i walidację niejednoznacznych tabel/lat.
 - Nie wyprowadzać dat sesji z samych nazw świąt; wymagane są dane źródłowe i oficjalne komunikaty dla skróconych/wyjątkowych sesji.
+
+## Etap 15D — diagnostyka osieroconych obiektów
+
+`find_orphaned_source_objects(snapshot)` zwraca obiekty `source_objects`, do których nie odwołuje się żadna rewizja kalendarza venue. Jest to raport manifestu, a nie procedura sprzątająca: nie usuwa plików, nie zmienia repozytorium i nie wyszukuje plików spoza indeksu JSON. Usuwanie obiektów pozostaje zabronione przez politykę niezmienności; decyzja o retencji wymaga osobnego, audytowalnego procesu.
