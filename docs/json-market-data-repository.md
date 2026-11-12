@@ -43,3 +43,20 @@ MarketDataBatch odwzorowuje kolekcje AdapterResult: instrumenty, dostawców, not
 
 ## Testy
 native/tests/test_market_data_repository.cpp sprawdza round-trip, walidację, rewizje, deduplikację, historię korekt, kopie zapasowe, jawne odtwarzanie, odrzucanie nieznanej wersji schematu oraz współbieżne zapisy procesów. Testy nie korzystają z sieci. Partia adaptera jest przyjmowana jako jedna transakcja plikowa, więc błąd walidacji nie pozostawia częściowo zapisanych instrumentów lub notowań.
+
+
+## Kalendarze sesyjne venue — rozszerzenie zgodne z v1
+
+Dokument JSON może opcjonalnie zawierać tablicę `venue_calendars`. Pole jest rozszerzeniem kompatybilnym wstecz: istniejące dokumenty schema v1 bez tej tablicy są odczytywane jako pusta kolekcja. Nie zmieniono numeru schematu głównego, a dotychczasowe `session_calendars` zachowują dotychczasową semantykę.
+
+Każdy element `venue_calendars` przechowuje:
+- `source`: identyfikator dokumentu źródłowego, venue, wersję, zakres półotwarty, strefę IANA, URL, opcjonalny czas pobrania UTC, opcjonalny SHA-256 dokładnych bajtów, atrybucję i status licencji;
+- `days`: pełną, uporządkowaną listę dat z osobnym statusem `closed`, `trading` lub `settlement_only`;
+- `product_sessions`: grupę produktu i lokalne godziny otwarcia/zamknięcia;
+- `requires_official_notice`: sygnał, że przed użyciem daty należy sprawdzić komunikat operatora.
+
+Walidacja wymaga pełnego pokrycia zakresu źródła, kolejnych dat bez luk i duplikatów, poprawnych godzin oraz co najmniej jednej sesji dla dnia handlowego. Kalendarz nie może mieć sesji w dniu zamknięcia ani rozliczeniowym.
+
+Wersje są niezmienne. Powtórne zapisanie identycznego `document_id + version` jest idempotentne; zmiana zawartości pod tym samym kluczem, usunięcie wersji przez `replace` lub zapis numeru nie większego od najnowszego jest odrzucany. Korekta źródła wymaga nowej wersji, a poprzednia pozostaje w migawce.
+
+Testy obejmują round-trip 365-dniowego kalendarza Xetra, metadane źródła, ponowne zapisanie, konflikt edycji, dopisanie wersji 2, próbę usunięcia/zmiany przez `replace` oraz odczyt starszego dokumentu schema v1 bez pola `venue_calendars`.
