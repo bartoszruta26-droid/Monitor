@@ -338,38 +338,67 @@ void JsonMarketDataRepository::write_unlocked(const MarketDataSnapshot& input,bo
     auto parent=file_path_.parent_path();if(parent.empty())parent=".";sync_directory(parent);
 }
 std::uint64_t JsonMarketDataRepository::replace(const MarketDataSnapshot& snapshot) {
-    FileLock lock(file_path_.string()+".lock");write_unlocked(snapshot,true);return load_unlocked().revision;
+    FileLock lock(file_path_.string()+".lock");
+    write_unlocked(snapshot,true);
+    return load_unlocked().revision;
 }
-std::uint64_t JsonMarketDataRepository::upsert_instrument(const Instrument& x) {
-    validate_instrument(x);FileLock lock(file_path_.string()+".lock");auto s=load_unlocked();
-    auto it=std::find_if(s.instruments.begin(),s.instruments.end(),[&](const auto& v){return v.id==x.id;});
-    if(it==s.instruments.end())s.instruments.push_back(x);else *it=x;
-    write_unlocked(s,true);return load_unlocked().revision;
+std::uint64_t JsonMarketDataRepository::upsert_batch(const MarketDataBatch& batch) {
+    FileLock lock(file_path_.string()+".lock");
+    auto snapshot=load_unlocked();
+    std::set<std::string> incoming_instruments,incoming_providers;
+    for(const auto& item:batch.instruments) {
+        validate_instrument(item);
+        if(!incoming_instruments.insert(item.id).second)
+            throw std::invalid_argument("Powielony instrument w jednej partii zapisu.");
+        const auto it=std::find_if(snapshot.instruments.begin(),snapshot.instruments.end(),
+            [&](const auto& value){return value.id==item.id;});
+        if(it==snapshot.instruments.end())snapshot.instruments.push_back(item);else *it=item;
+    }
+    for(const auto& item:batch.providers) {
+        validate_provider(item);
+        if(!incoming_providers.insert(item.id).second)
+            throw std::invalid_argument("Powielony dostawca w jednej partii zapisu.");
+        const auto it=std::find_if(snapshot.providers.begin(),snapshot.providers.end(),
+            [&](const auto& value){return value.id==item.id;});
+        if(it==snapshot.providers.end())snapshot.providers.push_back(item);else *it=item;
+    }
+    for(const auto& item:batch.observations) {
+        const auto instrument=std::find_if(snapshot.instruments.begin(),snapshot.instruments.end(),
+            [&](const auto& value){return value.id==item.instrument_id;});
+        const auto provider=std::find_if(snapshot.providers.begin(),snapshot.providers.end(),
+            [&](const auto& value){return value.id==item.provider_id;});
+        if(instrument==snapshot.instruments.end()||provider==snapshot.providers.end())
+            throw std::invalid_argument("Partia notowań wskazuje instrument lub dostawcę spoza magazynu.");
+        validate_observation(*instrument,*provider,item);
+        upsert_observation_in_snapshot(snapshot,item);
+    }
+    for(const auto& item:batch.series_metadata) {
+        if(std::none_of(snapshot.instruments.begin(),snapshot.instruments.end(),
+                [&](const auto& value){return value.id==item.instrument_id;})||
+           std::none_of(snapshot.providers.begin(),snapshot.providers.end(),
+                [&](const auto& value){return value.id==item.provider_id;}))
+            throw std::invalid_argument("Metadane szeregu wymagają istniejącego instrumentu i dostawcy.");
+        validate_series_metadata(item);
+        const auto it=std::find_if(snapshot.series_metadata.begin(),snapshot.series_metadata.end(),
+            [&](const auto& value){return value.instrument_id==item.instrument_id&&
+                value.provider_id==item.provider_id&&value.frequency==item.frequency;});
+        if(it==snapshot.series_metadata.end())snapshot.series_metadata.push_back(item);else *it=item;
+    }
+    validate_snapshot(snapshot);
+    write_unlocked(snapshot,true);
+    return load_unlocked().revision;
 }
-std::uint64_t JsonMarketDataRepository::upsert_provider(const Provider& x) {
-    validate_provider(x);FileLock lock(file_path_.string()+".lock");auto s=load_unlocked();
-    auto it=std::find_if(s.providers.begin(),s.providers.end(),[&](const auto& v){return v.id==x.id;});
-    if(it==s.providers.end())s.providers.push_back(x);else *it=x;
-    write_unlocked(s,true);return load_unlocked().revision;
+std::uint64_t JsonMarketDataRepository::upsert_instrument(const Instrument& item) {
+    MarketDataBatch batch;batch.instruments.push_back(item);return upsert_batch(batch);
 }
-std::uint64_t JsonMarketDataRepository::upsert_observation(const MarketObservation& x) {
-    FileLock lock(file_path_.string()+".lock");auto s=load_unlocked();
-    const auto i=std::find_if(s.instruments.begin(),s.instruments.end(),[&](const auto& v){return v.id==x.instrument_id;});
-    const auto p=std::find_if(s.providers.begin(),s.providers.end(),[&](const auto& v){return v.id==x.provider_id;});
-    if(i==s.instruments.end()||p==s.providers.end())throw std::invalid_argument("Przed zapisem notowania należy zapisać instrument i dostawcę.");
-    validate_observation(*i,*p,x);upsert_observation_in_snapshot(s,x);
-    write_unlocked(s,true);return load_unlocked().revision;
+std::uint64_t JsonMarketDataRepository::upsert_provider(const Provider& item) {
+    MarketDataBatch batch;batch.providers.push_back(item);return upsert_batch(batch);
 }
-std::uint64_t JsonMarketDataRepository::upsert_series_metadata(const SeriesMetadata& x) {
-    FileLock lock(file_path_.string()+".lock");auto s=load_unlocked();
-    if(std::none_of(s.instruments.begin(),s.instruments.end(),[&](const auto& v){return v.id==x.instrument_id;})||
-       std::none_of(s.providers.begin(),s.providers.end(),[&](const auto& v){return v.id==x.provider_id;}))
-        throw std::invalid_argument("Metadane szeregu wymagają istniejącego instrumentu i dostawcy.");
-    validate_series_metadata(x);
-    const auto it=std::find_if(s.series_metadata.begin(),s.series_metadata.end(),[&](const auto& v){
-        return v.instrument_id==x.instrument_id&&v.provider_id==x.provider_id&&v.frequency==x.frequency;});
-    if(it==s.series_metadata.end())s.series_metadata.push_back(x);else *it=x;
-    write_unlocked(s,true);return load_unlocked().revision;
+std::uint64_t JsonMarketDataRepository::upsert_observation(const MarketObservation& item) {
+    MarketDataBatch batch;batch.observations.push_back(item);return upsert_batch(batch);
+}
+std::uint64_t JsonMarketDataRepository::upsert_series_metadata(const SeriesMetadata& item) {
+    MarketDataBatch batch;batch.series_metadata.push_back(item);return upsert_batch(batch);
 }
 MarketDataSnapshot JsonMarketDataRepository::restore_backup() {
     FileLock lock(file_path_.string()+".lock");
