@@ -429,6 +429,67 @@ int main(){
     throws([&]{(void)resolve_effective_venue_calendar_day(
         conflicting_snapshot,"deutsche-boerse-xetra-2026",parse_date("2026-12-30"));},
         "two active session overrides for one date are rejected as a conflict");
+
+    const std::string phase_pdf_bytes="synthetic PDF bytes for Xetra final session phase schedule";
+    const auto phase_hash=sha256_hex(phase_pdf_bytes);
+    SourceArchiveObject phase_object;
+    phase_object.source_object_id="sha256:"+phase_hash;
+    phase_object.content_sha256=phase_hash;
+    phase_object.archive_relative_path="venue-calendars.json.sources/objects/"+phase_hash+".pdf";
+    phase_object.content_length_bytes=phase_pdf_bytes.size();
+    phase_object.content_type="application/pdf";
+    const auto phase_archive=venue_repo.file_path().parent_path()/phase_object.archive_relative_path;
+    { std::ofstream output(phase_archive,std::ios::binary); output<<phase_pdf_bytes; }
+    VenueSessionNotice phase_notice;
+    phase_notice.notice_id="xetra-2026-dec30-phase-schedule";
+    phase_notice.revision=1U;
+    phase_notice.calendar_id="deutsche-boerse-xetra-2026";
+    phase_notice.venue="XETRA";
+    phase_notice.effective_date=parse_date("2026-12-30");
+    phase_notice.source_object_id=phase_object.source_object_id;
+    phase_notice.source_uri=venue_source.source_uri;
+    phase_notice.attribution="Deutsche Börse Cash Market";
+    phase_notice.kind=VenueSessionNoticeKind::SessionOverride;
+    phase_notice.day_status=VenueDayStatus::Trading;
+    phase_notice.phase_events={
+        {VenueSessionPhaseEventKind::PreTradingStart,{7,0,0},{}},
+        {VenueSessionPhaseEventKind::RetailEarlyStart,{8,0,0},{}},
+        {VenueSessionPhaseEventKind::OpeningAuctionCall,{8,55,0},{}},
+        {VenueSessionPhaseEventKind::IntradayAuctionCall,{13,0,0},{}},
+        {VenueSessionPhaseEventKind::ClosingAuctionCall,{14,0,0},{}},
+        {VenueSessionPhaseEventKind::ClosingAuctionPriceDeterminationNotBefore,{14,5,0},{}},
+        {VenueSessionPhaseEventKind::TradeAtCloseEnd,{14,10,0},"DAX, MDAX, SDAX"},
+        {VenueSessionPhaseEventKind::OffBookServicesEnd,{14,59,0},"TES OTC, TES LIS, Xetra EnLight"},
+        {VenueSessionPhaseEventKind::PostTradingEnd,{15,0,0},{}}
+    };
+    MarketDataBatch phase_batch;
+    phase_batch.source_objects.push_back(phase_object);
+    phase_batch.venue_session_notices.push_back(phase_notice);
+    require(venue_repo.upsert_batch(phase_batch)==12U,
+            "PDF source object and phase-only notice commit atomically");
+    const auto phase_snapshot=venue_repo.load();
+    const auto phase_round_trip=std::find_if(phase_snapshot.venue_session_notices.begin(),
+        phase_snapshot.venue_session_notices.end(),[&](const VenueSessionNotice& item) {
+            return item.notice_id==phase_notice.notice_id;
+        });
+    require(phase_round_trip!=phase_snapshot.venue_session_notices.end() &&
+            phase_round_trip->phase_events.size()==9U &&
+            phase_round_trip->product_sessions.empty(),
+            "phase-only notice events survive JSON round-trip");
+    const auto effective_phase_day=resolve_effective_venue_calendar_day(
+        phase_snapshot,"deutsche-boerse-xetra-2026",parse_date("2026-12-30"));
+    require(effective_phase_day.day.phase_events.size()==9U &&
+            effective_phase_day.day.product_sessions.empty() &&
+            !effective_phase_day.requires_official_notice_unresolved,
+            "phase-only notice resolves the day without inventing a continuous product session");
+    require(find_unresolved_venue_notice_dates(
+        phase_snapshot,"deutsche-boerse-xetra-2026").empty(),
+        "explicit phase schedule resolves the outstanding official notice requirement");
+    const auto orphaned_phase_objects=find_orphaned_source_objects(phase_snapshot);
+    require(std::none_of(orphaned_phase_objects.begin(),orphaned_phase_objects.end(),
+                [&](const SourceArchiveObject& object){return object.source_object_id==phase_object.source_object_id;}),
+            "PDF source object referenced only by a notice is retained as non-orphaned");
+
     auto missing_cancellation= cancellation_notice;
     missing_cancellation.notice_id="bad-cancellation";
     missing_cancellation.cancels_notice_id="missing-notice";
@@ -462,7 +523,7 @@ int main(){
     source_delete.source_objects.clear();
     throws([&]{(void)venue_repo.replace(source_delete);},
            "replace cannot delete an immutable source object");
-    require(venue_repo.load().revision==11U,
+    require(venue_repo.load().revision==12U,
             "rejected source object and notice operations leave repository unchanged");
     std::filesystem::remove(source_archive);
     throws([&]{(void)venue_repo.load();},
