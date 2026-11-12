@@ -185,3 +185,7 @@ Puste `content_sha256` oraz brak `retrieved_at` są dozwolone wyłącznie jako j
 `build_xetra_2026_calendar` tworzy 365-dniowy fixture w strefie `Europe/Berlin`, z odrębnymi statusami `Closed`, `Trading` i `SettlementOnly`. Uwzględnia zamknięcia 1 stycznia, Wielki Piątek, Poniedziałek Wielkanocny, 1 maja i 25 grudnia; 24 i 31 grudnia oznacza jako rozliczeniowe bez handlu. Dla 14 maja, 25 maja i 4 czerwca zapisuje jawne wyjątki handlowe: akcje/ETP do 20:00 oraz produkty strukturyzowane do 22:00. Dzień 30 grudnia jest oznaczony `requires_official_notice`, ponieważ operator zastrzega możliwość odmiennych godzin i publikacji okólnika.
 
 To jest wersjonowany fixture transkrybowany z oficjalnego źródła, a nie jeszcze automatyczny importer HTML/PDF. Wersja 1 nie przypisuje fikcyjnego czasu pobrania, sumy SHA-256 ani statusu licencji. Parser aktualizujący fixture musi w kolejnej iteracji pobrać dokładne bajty oficjalnej strony/dokumentu, policzyć SHA-256, zapisać czas pobrania i wykrywać zmiany semantyczne bez nadpisywania poprzedniej wersji.
+
+### 15.1. SHA-256 surowych bajtów
+
+Rdzeń udostępnia `sha256_hex(std::string_view)`, który oblicza małymi literami SHA-256 z dokładnej sekwencji bajtów przekazanej przez warstwę pobierania. Testy używają standardowych wektorów dla pustego wejścia, `abc` i 1000 znaków `a`. Importer powinien wywoływać tę funkcję przed dekodowaniem/parsowaniem odpowiedzi, aby suma identyfikowała oryginalny dokument, a nie jego znormalizowaną reprezentację tekstową.
