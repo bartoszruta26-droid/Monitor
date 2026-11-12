@@ -189,3 +189,20 @@ To jest wersjonowany fixture transkrybowany z oficjalnego źródła, a nie jeszc
 ### 15.1. SHA-256 surowych bajtów
 
 Rdzeń udostępnia `sha256_hex(std::string_view)`, który oblicza małymi literami SHA-256 z dokładnej sekwencji bajtów przekazanej przez warstwę pobierania. Testy używają standardowych wektorów dla pustego wejścia, `abc` i 1000 znaków `a`. Importer powinien wywoływać tę funkcję przed dekodowaniem/parsowaniem odpowiedzi, aby suma identyfikowała oryginalny dokument, a nie jego znormalizowaną reprezentację tekstową.
+
+
+## 16. Importer semantycznej tabeli HTML Xetra — pierwsza wersja
+
+Dodano funkcję `parse_xetra_html_calendar` w `native/src/xetra_calendar_importer.cpp`. Korzysta z parsera HTML libxml2, bez wykonywania skryptów i bez dostępu sieciowego. Funkcja przyjmuje bajty dokumentu jako `string_view`; warstwa pobierająca ma obliczyć `sha256_hex` na niezmienionym buforze przed dekodowaniem i przekazać wynik w `SourceCalendarDocument.content_sha256`.
+
+Importer:
+- wymaga jawnego dokumentu XETRA, zakresu 2026 i strefy IANA `Europe/Berlin`;
+- odczytuje kolumnę 2026 i osiem nazwanych wierszy świąt z semantycznej tabeli HTML;
+- odrzuca brakujące/zdublowane wiersze, nieznane lub zmienione daty oraz niekompletną listę trzech świąt z handlem;
+- rozpoznaje zarówno zapis miesiąc–dzień, jak i dzień–miesiąc;
+- rozróżnia zamknięcie, dzień rozliczeniowy oraz handel w święto z odrębnymi godzinami dla grup produktów;
+- oznacza 30 grudnia jako wymagający sprawdzenia oficjalnego okólnika.
+
+Fixture `native/tests/fixtures/xetra_2026_calendar.html` jest lokalnym, syntetycznym odwzorowaniem struktury semantycznej źródła. Testy nie wykonują żądań sieciowych. Nie jest to zrzut bajtów pobrany z Deutsche Börse, dlatego hash fixture służy wyłącznie testowi kontraktu parsera, a nie jako hash oficjalnego dokumentu.
+
+**Ograniczenie zakresu:** pierwsza implementacja obsługuje schemat strony i rok 2026. Nie pobiera HTML, nie archiwizuje automatycznie kolejnych wersji i nie rozstrzyga licencji. Zmiana układu tabeli lub etykiet ma zakończyć import błędem, a nie wygenerować pozornie poprawny kalendarz. Importer nie odczytuje skróconych sesji z okólnika końcoworocznego; pozostają one osobnym źródłem i wymagają jawnej wersji dokumentu.
