@@ -525,6 +525,10 @@ void validate_calendar(const MarketSessionCalendar& x) {
     }
 }
 
+std::string venue_session_notice_key(const VenueSessionNotice& notice);
+std::string notice_stable_identity(const VenueSessionNotice& notice);
+void validate_venue_session_notice(const VenueSessionNotice& notice);
+
 void validate_snapshot(const MarketDataSnapshot& s) {
     if(s.schema_version!=json_document_schema_version)throw std::invalid_argument("Nieobsługiwana wersja dokumentu magazynu JSON.");
     std::map<std::string,const Instrument*> instruments;
