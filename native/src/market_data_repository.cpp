@@ -329,10 +329,13 @@ json encode(const VenueSessionCalendar& x) {
         days.push_back({{"date",format_date(day.date)},{"status",enum_name(day.status)},
             {"product_sessions",std::move(sessions)},{"requires_official_notice",day.requires_official_notice}});
     }
-    return {{"source",std::move(source_json)},{"days",std::move(days)}};
+    return {{"calendar_id",x.calendar_id},{"revision",x.revision},
+            {"source",std::move(source_json)},{"days",std::move(days)}};
 }
 VenueSessionCalendar decode_venue_calendar(const json& j) {
     VenueSessionCalendar result;
+    if(j.contains("calendar_id")) result.calendar_id=j.at("calendar_id").get<std::string>();
+    if(j.contains("revision")) result.revision=j.at("revision").get<std::uint32_t>();
     const auto& s = j.at("source");
     result.source.document_id=s.at("document_id").get<std::string>();
     result.source.venue=s.at("venue").get<std::string>();
@@ -403,14 +406,25 @@ void validate_source_object(const SourceArchiveObject& x) {
         if(component.empty() || component=="." || component=="..")
             throw std::invalid_argument("Ścieżka obiektu źródłowego zawiera niedozwolony komponent.");
 }
+std::string effective_venue_calendar_id(const VenueSessionCalendar& x) {
+    return x.calendar_id.empty() ? x.source.document_id : x.calendar_id;
+}
+std::uint32_t effective_venue_calendar_revision(const VenueSessionCalendar& x) {
+    return x.revision==0U ? x.source.version : x.revision;
+}
 std::string venue_calendar_key(const VenueSessionCalendar& x) {
-    return x.source.document_id + "\x1f" + std::to_string(x.source.version);
+    return effective_venue_calendar_id(x) + "\x1f" +
+           std::to_string(effective_venue_calendar_revision(x));
 }
 bool same_venue_calendar(const VenueSessionCalendar& a, const VenueSessionCalendar& b) {
     return encode(a) == encode(b);
 }
 void validate_venue_calendar(const VenueSessionCalendar& x) {
     validate_source_calendar_document(x.source);
+    if(x.calendar_id.empty()!=(x.revision==0U))
+        throw std::invalid_argument("Kalendarz wymaga jednocześnie identyfikatora i dodatniego numeru rewizji albo klucza legacy.");
+    if(!x.calendar_id.empty() && x.calendar_id.find_first_of("\\r\\n")!=std::string::npos)
+        throw std::invalid_argument("Identyfikator kalendarza zawiera niedozwolone znaki.");
     using namespace std::chrono;
     const sys_days begin{year{x.source.valid_from.year}/month{x.source.valid_from.month}/day{x.source.valid_from.day}};
     const sys_days end{year{x.source.valid_to_exclusive.year}/month{x.source.valid_to_exclusive.month}/day{x.source.valid_to_exclusive.day}};
@@ -532,10 +546,12 @@ void validate_snapshot(const MarketDataSnapshot& s) {
         const auto key=venue_calendar_key(calendar);
         if (!venue_keys.insert(key).second)
             throw std::invalid_argument("Powielona wersja kalendarza sesyjnego venue.");
-        auto& latest=latest_venue_versions[calendar.source.document_id];
-        if (calendar.source.version<=latest)
-            throw std::invalid_argument("Wersje dokumentu kalendarza venue muszą być rosnące.");
-        latest=calendar.source.version;
+        const auto calendar_id=effective_venue_calendar_id(calendar);
+        const auto revision=effective_venue_calendar_revision(calendar);
+        auto& latest=latest_venue_versions[calendar_id];
+        if (revision<=latest)
+            throw std::invalid_argument("Rewizje kalendarza venue muszą być rosnące.");
+        latest=revision;
     }
     std::set<std::string> series_keys;
     for(const auto& x:s.series_metadata) {
@@ -723,8 +739,7 @@ void JsonMarketDataRepository::write_unlocked(const MarketDataSnapshot& input,bo
     for (const auto& old_calendar : previous.venue_calendars) {
         const auto found=std::find_if(s.venue_calendars.begin(),s.venue_calendars.end(),
             [&](const auto& candidate) {
-                return candidate.source.document_id==old_calendar.source.document_id &&
-                       candidate.source.version==old_calendar.source.version;
+                return venue_calendar_key(candidate)==venue_calendar_key(old_calendar);
             });
         if (found==s.venue_calendars.end() || !same_venue_calendar(old_calendar,*found))
             throw std::invalid_argument("Nie można usunąć ani zmienić opublikowanej wersji kalendarza venue.");
@@ -732,15 +747,14 @@ void JsonMarketDataRepository::write_unlocked(const MarketDataSnapshot& input,bo
     for (const auto& candidate : s.venue_calendars) {
         std::uint32_t previous_latest=0U;
         for (const auto& old : previous.venue_calendars)
-            if (old.source.document_id==candidate.source.document_id)
-                previous_latest=std::max(previous_latest,old.source.version);
+            if (effective_venue_calendar_id(old)==effective_venue_calendar_id(candidate))
+                previous_latest=std::max(previous_latest,effective_venue_calendar_revision(old));
         const bool existed=std::any_of(previous.venue_calendars.begin(),previous.venue_calendars.end(),
             [&](const auto& old) {
-                return old.source.document_id==candidate.source.document_id &&
-                       old.source.version==candidate.source.version;
+                return venue_calendar_key(old)==venue_calendar_key(candidate);
             });
-        if (!existed && previous_latest>0U && candidate.source.version<=previous_latest)
-            throw std::invalid_argument("Nowa wersja kalendarza venue musi być większa od poprzednich.");
+        if (!existed && previous_latest>0U && effective_venue_calendar_revision(candidate)<=previous_latest)
+            throw std::invalid_argument("Nowa rewizja kalendarza venue musi być większa od poprzednich.");
     }
     if(!existing.empty()&&rotate_backup&&config_.backup_on_write) {
         const auto backup=backup_path();
@@ -848,10 +862,10 @@ std::uint64_t JsonMarketDataRepository::upsert_batch(const MarketDataBatch& batc
         }
         std::uint32_t latest=0U;
         for (const auto& value : snapshot.venue_calendars)
-            if (value.source.document_id==item.source.document_id)
-                latest=std::max(latest,value.source.version);
-        if (item.source.version<=latest)
-            throw std::invalid_argument("Nowa wersja kalendarza venue musi mieć większy numer.");
+            if (effective_venue_calendar_id(value)==effective_venue_calendar_id(item))
+                latest=std::max(latest,effective_venue_calendar_revision(value));
+        if (effective_venue_calendar_revision(item)<=latest)
+            throw std::invalid_argument("Nowa rewizja kalendarza venue musi mieć większy numer.");
         snapshot.venue_calendars.push_back(item);
     }
     validate_snapshot(snapshot);
