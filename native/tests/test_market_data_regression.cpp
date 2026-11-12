@@ -116,7 +116,7 @@ int main() {
         static_cast<HtfSamplePolicy>(99)); },
         "nieznana polityka próbki");
     throws([&] { (void)time_aware_rolling_regression(
-        february, Frequency::Daily, 2U, WidthMethod::SampleSd); },
+        february, Frequency::Minute, 2U, WidthMethod::SampleSd); },
         "regresja odrzuca próbę zwiększenia częstotliwości");
     throws([&] { (void)time_aware_rolling_regression(
         february, Frequency::Weekly, 2U, static_cast<WidthMethod>(99)); },
