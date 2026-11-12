@@ -295,10 +295,13 @@ VenueSessionCalendar parse_xetra_html_calendar(
 VenueSessionNotice parse_xetra_session_notice_html(std::string_view html,VenueSessionNotice notice) {
     if(html.empty() || html.size()>4U*1024U*1024U)
         throw std::invalid_argument("Komunikat Xetra jest pusty lub przekracza limit 4 MiB.");
-    if(notice.notice_id.empty() || notice.revision==0U || notice.calendar_id.empty() ||
-       notice.venue.empty() || notice.source_object_id.empty() ||
+    static const std::regex id_pattern(R"(^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$)");
+    static const std::regex source_id_pattern(R"(^sha256:[0-9a-f]{64}$)");
+    if(!std::regex_match(notice.notice_id,id_pattern) || notice.revision==0U ||
+       !std::regex_match(notice.calendar_id,id_pattern) || normalized(notice.venue)!="xetra" ||
+       !std::regex_match(notice.source_object_id,source_id_pattern) ||
        notice.source_uri.rfind("https://",0)!=0 || notice.attribution.empty())
-        throw std::invalid_argument("Metadane komunikatu Xetra są niekompletne.");
+        throw std::invalid_argument("Metadane komunikatu Xetra są niekompletne lub nieprawidłowe.");
     auto parsed=std::unique_ptr<xmlDoc,decltype(&xmlFreeDoc)>(
         htmlReadMemory(html.data(),static_cast<int>(html.size()),"xetra-session-notice.html",nullptr,
             HTML_PARSE_NONET|HTML_PARSE_NOERROR|HTML_PARSE_NOWARNING|HTML_PARSE_RECOVER),xmlFreeDoc);
@@ -333,6 +336,7 @@ VenueSessionNotice parse_xetra_session_notice_html(std::string_view html,VenueSe
     std::vector<xmlNode*> tables;
     collect_elements(xmlDocGetRootElement(parsed.get()),"table",tables);
     std::vector<VenueProductSession> sessions;
+    std::set<std::string> seen_product_groups;
     bool found_session_table=false;
     for(xmlNode* table:tables) {
         std::vector<xmlNode*> rows;
@@ -350,6 +354,8 @@ VenueSessionNotice parse_xetra_session_notice_html(std::string_view html,VenueSe
             const auto product=normalized(node_text(cells[0]));
             if(product!="xetra_regular" && product!="shares_and_etps" && product!="structured_products")
                 throw std::invalid_argument("Komunikat Xetra wskazuje nieobsługiwaną grupę produktów.");
+            if(!seen_product_groups.insert(product).second)
+                throw std::invalid_argument("Komunikat Xetra powtarza grupę produktów.");
             const auto parse_time=[](const std::string& raw) {
                 static const std::regex pattern(R"(^([0-9]{2}):([0-9]{2})(?::([0-9]{2}))?$)");
                 std::smatch match;
@@ -363,7 +369,11 @@ VenueSessionNotice parse_xetra_session_notice_html(std::string_view html,VenueSe
                     throw std::invalid_argument("Godzina sesji w komunikacie Xetra wykracza poza zakres doby.");
                 return LocalTimeOfDay{hour,minute,second};
             };
-            sessions.push_back({product,parse_time(node_text(cells[1])),parse_time(node_text(cells[2]))});
+            const auto opens=parse_time(node_text(cells[1]));
+            const auto closes=parse_time(node_text(cells[2]));
+            if(std::tie(opens.hour,opens.minute,opens.second)>=std::tie(closes.hour,closes.minute,closes.second))
+                throw std::invalid_argument("Godzina otwarcia sesji Xetra musi poprzedzać zamknięcie.");
+            sessions.push_back({product,opens,closes});
         }
     }
 
@@ -394,6 +404,8 @@ VenueSessionNotice parse_xetra_session_notice_html(std::string_view html,VenueSe
         if(separator==std::string::npos || separator==0U || separator+1U>=cancellation_text->size())
             throw std::invalid_argument("Cel anulowania musi mieć format notice-id@revision.");
         notice.cancels_notice_id=cancellation_text->substr(0,separator);
+        if(!std::regex_match(notice.cancels_notice_id,id_pattern))
+            throw std::invalid_argument("Identyfikator anulowanego komunikatu jest nieprawidłowy.");
         const auto revision_text=cancellation_text->substr(separator+1U);
         if(!std::all_of(revision_text.begin(),revision_text.end(),[](unsigned char ch){return std::isdigit(ch)!=0;}))
             throw std::invalid_argument("Numer anulowanej rewizji jest nieprawidłowy.");
