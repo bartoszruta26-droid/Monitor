@@ -18,6 +18,7 @@
 #include <set>
 #include <stdexcept>
 #include <string_view>
+#include <tuple>
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -595,6 +596,51 @@ void validate_snapshot(const MarketDataSnapshot& s) {
             throw std::invalid_argument("Rewizje kalendarza venue muszą być rosnące.");
         latest=revision;
     }
+    std::set<std::string> notice_keys;
+    std::map<std::string,std::uint32_t> latest_notice_revisions;
+    std::map<std::string,std::string> notice_identities;
+    std::map<std::string,const VenueSessionNotice*> notice_versions;
+    for(const auto& notice:s.venue_session_notices) {
+        validate_venue_session_notice(notice);
+        if(!source_objects.contains(notice.source_object_id))
+            throw std::invalid_argument("Komunikat sesyjny wskazuje brakujący obiekt źródłowy.");
+        const auto venue_it=venue_by_calendar_id.find(notice.calendar_id);
+        if(venue_it==venue_by_calendar_id.end() || venue_it->second!=notice.venue)
+            throw std::invalid_argument("Komunikat sesyjny wskazuje nieznany kalendarz lub inny rynek.");
+        const auto calendar=std::find_if(s.venue_calendars.begin(),s.venue_calendars.end(),
+            [&](const VenueSessionCalendar& item) {
+                if(effective_venue_calendar_id(item)!=notice.calendar_id || item.source.venue!=notice.venue)
+                    return false;
+                using namespace std::chrono;
+                const sys_days date{year{notice.effective_date.year}/month{notice.effective_date.month}/day{notice.effective_date.day}};
+                const sys_days first{year{item.source.valid_from.year}/month{item.source.valid_from.month}/day{item.source.valid_from.day}};
+                const sys_days last{year{item.source.valid_to_exclusive.year}/month{item.source.valid_to_exclusive.month}/day{item.source.valid_to_exclusive.day}};
+                return date>=first && date<last;
+            });
+        if(calendar==s.venue_calendars.end())
+            throw std::invalid_argument("Data komunikatu sesyjnego wypada poza zakresem kalendarza.");
+        const auto key=venue_session_notice_key(notice);
+        if(!notice_keys.insert(key).second)
+            throw std::invalid_argument("Powielona rewizja komunikatu sesyjnego.");
+        const auto identity=notice_stable_identity(notice);
+        const auto [identity_it,identity_inserted]=notice_identities.emplace(notice.notice_id,identity);
+        if(!identity_inserted && identity_it->second!=identity)
+            throw std::invalid_argument("Rewizje komunikatu muszą zachować rynek, kalendarz i datę obowiązywania.");
+        auto& latest=latest_notice_revisions[notice.notice_id];
+        if(notice.revision<=latest)
+            throw std::invalid_argument("Rewizje komunikatu sesyjnego muszą być rosnące.");
+        latest=notice.revision;
+        notice_versions.emplace(key,&notice);
+    }
+    for(const auto& notice:s.venue_session_notices) {
+        if(notice.kind!=VenueSessionNoticeKind::Cancellation) continue;
+        const auto target_key=notice.cancels_notice_id+"\\x1f"+std::to_string(notice.cancels_revision);
+        const auto target=notice_versions.find(target_key);
+        if(target==notice_versions.end() || target->second->kind==VenueSessionNoticeKind::Cancellation ||
+           target->second->calendar_id!=notice.calendar_id || target->second->venue!=notice.venue ||
+           format_date(target->second->effective_date)!=format_date(notice.effective_date))
+            throw std::invalid_argument("Anulowanie musi wskazywać istniejący komunikat dla tego samego rynku i dnia.");
+    }
     std::set<std::string> series_keys;
     for(const auto& x:s.series_metadata) {
         if(!instruments.contains(x.instrument_id)||!providers.contains(x.provider_id))throw std::invalid_argument("Metadane szeregu wskazują nieznany instrument lub dostawcę.");
@@ -700,7 +746,7 @@ std::string notice_stable_identity(const VenueSessionNotice& x) {
     return x.calendar_id+"\\x1f"+x.venue+"\\x1f"+format_date(x.effective_date);
 }
 json encode_snapshot(const MarketDataSnapshot& s) {
-    json instruments=json::array(),providers=json::array(),observations=json::array(),series=json::array(),history=json::array(),calendars=json::array(),venue_calendars=json::array(),source_objects=json::array();
+    json instruments=json::array(),providers=json::array(),observations=json::array(),series=json::array(),history=json::array(),calendars=json::array(),venue_calendars=json::array(),source_objects=json::array(),venue_session_notices=json::array();
     for(const auto& x:s.instruments)instruments.push_back(encode(x));
     for(const auto& x:s.providers)providers.push_back(encode(x));
     for(const auto& x:s.observations)observations.push_back(encode(x));
@@ -709,10 +755,11 @@ json encode_snapshot(const MarketDataSnapshot& s) {
     for(const auto& x:s.session_calendars)calendars.push_back(encode(x));
     for(const auto& x:s.venue_calendars)venue_calendars.push_back(encode(x));
     for(const auto& x:s.source_objects)source_objects.push_back(encode(x));
+    for(const auto& x:s.venue_session_notices)venue_session_notices.push_back(encode(x));
     return {{"document_type","monitor.market_data"},{"schema_version",s.schema_version},{"revision",s.revision},
         {"updated_at",format_utc_timestamp(s.updated_at)},{"instruments",std::move(instruments)},
         {"providers",std::move(providers)},{"observations",std::move(observations)},
-        {"series_metadata",std::move(series)},{"observation_history",std::move(history)},{"session_calendars",std::move(calendars)},{"venue_calendars",std::move(venue_calendars)},{"source_objects",std::move(source_objects)}};
+        {"series_metadata",std::move(series)},{"observation_history",std::move(history)},{"session_calendars",std::move(calendars)},{"venue_calendars",std::move(venue_calendars)},{"source_objects",std::move(source_objects)},{"venue_session_notices",std::move(venue_session_notices)}};
 }
 MarketDataSnapshot decode_snapshot(const json& j) {
     if(!j.is_object()||j.at("document_type").get<std::string>()!="monitor.market_data")
@@ -729,6 +776,7 @@ MarketDataSnapshot decode_snapshot(const json& j) {
     if(j.contains("session_calendars")) for(const auto& x:j.at("session_calendars")) s.session_calendars.push_back(decode_session_calendar(x));
     if(j.contains("venue_calendars")) for(const auto& x:j.at("venue_calendars")) s.venue_calendars.push_back(decode_venue_calendar(x));
     if(j.contains("source_objects")) for(const auto& x:j.at("source_objects")) s.source_objects.push_back(decode_source_object(x));
+    if(j.contains("venue_session_notices")) for(const auto& x:j.at("venue_session_notices")) s.venue_session_notices.push_back(decode_venue_session_notice(x));
     validate_snapshot(s);return s;
 }
 std::string read_file(const std::filesystem::path& path,std::size_t limit,bool missing_ok) {
