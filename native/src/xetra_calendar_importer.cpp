@@ -349,6 +349,28 @@ VenueSessionNotice parse_xetra_session_notice_text(
        market_section.find("mic xetr")==std::string::npos)
         throw std::invalid_argument("Sekcja ogłoszenia nie potwierdza MIC XETR.");
 
+    std::vector<std::string> offbook_lines;
+    bool in_offbook=false;
+    bool in_xetra_offbook=false;
+    std::istringstream offbook_input{std::string(extracted_text)};
+    while(std::getline(offbook_input,raw_line)) {
+        const auto line=normalized(raw_line);
+        if(line.find("availability of off-book services")!=std::string::npos) {
+            in_offbook=true;
+            continue;
+        }
+        if(!in_offbook) continue;
+        if(has_market_marker(line)) in_xetra_offbook=true;
+        if(in_xetra_offbook) offbook_lines.push_back(line);
+    }
+    if(offbook_lines.empty())
+        throw std::invalid_argument("Ogłoszenie PDF nie zawiera podsekcji dostępności usług Xetra.");
+    std::string offbook_section;
+    for(const auto& line:offbook_lines) offbook_section+=line+"\n";
+    if(offbook_section.find("mic: xetr")==std::string::npos &&
+       offbook_section.find("mic xetr")==std::string::npos)
+        throw std::invalid_argument("Podsekcja usług off-book nie potwierdza MIC XETR.");
+
     static const char* months[]={"","january","february","march","april","may","june",
         "july","august","september","october","november","december"};
     const auto textual_date=std::to_string(notice.effective_date.day)+" "+
@@ -357,13 +379,13 @@ VenueSessionNotice parse_xetra_session_notice_text(
     if(text.find(textual_date)==std::string::npos && text.find(iso_date)==std::string::npos)
         throw std::invalid_argument("Ogłoszenie PDF nie potwierdza wskazanej daty obowiązywania.");
 
-    const auto extract_time=[&](const std::string& pattern_text,const char* event_name) {
+    const auto extract_time=[&](const std::string& source_text,const std::string& pattern_text,const char* event_name) {
         const std::regex pattern(pattern_text,std::regex::icase);
         std::optional<std::array<std::string,3>> captured;
-        for(const auto& line:market_lines) {
-            std::smatch match;
-            if(!std::regex_search(line,match,pattern)) continue;
-            if(captured) throw std::invalid_argument(std::string("Powtórzone zdarzenie w ogłoszeniu PDF: ")+event_name);
+        for(std::sregex_iterator it(source_text.begin(),source_text.end(),pattern),last;it!=last;++it) {
+            if(captured)
+                throw std::invalid_argument(std::string("Powtórzone zdarzenie w ogłoszeniu PDF: ")+event_name);
+            const auto& match=*it;
             captured=std::array<std::string,3>{match[1].str(),match[2].str(),match[3].str()};
         }
         if(!captured)
@@ -379,30 +401,30 @@ VenueSessionNotice parse_xetra_session_notice_text(
     };
     std::vector<VenueSessionPhaseEvent> events;
     events.push_back({VenueSessionPhaseEventKind::PreTradingStart,
-        extract_time(R"(from\s+([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.).{0,100}pre-trading)","pre-trading"),{}});
+        extract_time(market_section,R"(from\s+([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.).{0,100}pre-trading)","pre-trading"),{}});
     events.push_back({VenueSessionPhaseEventKind::RetailEarlyStart,
-        extract_time(R"(from\s+([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.).{0,100}retail early)","retail early"),{}});
+        extract_time(market_section,R"(from\s+([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.).{0,100}retail early)","retail early"),{}});
     events.push_back({VenueSessionPhaseEventKind::OpeningAuctionCall,
-        extract_time(R"(from\s+([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.).{0,100}opening auction call)","opening auction"),{}});
+        extract_time(market_section,R"(from\s+([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.).{0,100}opening auction call)","opening auction"),{}});
     events.push_back({VenueSessionPhaseEventKind::IntradayAuctionCall,
-        extract_time(R"(from\s+([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.).{0,100}intraday auction call)","intraday auction"),{}});
+        extract_time(market_section,R"(from\s+([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.).{0,100}intraday auction call)","intraday auction"),{}});
     events.push_back({VenueSessionPhaseEventKind::ClosingAuctionCall,
-        extract_time(R"(from\s+([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.).{0,100}closing auction call)","closing auction"),{}});
+        extract_time(market_section,R"(from\s+([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.).{0,100}closing auction call)","closing auction"),{}});
     events.push_back({VenueSessionPhaseEventKind::ClosingAuctionPriceDeterminationNotBefore,
-        extract_time(R"(no earlier than\s+([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.))","closing auction price"),{}});
+        extract_time(market_section,R"(no earlier than\s+([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.))","closing auction price"),{}});
     events.push_back({VenueSessionPhaseEventKind::TradeAtCloseEnd,
-        extract_time(R"(trade-at-close.{0,180}?(?:end|until)[^0-9]{0,40}([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.))","Trade-at-Close"),"DAX, MDAX, SDAX"});
+        extract_time(market_section,R"(trade-at-close[\s\S]{0,180}?(?:end|until)[^0-9]{0,40}([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.))","Trade-at-Close"),"DAX, MDAX, SDAX"});
     events.push_back({VenueSessionPhaseEventKind::OffBookServicesEnd,
-        extract_time(R"(tes otc.{0,240}?(?:until|up to)[^0-9]{0,40}([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.))","TES OTC/LIS and Xetra EnLight"),"TES OTC, TES LIS, Xetra EnLight"});
+        extract_time(offbook_section,R"(tes otc[\s\S]{0,240}?(?:until|up to)[^0-9]{0,40}([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.))","TES OTC/LIS and Xetra EnLight"),"TES OTC, TES LIS, Xetra EnLight"});
     events.push_back({VenueSessionPhaseEventKind::PostTradingEnd,
-        extract_time(R"(end of post-trading[^0-9]{0,40}([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.))","post-trading"),{}});
+        extract_time(market_section,R"(end of post-trading[^0-9]{0,40}([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.))","post-trading"),{}});
     std::sort(events.begin(),events.end(),[](const auto& a,const auto& b) {
         return std::tie(a.at.hour,a.at.minute,a.at.second)<std::tie(b.at.hour,b.at.minute,b.at.second);
     });
     validate_notice_phase_events(events);
     notice.kind=VenueSessionNoticeKind::SessionOverride;
     notice.day_status=VenueDayStatus::Trading;
-    notice.parser_version="xetra-pdf-text-notice-v1";
+    notice.parser_version="xetra-pdf-text-notice-v2";
     notice.product_sessions.clear();
     notice.phase_events=std::move(events);
     notice.cancels_notice_id.clear();
