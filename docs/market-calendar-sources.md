@@ -102,3 +102,8 @@ Kod: `NbpPublicationWindow`, `NbpPublicationTable`, `generate_nbp_publication_wi
 - Wszystkie okna są lokalnymi przedziałami Europe/Warsaw. Nie są przeliczane na `observed_at`; dokładny czas publikacji pochodzi z rzeczywistej odpowiedzi NBP.
 - Generator nie zawiera własnej listy świąt. Wywołujący przekazuje listę z wiarygodnego, wersjonowanego źródła.
 - Fixture: 2026-11-11 jako środa wolna; B przesunięta na 2026-11-10, A/C pomijają 11 listopada.
+
+
+## 8. Weryfikacja pierwszego generatora NBP
+
+Pierwsze CI `43302839736` dla commitu `95c53dc2a6a8519119480836d45eab189e69b801` przeszło konfigurację i kompilację modułu produkcyjnego, ale zatrzymało się na kompilacji testu z powodu braku `#include <algorithm>` dla `std::any_of`. Dodano brakujący nagłówek; oczekuje na ponowne CI. Testy nie zostały uruchomione w nieudanym przebiegu.

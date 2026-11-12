@@ -728,3 +728,8 @@ Decyzja projektowa: rozdzielić (1) kalendarz publikacji źródła, (2) kalendar
 Dodano typ `NbpPublicationWindow` jako lokalny przedział czasu, `NbpPublicationTable` oraz generator `generate_nbp_publication_windows(start, end_exclusive, public_holidays)`. Tabele A/C działają w dni robocze z przekazanej listy świąt; tabela B przypada w środę, a w środę wolną jest przenoszona na poprzedni dzień roboczy. Godziny A/B: 11:45–12:15; C: 07:45–08:15; strefa `Europe/Warsaw`. Źródło: https://nbp.pl/statystyka-i-sprawozdawczosc/kursy/informacja-o-terminach-publikacji-kursow-walut/.
 
 Generator nie wbudowuje listy świąt i nie udaje rzeczywistego czasu publikacji. Lista świąt musi pochodzić z jawnego, wersjonowanego źródła. Fixture testuje 11 listopada 2026 r. jako środę wolną, przesunięcie B na wtorek oraz wyłączenie A/C. Etap 11 pozostaje w toku do CI i dalszego importu oficjalnego kalendarza świąt oraz venue.
+
+
+## 26. Etap 11 — korekta kompilacji testu NBP
+
+CI `43302839736` wykazało brak bezpośredniego include `<algorithm>` w teście korzystającym z `std::any_of`. `market_data_calendar.cpp` skompilował się poprawnie; błąd ograniczał się do translation unit testowego, a CTest został pominięty. Dodano jawny include; oczekuje na pełne ponowne CI.

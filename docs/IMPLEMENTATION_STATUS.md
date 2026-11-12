@@ -7,8 +7,8 @@
 
 ## Stan repozytorium przy audycie
 
-- HEAD `main`: `15dd26ca67ea297a81fc30eec42d1664ed8376d8` (przed implementacją etapu 11).
-- Ostatni workflow: [CI 43301713066](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43301713066), SHA zgodny z HEAD, zakończony sukcesem (konfiguracja, kompilacja, CTest 8/8).
+- HEAD `main`: `95c53dc2a6a8519119480836d45eab189e69b801` (pierwsza implementacja reguł NBP; poprawka testu oczekuje na CI).
+- Ostatni workflow: [CI 43302839736](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43302839736), kompilacja nieudana w pliku testowym z powodu braku `#include <algorithm>`; moduł kalendarza skompilował się poprawnie, CTest pominięty.
 - Poprzednie przebiegi obejmują jeden nieudany CI dla wcześniejszego SHA `aa3b7eb`, po którym późniejszy commit przeszedł poprawnie. Nie traktować błędu jako aktualnego, ale zachować go w historii.
 - Gałęzie: wyłącznie `main`.
 - Otwarte pull requesty: 0.
@@ -29,7 +29,7 @@
 | 8 | Jawny kalendarz sesyjny dla kompletności HTF | Zakończony v1 jako funkcja obliczeniowa | `MarketSessionCalendar` i `session_aware_rolling_regression()`; terminy przekazuje wywołujący |
 | 9 | Trwały magazyn i wersjonowanie kalendarzy sesyjnych | Zakończony | Commit `df867c6efaa7f8cebad74db3291a3c0dde12f67e`; CI [43264555372](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43264555372) sukces, kompilacja i CTest 7/7. Pochodzenie regresji zawiera `calendar_id` i `calendar_version`. |
 | 10 | Generator harmonogramów z IANA TZ/DST i reguł sesji | Zakończony | Commit `da61302dc4de43308228e6f60e82e187bef566df`; CI [43301335250](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43301335250) sukces: konfiguracja, kompilacja i CTest 8/8. Testy obejmują DST wiosenny i jesienny, polityki czasu, weekendy, wyłączenia, błędne strefy i zakres dat. |
-| 11 | Kalendarze źródłowe i instrumentowe (NBP, metale, giełdy) | W toku — generator okien publikacji NBP | Dodano lokalny model okna publikacji i reguły A/B/C z jawną listą świąt; fixture obejmuje święto w środę i przesunięcie tabeli B. Oczekuje na CI. |
+| 11 | Kalendarze źródłowe i instrumentowe (NBP, metale, giełdy) | W toku — generator okien publikacji NBP | Dodano lokalny model okna publikacji i reguły A/B/C z jawną listą świąt. Pierwsze CI wykryło brak nagłówka `<algorithm>` w teście; poprawka została przygotowana, wymaga ponownego CI. |
 | 12 | Wspólne fixture i porównanie C++/Pine | Do wykonania | Pine Editor niezweryfikowany; brak potwierdzonej kompilacji TradingView |
 | 13 | Serwer API, autoryzacja, REST/JSON i WebSocket | Do wykonania | Brak aktywnego modułu serwera |
 | 14 | Klienci Linux GUI, WebUI, TUI i Android | Do wykonania | Brak aktywnych modułów klientów |
@@ -150,3 +150,10 @@ Przy każdym kolejnym poleceniu kontynuacji należy najpierw odczytać ten plik 
 - Lista świąt jest parametrem wejściowym; nie zaszyto ani nie zgadnięto polskiego kalendarza świąt.
 - Fixture: 11 listopada 2026 r. jako środa wolna; B przesunięta na 10 listopada, A/C pomijają święto. Testy obejmują zwykłą środę, błędny zakres i duplikaty świąt.
 - Status pozostaje w toku do pełnego CI.
+
+
+## 26. Etap 11 — korekta po pierwszym CI NBP
+
+- Commit `95c53dc2a6a8519119480836d45eab189e69b801`, CI [43302839736](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43302839736): konfiguracja zakończona sukcesem; moduł `market_data_calendar.cpp` skompilował się; kompilacja testu `test_market_data_calendar.cpp` nie powiodła się, ponieważ test używa `std::any_of` bez `#include <algorithm>`. CTest nie został uruchomiony.
+- Poprawka: jawnie dołączono `<algorithm>` w teście. Logika produkcyjna generatora nie wymagała zmiany.
+- Etap 11 pozostaje w toku do pełnej kompilacji i zielonego CTest.

@@ -1,5 +1,6 @@
 #include "monitor/market_data_calendar.hpp"
 
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
