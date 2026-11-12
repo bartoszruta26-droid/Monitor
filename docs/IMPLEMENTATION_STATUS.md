@@ -2,7 +2,7 @@
 
 **Repozytorium:** `bartoszruta26-droid/Monitor`  
 **Gałąź:** `main`  
-**Ostatnia weryfikacja:** 2026-11-12 23:3x Europe/Warsaw
+**Ostatnia weryfikacja:** 2026-11-12 23:4x Europe/Warsaw
 **Zasada prowadzenia:** status etapu zmienia się na „zakończony” dopiero po sprawdzeniu kodu, testów i CI dla konkretnego SHA. Ten plik jest bieżącym rejestrem wykonania; szczegóły techniczne pozostają w dokumentach etapów.
 
 ## Stan repozytorium przy audycie
@@ -459,3 +459,23 @@ Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na ma
 2. Po zielonym CI zamknąć Etap 15D.
 3. Rozpocząć Etap 16: dynamiczne lata parsera Xetra; usunąć założenia zakodowane na stałe dla 2026 dopiero po przygotowaniu niezależnych fixture i walidacji dat/układów.
 4. Następnie Etap 17: osobny importer nadzwyczajnych komunikatów o skróconych sesjach. Godzin nie wolno wyprowadzać z samego kalendarza świąt ani zgadywać.
+
+## 47. Etap 15D zamknięty; Etap 16 — parser Xetra z zakresem dynamicznego roku
+
+### Etap 15D — wynik
+- Raport `find_orphaned_source_objects` został wdrożony i przetestowany. Obiekt bez referencji jest wskazywany, a po przypisaniu do rewizji przestaje być raportowany.
+- API jest nieinwazyjne: brak automatycznego usuwania i brak modyfikacji danych.
+- CI [43321758225](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43321758225) dla SHA `15d5e2f606d030c01cff9d095e75bea45232feab`: Configure/Build/Test — success; CTest 9/9.
+- Status Etapu 15D: zakończony. Cały Etap 15 (15A–15D) jest zakończony.
+
+### Etap 16 — wymagania
+- Obecny parser Xetra jest ograniczony do roku 2026: wyrażenia regularne, walidacja zakresu, komunikat o sesjach świątecznych i mapowanie dat są zakodowane dla jednego roku.
+- Celem jest pobieranie roku z `valid_from`/`valid_to_exclusive`, parsowanie dat tylko z jednoznacznym rokiem i odrzucanie tabel z brakującym/niejednoznacznym rokiem albo nieobsługiwanym układem.
+- Każdy rok otrzyma osobny fixture offline. Testy nie wykonują HTTP. Nie wprowadzać dat ani godzin sesji przez założenie; godziny i wyjątki mają pochodzić z treści oficjalnego komunikatu.
+- Funkcję `build_xetra_2026_calendar` pozostawić jako fixture/regułę historyczną, dopóki nie będzie niezależnego źródła danych dla kolejnych lat.
+
+### Następne czynności
+1. Zidentyfikować elementy parsera zależne od 2026 i przygotować wspólne funkcje parsowania dat dla roku wynikającego z zakresu dokumentu.
+2. Dodać fixture drugiego roku na podstawie jawnie przygotowanego, syntetycznego HTML w testach parsera; oznaczyć fixture jako syntetyczny, nie jako kopię oficjalnej strony.
+3. Rozdzielić parsowanie tabeli dni wolnych od interpretacji godzin sesji specjalnych; brak oficjalnego komunikatu godzin oznacza odrzucenie importu albo brak publikacji sesji, a nie zgadywanie.
+4. Uruchomić pełny CI i dopiero wtedy oznaczyć Etap 16 jako zakończony.
