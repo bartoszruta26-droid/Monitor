@@ -703,3 +703,21 @@ Commit `cedee367f5528abef5d956b9f560167a5b86aaf0`: konfiguracja i kompilacja C++
 ## 22. Etap 10 — diagnoza i korekta integracji ICU (2026-11-12)
 
 CI `43265958349` dla commitu `6845c071890a762fb7e9fe00fef220a31134af7e` potwierdził konfigurację i kompilację, ale test generatora zakończył się wyjątkiem ICU `U_ILLEGAL_ARGUMENT_ERROR`. Analiza logu wskazała konflikt pomiędzy `GregorianCalendar::setLenient(false)` a jawną obsługą `UCAL_WALLTIME_NEXT_VALID`. Poprawka ustawia kalendarz w trybie lenient, aby ICU mogło zastosować reguły wall-time. Odrzucanie nieistniejącego czasu dla polityki `Reject` nadal jest jawne: po konwersji porównywane są wszystkie składowe lokalnej daty i czasu z żądaniem; każda normalizacja jest odrzucana. `NextValidTime` zachowuje zachowanie przesunięcia do pierwszej poprawnej chwili. Etap 10 pozostaje w toku do potwierdzenia pełnego CI dla nowego SHA.
+
+
+## 23. Etap 10 — potwierdzenie końcowe
+
+Commit `da61302dc4de43308228e6f60e82e187bef566df` przeszedł GitHub Actions [43301335250](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43301335250): konfiguracja, kompilacja i wszystkie **8/8 testów CTest** zakończone sukcesem. Generator IANA TZ/DST jest zamknięty w zakresie reguł lokalnych, jawnych polityk DST, zakresu dat i wyłączeń. Nie oznacza to jeszcze posiadania kalendarzy dostawców ani automatycznego pobierania świąt.
+
+## 24. Etap 11 — audyt źródeł i semantyki kalendarzy (2026-11-12)
+
+Dokument roboczy: [market-calendar-sources.md](market-calendar-sources.md).
+
+Wnioski oparte na źródłach pierwotnych:
+- NBP rozdziela terminy publikacji tabel A/B/C; okna publikacji to przedziały, nie dokładne timestampy danych. API rozdziela tradingDate i effectiveDate tabeli C i zwraca 404, gdy nie ma danych. Źródła: https://nbp.pl/statystyka-i-sprawozdawczosc/kursy/informacja-o-terminach-publikacji-kursow-walut/ oraz https://api.nbp.pl/.
+- NBP gold API zwraca datę publikacji, bez deklaracji godziny. Źródło: https://api.nbp.pl/.
+- World Bank Pink Sheet publikuje miesięczne ceny; jego seria pozostaje miesięczna. Źródło: https://www.worldbank.org/en/research/commodity-markets.
+- XAUS opisuje spot jako indicative mid-market, cache 60 s i intraday próbkowane co 5 minut z retencją 14 dni; nie jest to kalendarz sesji giełdowej. Źródło: https://xaus.com/api/.
+- Deutsche Börse publikuje odrębne godziny i listy dni bez handlu oraz wyjątki świąteczne dla Xetra/Frankfurt. Źródło: https://www.cashmarket.deutsche-boerse.com/cash-en/trading/trading-calendar-and-trading-hours.
+
+Decyzja projektowa: rozdzielić (1) kalendarz publikacji źródła, (2) kalendarz sesji instrumentu/venue i (3) historyczny kalendarz rzeczywiście zaobserwowanych publikacji. Nie wyprowadzać dokładnego czasu z okna publikacji; nie traktować braku danych z API jako automatycznie potwierdzonego święta bez niezależnego źródła; nie stosować kalendarza giełdowego do spot OTC ani miesięcznych serii World Bank. Etap 11 pozostaje w toku do czasu implementacji i testów importerów oraz fixture.

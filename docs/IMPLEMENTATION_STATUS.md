@@ -7,8 +7,8 @@
 
 ## Stan repozytorium przy audycie
 
-- HEAD `main`: `d2bc1364986bee6f4474bfce9ad2549e60c90f97`.
-- Ostatni workflow: [CI 43260529082](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43260529082), SHA zgodny z HEAD, zakończony sukcesem.
+- HEAD `main`: `da61302dc4de43308228e6f60e82e187bef566df`.
+- Ostatni workflow: [CI 43301335250](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43301335250), SHA zgodny z HEAD, zakończony sukcesem (konfiguracja, kompilacja, CTest 8/8).
 - Poprzednie przebiegi obejmują jeden nieudany CI dla wcześniejszego SHA `aa3b7eb`, po którym późniejszy commit przeszedł poprawnie. Nie traktować błędu jako aktualnego, ale zachować go w historii.
 - Gałęzie: wyłącznie `main`.
 - Otwarte pull requesty: 0.
@@ -28,8 +28,8 @@
 | 7 | Regresja HTF z segmentacją po brakujących okresach | Zakończony v1 | `market_data_regression.*`; okresy kalendarzowe, bez reguł sesji |
 | 8 | Jawny kalendarz sesyjny dla kompletności HTF | Zakończony v1 jako funkcja obliczeniowa | `MarketSessionCalendar` i `session_aware_rolling_regression()`; terminy przekazuje wywołujący |
 | 9 | Trwały magazyn i wersjonowanie kalendarzy sesyjnych | Zakończony | Commit `df867c6efaa7f8cebad74db3291a3c0dde12f67e`; CI [43264555372](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43264555372) sukces, kompilacja i CTest 7/7. Pochodzenie regresji zawiera `calendar_id` i `calendar_version`. |
-| 10 | Generator harmonogramów z IANA TZ/DST i reguł sesji | W toku — poprawka obsługi DST w ICU | CI `43265958349`: konfiguracja i kompilacja przeszły, CTest 7/8; test generatora przerwał się na `U_ILLEGAL_ARGUMENT_ERROR`. Zdiagnozowano konflikt `setLenient(false)` z jawną obsługą nieistniejącego czasu ICU; poprawiono tryb kalendarza, zachowując kontrolę odrzucania przez porównanie pól lokalnych. Oczekuje na ponowne CI. |
-| 11 | Oficjalne kalendarze instrumentów (NBP, metale, giełdy) | Do wykonania | Brak zweryfikowanych kalendarzy dostawców |
+| 10 | Generator harmonogramów z IANA TZ/DST i reguł sesji | Zakończony | Commit `da61302dc4de43308228e6f60e82e187bef566df`; CI [43301335250](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43301335250) sukces: konfiguracja, kompilacja i CTest 8/8. Testy obejmują DST wiosenny i jesienny, polityki czasu, weekendy, wyłączenia, błędne strefy i zakres dat. |
+| 11 | Kalendarze źródłowe i instrumentowe (NBP, metale, giełdy) | W toku — audyt źródeł i semantyki kalendarzy | Opracowano rejestr źródeł oficjalnych i rozdzielono kalendarz publikacji, kalendarz sesji oraz obserwowaną historię publikacji. Do implementacji po zatwierdzeniu modelu i fixture. |
 | 12 | Wspólne fixture i porównanie C++/Pine | Do wykonania | Pine Editor niezweryfikowany; brak potwierdzonej kompilacji TradingView |
 | 13 | Serwer API, autoryzacja, REST/JSON i WebSocket | Do wykonania | Brak aktywnego modułu serwera |
 | 14 | Klienci Linux GUI, WebUI, TUI i Android | Do wykonania | Brak aktywnych modułów klientów |
@@ -122,3 +122,21 @@ Przy każdym kolejnym poleceniu kontynuacji należy najpierw odczytać ten plik 
 - Przyczyna: kalendarz ICU był ustawiany jako nielenientny, mimo że generator korzysta z jawnych opcji `UCAL_WALLTIME_NEXT_VALID` do rozstrzygania nieistniejących czasów. Tryb lenient jest wymagany do zastosowania polityki ICU; rygorystyczne odrzucanie pozostaje realizowane przez odczyt pól po konwersji i porównanie z żądanym czasem lokalnym.
 - Poprawka: w `market_data_calendar.cpp` włączono tryb lenient z komentarzem wyjaśniającym. Dla `NonexistentLocalTimePolicy::Reject` nadal porównywane są rok, miesiąc, dzień, godzina, minuta i sekunda; rozbieżność powoduje `invalid_argument`. Polityka `NextValidTime` akceptuje pierwszą poprawną chwilę po luce DST.
 - Status etapu 10 pozostaje „w toku” do czasu zielonego CI dla nowego SHA.
+
+
+## 23. Etap 10 — zamknięcie po poprawce ICU
+
+- Commit: `da61302dc4de43308228e6f60e82e187bef566df`.
+- GitHub Actions: [CI 43301335250](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43301335250) — sukces.
+- Konfiguracja CMake: sukces; kompilacja C++20/ICU: sukces; CTest: **8/8, 100%** (0,59 s).
+- `monitor-market-data-calendar-tests` przeszedł po zmianie trybu ICU na lenient z zachowaniem jawnej walidacji odrzucania nieistniejącego czasu.
+- Etap 10 zamknięty. Kolejny jest Etap 11 — kalendarze źródłowe i instrumentowe, z oddzieleniem terminów publikacji od sesji rynkowych.
+
+## 24. Etap 11 — rozpoznanie źródeł kalendarzy
+
+- NBP publikuje osobne reguły terminów dla tabel A/B/C; oficjalny harmonogram podaje okna publikacji, a nie precyzyjny czas obserwacji każdego rekordu. API udostępnia daty publikacji i daty notowania dla tabeli C oraz zwraca 404 przy braku danych.
+- NBP gold API dostarcza datę publikacji, ale dokumentacja API nie deklaruje godziny publikacji. Nie należy dopisywać fikcyjnej godziny do obserwacji.
+- World Bank Pink Sheet jest miesięcznym źródłem danych; nie wolno przypisywać mu dziennego kalendarza sesji.
+- XAUS udostępnia orientacyjny spot z cache 60 s i serię intraday co 5 minut z ograniczoną retencją; nie jest to kalendarz giełdowy ani kwotowanie wykonywalne.
+- Dla giełd należy importować oficjalny kalendarz konkretnego operatora i rynku (np. Xetra), uwzględniając dni handlu w święta, skrócone sesje i wersje kalendarza.
+- Szczegóły, źródła i kryteria implementacji: `docs/market-calendar-sources.md`.
