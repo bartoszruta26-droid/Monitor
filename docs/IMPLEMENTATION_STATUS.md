@@ -418,3 +418,19 @@ Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na ma
 - Przenieść archiwizację Xetra na ścieżkę `*.sources/objects/<sha256>.<ext>` i podłączyć adapter do `SourceArchiveObject`.
 - Deduplikować fizyczny zapis po SHA-256, tak aby ponowne pobranie tych samych bajtów nie tworzyło kolejnego pliku.
 - Zachować legacy ścieżki archiwum oraz dotychczasowe pola JSON do czasu jawnej migracji; dodać testy współistnienia i awarii importu.
+
+## 45. Etap 15B — archiwum content-addressed i integracja Xetra
+
+- Commit `ec56dedae6544b9f1a672e0c8ccc5834600ededb`: adapter przeniesiony z archiwum `document_id/version/hash` do `*.sources/objects/<sha256>.html`; nowe kalendarze odwołują się przez `source_object_id`.
+- Commity `6945519c05acd6e6068ff944fe965502f6fb2086`, `0321b999e39862dd3f601f5dff216f0f99b9b57b`, `b33aa57012012eb2a8c8401122f5340c7ad71a0c`: testy deduplikacji identycznych bajtów, nowego obiektu po zmianie bajtów, manifestu obiektu i ścieżki traversal.
+- Commit `4c194b136644c9e984677cfbf883fa581dd7b279`: usunięto nieużywany sanitizer ścieżki dokumentu, ponieważ ścieżka archiwum jest teraz oparta wyłącznie na SHA-256.
+- Commity `7ee99d1f904694ffb4a362130146f022d85e744c` i `4dc878ac01e251cb2dc47126f38ba528e9444800`: importer odrzuca metadane obiektu/archiwum podane przez wywołującego; test potwierdza odrzucenie caller-supplied source object ID.
+- Commit `f61f1bd103348ff1c07c0133f22e4a75503ae573`: archiwizacja utwardzona. Plik tymczasowy jest synchronizowany, publikacja odbywa się bez nadpisywania istniejącego obiektu przez `link()`, a katalog archiwum jest synchronizowany. Kolizja istniejącego SHA jest akceptowana tylko przy identycznych bajtach; symlink i różna treść są odrzucane.
+- CI dla końcowego SHA `f61f1bd103348ff1c07c0133f22e4a75503ae573`: [43319017765](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43319017765) — Configure/Build/Test: success; CTest **9/9**.
+- Wcześniejsze błędy: `43318475559` i `43318569332` wykryły przejściowo niezgodne asercje ścieżki; `43318627432` wykrył pozostawione `.value()` po zmianie pola na `std::string`. Poprawki zostały wprowadzone; późniejsze CI dla SHA `b33aa57`, `4c194b1`, `7ee99d1` i `f61f1bd` przeszły.
+- Status Etapu 15B: zakończony.
+
+### Etap 15C — następny zakres
+- Oddzielić wersję semantycznej rewizji kalendarza od wersji dokumentu źródłowego; zachować zgodność legacy `document_id + version`.
+- Umożliwić ponowną interpretację istniejącego obiektu źródłowego bez ponownego pobrania bajtów.
+- Dodać testy: wiele rewizji do jednego obiektu, parser revision bez zmiany źródła, zmiana źródła bez niejawnego nadpisania kalendarza i migracja JSON v1.
