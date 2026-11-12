@@ -36,17 +36,28 @@ struct JsonRepositoryConfig {
     bool create_parent_directories{true};
 };
 
-class JsonMarketDataRepository {
+class MarketDataRepository {
+public:
+    virtual ~MarketDataRepository() = default;
+    [[nodiscard]] virtual MarketDataSnapshot load() const = 0;
+    [[nodiscard]] virtual std::uint64_t replace(const MarketDataSnapshot& snapshot) = 0;
+    [[nodiscard]] virtual std::uint64_t upsert_instrument(const Instrument& instrument) = 0;
+    [[nodiscard]] virtual std::uint64_t upsert_provider(const Provider& provider) = 0;
+    [[nodiscard]] virtual std::uint64_t upsert_observation(const MarketObservation& observation) = 0;
+    [[nodiscard]] virtual std::uint64_t upsert_series_metadata(const SeriesMetadata& metadata) = 0;
+};
+
+class JsonMarketDataRepository final : public MarketDataRepository {
 public:
     explicit JsonMarketDataRepository(std::filesystem::path file_path,
                                       JsonRepositoryConfig config = {});
 
-    [[nodiscard]] MarketDataSnapshot load() const;
-    [[nodiscard]] std::uint64_t replace(const MarketDataSnapshot& snapshot);
-    [[nodiscard]] std::uint64_t upsert_instrument(const Instrument& instrument);
-    [[nodiscard]] std::uint64_t upsert_provider(const Provider& provider);
-    [[nodiscard]] std::uint64_t upsert_observation(const MarketObservation& observation);
-    [[nodiscard]] std::uint64_t upsert_series_metadata(const SeriesMetadata& metadata);
+    [[nodiscard]] MarketDataSnapshot load() const override;
+    [[nodiscard]] std::uint64_t replace(const MarketDataSnapshot& snapshot) override;
+    [[nodiscard]] std::uint64_t upsert_instrument(const Instrument& instrument) override;
+    [[nodiscard]] std::uint64_t upsert_provider(const Provider& provider) override;
+    [[nodiscard]] std::uint64_t upsert_observation(const MarketObservation& observation) override;
+    [[nodiscard]] std::uint64_t upsert_series_metadata(const SeriesMetadata& metadata) override;
 
     // Explicit recovery only. A corrupt primary file is never silently replaced.
     [[nodiscard]] MarketDataSnapshot restore_backup();
