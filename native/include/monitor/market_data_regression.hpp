@@ -9,16 +9,6 @@
 
 namespace monitor::market {
 
-// Harmonogram oczekiwanych obserwacji jednego szeregu w UTC.
-// Święta i zamknięcia rynku pomija dostawca kalendarza; nie są wywnioskowywane.
-struct MarketSessionCalendar {
-    std::string calendar_id;
-    std::string instrument_id;
-    std::string provider_id;
-    Frequency source_frequency{Frequency::Daily};
-    std::vector<UtcTimestamp> expected_observation_times;
-};
-
 enum class HtfSamplePolicy {
     FirstObservation,
     LastObservation
