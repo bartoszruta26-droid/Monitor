@@ -2,7 +2,7 @@
 
 **Repozytorium:** `bartoszruta26-droid/Monitor`  
 **Gałąź:** `main`  
-**Ostatnia weryfikacja:** 2026-11-12 23:4x Europe/Warsaw
+**Ostatnia weryfikacja:** 2026-11-12 23:16 Europe/Warsaw
 **Zasada prowadzenia:** status etapu zmienia się na „zakończony” dopiero po sprawdzeniu kodu, testów i CI dla konkretnego SHA. Ten plik jest bieżącym rejestrem wykonania; szczegóły techniczne pozostają w dokumentach etapów.
 
 ## Stan repozytorium przy audycie
@@ -397,3 +397,24 @@ Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na ma
 2. Zaktualizować status Etapu 14 na zakończony dopiero po zielonym Configure/Build/Test dla testu legacy i symlinku katalogu.
 3. Rozpocząć Etap 15A: model `SourceArchiveObject`, kolekcja `source_objects`, serializacja, walidacja unikalności SHA-256 i referencji, testy round-trip oraz starego JSON v1.
 4. Następnie podłączyć adapter Xetra w Etapie 15B; nie usuwać starych ścieżek ani metadanych, dopóki migracja i testy współistnienia nie będą zakończone.
+
+## 44. Etap 14 zamknięty i Etap 15A — niezmienne obiekty źródłowe
+
+### Etap 14 — końcowa weryfikacja
+- Test legacy JSON v1 bez `archive_relative_path`, `content_length_bytes` i `content_type` oraz test dowiązania symbolicznego w katalogu nadrzędnym archiwum przeszły w CI [43317206138](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43317206138) dla SHA `0869dee951e5846aee602f079e8fb82aa2378b53`.
+- Wzmocniona implementacja `openat(O_NOFOLLOW)` przeszła CI [43317179202](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43317179202), a poprawka nagłówka `<iterator>` przeszła CI [43317220372](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43317220372).
+- Etap 14 uznany za zakończony. Ochrona obejmuje każdy komponent ścieżki, plik regularny, długość, SHA-256, traversal i symlinki; zgodność starszych rekordów v1 jest sprawdzona fixture.
+
+### Etap 15A — model i magazyn obiektów źródłowych
+- Commity: `b2e5d0087b28c73b74d3c5e464db07e1ddb278da` (model), `f2796425fb694600ae5bb809f2a1e563fddb6494` (interfejs repozytorium), `638a0fd427d01005b635b5bdc87261d61ae42dc7` (serializacja i walidacja), `21a315d54793870854a664e5ac1dbfd630ca9dae` (integralność archiwum), `f0431cf07b8a01f5909b9285225d86706ae4a3a5` (testy), `25343ea73ce00baeb0837180126cd5de02d4699e` (weryfikacja przed publikacją), `902ae42d45a158452c9e3d0feb4b6db95536c34f` / `2796bf671db2114f3482492bc71e7fe6a5fb3c8c` / `010dcbf0b2e29ba06f3c90b4f7dc106630ac939e` (rozdzielenie metadanych pobrania od metadanych bajtów), `04b0b05f9d351b402149c2b332dc92e82b076183` i `caf72e8c297d4c76fc4bdf89e95c1a31b6aebd2f` (wymuszenie nazwy content-addressed i test), `ede4b0f29cec1db11b89e20394254dfd4780e52b` (końcowa poprawka serializacji).
+- Model: `SourceArchiveObject` ma stabilny identyfikator `sha256:<hash>` i przechowuje wyłącznie niezmienne metadane bajtów; `SourceCalendarDocument` przechowuje opcjonalną referencję `source_object_id` oraz pochodzenie pobrania.
+- Dodano `source_objects` do `MarketDataSnapshot` i `MarketDataBatch`, serializację JSON, `upsert_source_object`, walidację hash/ID/ścieżki/nazwy pliku, kontrolę referencji, deduplikację, niezmienność i weryfikację pliku przed zapisem oraz przy odczycie.
+- Testy potwierdzają, że dwie rewizje kalendarza mogą współdzielić jeden obiekt, a konflikt metadanych, brakująca referencja, usunięcie obiektu, niezgodna nazwa pliku i brak archiwum są odrzucane.
+- CI dla końcowego kodu SHA `ede4b0f29cec1db11b89e20394254dfd4780e52b`: [43318104387](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43318104387) — Configure, Build i Test: success; CTest **9/9**.
+- Wcześniejsze przebiegi `43317910938`, `43317918775`, `43317926291`, `43317942512`, `43317982706` i `43317990281` zakończyły się niepowodzeniem na przejściowych SHA podczas przenoszenia pól metadanych; logi wskazały pozostawione odwołania do pól usuniętych z modelu obiektu. Poprawiono serializację w `ede4b0f`; pełny CI końcowego SHA przeszedł.
+- Status Etapu 15A: zakończony.
+
+### Etap 15B — następny zakres
+- Przenieść archiwizację Xetra na ścieżkę `*.sources/objects/<sha256>.<ext>` i podłączyć adapter do `SourceArchiveObject`.
+- Deduplikować fizyczny zapis po SHA-256, tak aby ponowne pobranie tych samych bajtów nie tworzyło kolejnego pliku.
+- Zachować legacy ścieżki archiwum oraz dotychczasowe pola JSON do czasu jawnej migracji; dodać testy współistnienia i awarii importu.
