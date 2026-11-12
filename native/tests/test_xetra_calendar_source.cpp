@@ -414,16 +414,24 @@ int main() {
             "PDF text parser creates a phase-only session override with all nine official milestones");
     const auto& phase_events=parsed_pdf_notice.phase_events;
     require(phase_events.at(0).kind==VenueSessionPhaseEventKind::PreTradingStart &&
-            phase_events.at(0).at.hour==7U &&
-            phase_events.at(2).kind==VenueSessionPhaseEventKind::OpeningAuctionCall &&
-            phase_events.at(2).at.hour==8U && phase_events.at(2).at.minute==55U &&
-            phase_events.at(3).at.hour==13U &&
-            phase_events.at(4).at.hour==14U &&
-            phase_events.at(5).at.minute==5U &&
-            phase_events.at(6).at.minute==10U &&
-            phase_events.at(7).at.minute==59U &&
-            phase_events.at(8).at.hour==15U,
-            "PDF parser converts AM/PM times and preserves the official phase order");
+            phase_events.at(0).at.hour==7U,"PDF pre-trading event is 07:00");
+    require(phase_events.at(1).kind==VenueSessionPhaseEventKind::RetailEarlyStart &&
+            phase_events.at(1).at.hour==8U,"PDF retail early event is 08:00");
+    require(phase_events.at(2).kind==VenueSessionPhaseEventKind::OpeningAuctionCall &&
+            phase_events.at(2).at.hour==8U && phase_events.at(2).at.minute==55U,
+            "PDF opening auction event is 08:55");
+    require(phase_events.at(3).kind==VenueSessionPhaseEventKind::IntradayAuctionCall &&
+            phase_events.at(3).at.hour==13U,"PDF intraday auction event converts 1 p.m. to 13:00");
+    require(phase_events.at(4).kind==VenueSessionPhaseEventKind::ClosingAuctionCall &&
+            phase_events.at(4).at.hour==14U,"PDF closing auction event converts 2 p.m. to 14:00");
+    require(phase_events.at(5).at.hour==14U && phase_events.at(5).at.minute==5U,
+            "PDF closing price event is 14:05");
+    require(phase_events.at(6).at.hour==14U && phase_events.at(6).at.minute==10U,
+            "PDF Trade-at-Close event is 14:10");
+    require(phase_events.at(7).at.hour==14U && phase_events.at(7).at.minute==59U,
+            "PDF off-book service event is 14:59");
+    require(phase_events.at(8).kind==VenueSessionPhaseEventKind::PostTradingEnd &&
+            phase_events.at(8).at.hour==15U,"PDF post-trading event is 15:00");
     require(phase_events.at(6).scope=="DAX, MDAX, SDAX" &&
             phase_events.at(7).scope=="TES OTC, TES LIS, Xetra EnLight",
             "PDF parser preserves product and service scopes for final-session events");
