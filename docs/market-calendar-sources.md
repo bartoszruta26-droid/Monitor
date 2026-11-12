@@ -217,3 +217,12 @@ Zapis pliku źródłowego odbywa się przez plik tymczasowy i zmianę nazwy w ob
 Powtórne pobranie z tym samym `document_id` i SHA-256 jest deduplikowane i nie tworzy nowej wersji kalendarza. Różnica choćby jednego bajtu daje inny hash i może utworzyć kolejną, niezmienną wersję. Samo przesunięcie numeru żądanej wersji bez zmiany bajtów nie publikuje nowej wersji. Weryfikacja skrótu i zgodności bajtów odbywa się również przy ponownym użyciu istniejącej ścieżki archiwum.
 
 Testy używają lokalnego fixture HTML i sztucznego transportu; nie wykonują pobrania sieciowego. Licencja źródła pozostaje `Unknown`, dopóki warunki ponownego wykorzystania nie zostaną niezależnie potwierdzone.
+
+
+## 14. Etap 14 — manifest archiwum i kontrola integralności
+
+Każdy nowy import kalendarza venue zapisuje w rekordzie źródła względną ścieżkę archiwum, długość bajtową i oryginalny typ treści HTTP. Ścieżka jest przechowywana względem katalogu pliku JSON; starsze rekordy schematu v1 bez tych pól pozostają czytelne.
+
+Przy każdym odczycie migawki repozytorium weryfikowane są pliki wskazane przez manifest: ścieżka musi być względna i pozbawiona komponentów `.`/`..`, żaden komponent nie może być dowiązaniem symbolicznym, obiekt musi być zwykłym plikiem, a długość i SHA-256 muszą odpowiadać metadanym. Brak pliku lub rozbieżność integralności przerywa odczyt zamiast zwracać kalendarz z niepotwierdzonym pochodzeniem.
+
+Archiwum pozostaje zapisywane przed publikacją migawki JSON. Osierocone pliki są dopuszczalne po przerwanym imporcie; wpis manifestu bez pliku jest niedopuszczalny. Identyfikator źródła i wersja kalendarza pozostają obecnie wspólnym kluczem domenowym — dalsze rozdzielenie wersji dokumentu źródłowego i rewizji interpretacji kalendarza wymaga osobnej migracji modelu.
