@@ -20,6 +20,9 @@ public:
                                         std::string calendar_id,
                                         std::uint32_t calendar_revision) const;
     // Re-parse already archived bytes without issuing another HTTP request.
+    [[nodiscard]] std::uint64_t import_notice(JsonMarketDataRepository& repository,
+                                                VenueSessionNotice notice,
+                                                std::string source_uri) const;
     [[nodiscard]] std::uint64_t publish_revision_from_archive(
         JsonMarketDataRepository& repository,SourceCalendarDocument source,
         std::string calendar_id,std::uint32_t calendar_revision,
