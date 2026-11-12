@@ -1,4 +1,5 @@
 #include "monitor/market_data_calendar.hpp"
+#include "monitor/xetra_calendar_importer.hpp"
 
 #include <libxml/HTMLparser.h>
 #include <libxml/tree.h>
@@ -287,6 +288,122 @@ VenueSessionCalendar parse_xetra_html_calendar(
         result.days.push_back(std::move(day));
     }
     return result;
+}
+
+VenueSessionNotice parse_xetra_session_notice_html(std::string_view html,VenueSessionNotice notice) {
+    if(html.empty() || html.size()>4U*1024U*1024U)
+        throw std::invalid_argument("Komunikat Xetra jest pusty lub przekracza limit 4 MiB.");
+    if(notice.notice_id.empty() || notice.revision==0U || notice.calendar_id.empty() ||
+       notice.venue.empty() || notice.source_object_id.empty() ||
+       notice.source_uri.rfind("https://",0)!=0 || notice.attribution.empty())
+        throw std::invalid_argument("Metadane komunikatu Xetra są niekompletne.");
+    auto parsed=std::unique_ptr<xmlDoc,decltype(&xmlFreeDoc)>(
+        htmlReadMemory(html.data(),static_cast<int>(html.size()),"xetra-session-notice.html",nullptr,
+            HTML_PARSE_NONET|HTML_PARSE_NOERROR|HTML_PARSE_NOWARNING|HTML_PARSE_RECOVER),xmlFreeDoc);
+    if(!parsed) throw std::invalid_argument("Nie można sparsować HTML komunikatu Xetra.");
+
+    std::vector<xmlNode*> paragraphs;
+    collect_elements(xmlDocGetRootElement(parsed.get()),"p",paragraphs);
+    std::optional<std::string> venue_text,date_text,kind_text,status_text,cancellation_text;
+    const auto assign_once=[](std::optional<std::string>& target,std::string value,const char* field) {
+        if(target) throw std::invalid_argument(std::string("Powtórzone pole komunikatu Xetra: ")+field);
+        target=std::move(value);
+    };
+    const std::regex field_pattern(R"(^([a-z ]+):\\s*(.+)$)");
+    for(xmlNode* paragraph:paragraphs) {
+        const auto text=normalized(node_text(paragraph));
+        std::smatch match;
+        if(!std::regex_match(text,match,field_pattern)) continue;
+        const auto field=match[1].str();
+        const auto value=match[2].str();
+        if(field=="venue") assign_once(venue_text,value,"venue");
+        else if(field=="effective date") assign_once(date_text,value,"effective date");
+        else if(field=="notice kind") assign_once(kind_text,value,"notice kind");
+        else if(field=="day status") assign_once(status_text,value,"day status");
+        else if(field=="cancels") assign_once(cancellation_text,value,"cancels");
+    }
+    if(!venue_text || *venue_text!=normalized(notice.venue) || !date_text || !kind_text)
+        throw std::invalid_argument("Komunikat Xetra musi jednoznacznie wskazywać rynek, datę i rodzaj.");
+    if(!std::regex_match(*date_text,std::regex(R"(^[0-9]{4}-[0-9]{2}-[0-9]{2}$)")))
+        throw std::invalid_argument("Data komunikatu Xetra musi mieć format YYYY-MM-DD.");
+    notice.effective_date=parse_date(*date_text);
+
+    std::vector<xmlNode*> tables;
+    collect_elements(xmlDocGetRootElement(parsed.get()),"table",tables);
+    std::vector<VenueProductSession> sessions;
+    bool found_session_table=false;
+    for(xmlNode* table:tables) {
+        std::vector<xmlNode*> rows;
+        collect_elements(table->children,"tr",rows);
+        if(rows.empty()) continue;
+        const auto header=direct_cells(rows.front());
+        if(header.size()!=3U || normalized(node_text(header[0]))!="product group" ||
+           normalized(node_text(header[1]))!="opens" || normalized(node_text(header[2]))!="closes")
+            continue;
+        if(found_session_table) throw std::invalid_argument("Komunikat Xetra zawiera kilka tabel sesji.");
+        found_session_table=true;
+        for(std::size_t row_index=1;row_index<rows.size();++row_index) {
+            const auto cells=direct_cells(rows[row_index]);
+            if(cells.size()!=3U) throw std::invalid_argument("Wiersz sesji Xetra musi zawierać grupę produktu, otwarcie i zamknięcie.");
+            const auto product=normalized(node_text(cells[0]));
+            if(product!="xetra_regular" && product!="shares_and_etps" && product!="structured_products")
+                throw std::invalid_argument("Komunikat Xetra wskazuje nieobsługiwaną grupę produktów.");
+            const auto parse_time=[](const std::string& raw) {
+                static const std::regex pattern(R"(^([0-9]{2}):([0-9]{2})(?::([0-9]{2}))?$)");
+                std::smatch match;
+                const auto value=normalized(raw);
+                if(!std::regex_match(value,match,pattern))
+                    throw std::invalid_argument("Godzina sesji w komunikacie Xetra musi mieć format HH:MM[:SS].");
+                const unsigned hour=static_cast<unsigned>(std::stoul(match[1].str()));
+                const unsigned minute=static_cast<unsigned>(std::stoul(match[2].str()));
+                const unsigned second=match[3].matched?static_cast<unsigned>(std::stoul(match[3].str())):0U;
+                if(hour>23U || minute>59U || second>59U)
+                    throw std::invalid_argument("Godzina sesji w komunikacie Xetra wykracza poza zakres doby.");
+                return LocalTimeOfDay{hour,minute,second};
+            };
+            sessions.push_back({product,parse_time(node_text(cells[1])),parse_time(node_text(cells[2]))});
+        }
+    }
+
+    notice.day_status.reset();
+    notice.product_sessions.clear();
+    notice.cancels_notice_id.clear();
+    notice.cancels_revision=0U;
+    if(*kind_text=="informational") {
+        if(status_text || cancellation_text || !sessions.empty())
+            throw std::invalid_argument("Komunikat informacyjny nie może zawierać nadpisania ani anulowania.");
+        notice.kind=VenueSessionNoticeKind::Informational;
+    } else if(*kind_text=="session override") {
+        if(!status_text || cancellation_text)
+            throw std::invalid_argument("Nadpisanie sesji wymaga statusu dnia i nie może anulować innego komunikatu.");
+        if(*status_text=="trading") notice.day_status=VenueDayStatus::Trading;
+        else if(*status_text=="closed") notice.day_status=VenueDayStatus::Closed;
+        else if(*status_text=="settlement only") notice.day_status=VenueDayStatus::SettlementOnly;
+        else throw std::invalid_argument("Nieznany status dnia w komunikacie Xetra.");
+        if((*notice.day_status==VenueDayStatus::Trading && sessions.empty()) ||
+           (*notice.day_status!=VenueDayStatus::Trading && !sessions.empty()))
+            throw std::invalid_argument("Nadpisanie sesji wymaga kompletnych godzin tylko dla dnia handlowego.");
+        notice.kind=VenueSessionNoticeKind::SessionOverride;
+        notice.product_sessions=std::move(sessions);
+    } else if(*kind_text=="cancellation") {
+        if(!cancellation_text || status_text || !sessions.empty())
+            throw std::invalid_argument("Anulowanie wymaga celu i nie może zawierać godzin ani statusu dnia.");
+        const auto separator=cancellation_text->rfind('@');
+        if(separator==std::string::npos || separator==0U || separator+1U>=cancellation_text->size())
+            throw std::invalid_argument("Cel anulowania musi mieć format notice-id@revision.");
+        notice.cancels_notice_id=cancellation_text->substr(0,separator);
+        const auto revision_text=cancellation_text->substr(separator+1U);
+        if(!std::all_of(revision_text.begin(),revision_text.end(),[](unsigned char ch){return std::isdigit(ch)!=0;}))
+            throw std::invalid_argument("Numer anulowanej rewizji jest nieprawidłowy.");
+        const auto revision_value=std::stoul(revision_text);
+        if(revision_value==0U || revision_value>std::numeric_limits<std::uint32_t>::max())
+            throw std::invalid_argument("Numer anulowanej rewizji jest poza zakresem.");
+        notice.cancels_revision=static_cast<std::uint32_t>(revision_value);
+        notice.kind=VenueSessionNoticeKind::Cancellation;
+    } else {
+        throw std::invalid_argument("Nieznany rodzaj komunikatu Xetra.");
+    }
+    return notice;
 }
 
 } // namespace monitor::market
