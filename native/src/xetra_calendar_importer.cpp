@@ -5,6 +5,8 @@
 #include <libxml/tree.h>
 
 #include <algorithm>
+#include <array>
+#include <sstream>
 #include <cctype>
 #include <chrono>
 #include <map>
@@ -324,13 +326,25 @@ VenueSessionNotice parse_xetra_session_notice_text(
         throw std::invalid_argument("Metadane komunikatu PDF Xetra są niekompletne lub nieprawidłowe.");
 
     const auto text=normalized(std::string(extracted_text));
-    auto market_start=text.find("market deutsche börse xetra");
-    if(market_start==std::string::npos) market_start=text.find("market deutsche boerse xetra");
-    if(market_start==std::string::npos)
+    const auto has_market_marker=[](const std::string& line) {
+        return line.find("market deutsche börse xetra")!=std::string::npos ||
+               line.find("market deutsche boerse xetra")!=std::string::npos;
+    };
+    std::vector<std::string> market_lines;
+    bool in_market=false;
+    std::istringstream input{std::string(extracted_text)};
+    std::string raw_line;
+    while(std::getline(input,raw_line)) {
+        const auto line=normalized(raw_line);
+        if(!in_market && has_market_marker(line)) in_market=true;
+        if(!in_market) continue;
+        if(line.find("availability")!=std::string::npos) break;
+        market_lines.push_back(line);
+    }
+    if(market_lines.empty())
         throw std::invalid_argument("Ogłoszenie PDF nie zawiera sekcji rynku Deutsche Börse Xetra.");
-    auto market_end=text.find("availability",market_start);
-    if(market_end==std::string::npos) market_end=text.size();
-    const auto market_section=text.substr(market_start,market_end-market_start);
+    std::string market_section;
+    for(const auto& line:market_lines) market_section+=line+"\\n";
     if(market_section.find("mic: xetr")==std::string::npos &&
        market_section.find("mic xetr")==std::string::npos)
         throw std::invalid_argument("Sekcja ogłoszenia nie potwierdza MIC XETR.");
@@ -345,12 +359,18 @@ VenueSessionNotice parse_xetra_session_notice_text(
 
     const auto extract_time=[&](const std::string& pattern_text,const char* event_name) {
         const std::regex pattern(pattern_text,std::regex::icase);
-        std::smatch match;
-        if(!std::regex_search(market_section,match,pattern))
+        std::optional<std::array<std::string,3>> captured;
+        for(const auto& line:market_lines) {
+            std::smatch match;
+            if(!std::regex_search(line,match,pattern)) continue;
+            if(captured) throw std::invalid_argument(std::string("Powtórzone zdarzenie w ogłoszeniu PDF: ")+event_name);
+            captured=std::array<std::string,3>{match[1].str(),match[2].str(),match[3].str()};
+        }
+        if(!captured)
             throw std::invalid_argument(std::string("Ogłoszenie PDF nie zawiera godziny zdarzenia: ")+event_name);
-        const unsigned hour12=static_cast<unsigned>(std::stoul(match[1].str()));
-        const unsigned minute=static_cast<unsigned>(std::stoul(match[2].str()));
-        const auto meridiem=normalized(match[3].str());
+        const unsigned hour12=static_cast<unsigned>(std::stoul((*captured)[0]));
+        const unsigned minute=static_cast<unsigned>(std::stoul((*captured)[1]));
+        const auto meridiem=normalized((*captured)[2]);
         if(hour12<1U || hour12>12U || minute>59U)
             throw std::invalid_argument("Godzina zdarzenia w ogłoszeniu PDF jest nieprawidłowa.");
         unsigned hour=hour12%12U;
