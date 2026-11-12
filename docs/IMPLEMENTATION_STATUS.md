@@ -41,6 +41,14 @@
 - `c561ac86cf7d1231aed6ef40d47e8ff2f36de763` — walidacja pochodzenia wykresów i silnik regresji kroczącej.
 - `8b7264e08fe946824304bea190dd76322166c8be` — wcześniejszy etap regresji HTF.
 
+## Ostatnia aktualizacja rejestru — commit `72d7ce5a13e082b21752821d653550ad7a1f7299`
+
+- Rejestr oraz audyt zostały zapisane na `main`.
+- CI dla tego commitu: [workflow 43261502952](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43261502952) — sukces.
+- Kroki: konfiguracja, kompilacja i testy zakończone powodzeniem.
+- CTest: 7/7; 100% testów zaliczonych; czas testów 0,09 s.
+- Commit zawiera dokumentację i rejestr, nie zmienia logiki aplikacji.
+
 ## Bieżący etap roboczy
 
 ### Etap 9 — trwały, niezmienny magazyn kalendarzy
