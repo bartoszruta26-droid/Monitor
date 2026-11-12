@@ -83,7 +83,7 @@ void archive_exact_bytes(const std::filesystem::path& path,const std::string& by
         if (ec) throw std::runtime_error("Nie można sprawdzić istniejącego archiwum HTML.");
         std::ifstream existing(path,std::ios::binary);
         const std::string stored((std::istreambuf_iterator<char>(existing)),{});
-        if (!existing.eof() || stored!=bytes)
+        if (existing.bad() || stored!=bytes)
             throw std::runtime_error("Konflikt: archiwum SHA-256 istnieje, ale bajty są różne.");
         return;
     }
@@ -104,7 +104,7 @@ void archive_exact_bytes(const std::filesystem::path& path,const std::string& by
                 std::filesystem::remove(temporary);
                 std::ifstream existing(path,std::ios::binary);
                 const std::string stored((std::istreambuf_iterator<char>(existing)),{});
-                if (stored==bytes) return;
+                if (!existing.bad() && stored==bytes) return;
             }
             throw std::runtime_error("Nie udało się atomowo opublikować archiwum HTML: "+ec.message());
         }
