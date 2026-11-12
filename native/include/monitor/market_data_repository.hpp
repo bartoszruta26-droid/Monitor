@@ -51,6 +51,17 @@ struct MarketDataSnapshot {
 [[nodiscard]] std::vector<SourceArchiveObject> find_orphaned_source_objects(
     const MarketDataSnapshot& snapshot);
 
+struct EffectiveVenueCalendarDay {
+    VenueCalendarDay day;
+    std::vector<std::string> applied_notice_ids;
+    bool requires_official_notice_unresolved{};
+};
+
+// Resolves the latest calendar revision and overlays active notice revisions
+// without mutating the stored base calendar.
+[[nodiscard]] EffectiveVenueCalendarDay resolve_effective_venue_calendar_day(
+    const MarketDataSnapshot& snapshot,std::string_view calendar_id,CivilDate date);
+
 struct JsonRepositoryConfig {
     std::size_t max_document_bytes{256U * 1024U * 1024U};
     bool backup_on_write{true};
