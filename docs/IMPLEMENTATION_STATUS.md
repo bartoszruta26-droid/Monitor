@@ -523,3 +523,19 @@ Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na ma
 2. Dodać walidację: rynek, kalendarz, data w zakresie, wersjonowanie, referencja SHA-256, kompletność i niezmienność.
 3. Dodać parser komunikatu dla jawnych godzin oraz oddzielny stan informacyjny, gdy komunikat nie zawiera danych pozwalających zmienić sesję.
 4. Dodać funkcję obliczającą efektywny dzień sesyjny z bazowego kalendarza i zatwierdzonych komunikatów; bez mutowania kalendarza bazowego.
+
+## 50. Etap 17A — model i magazyn komunikatów sesyjnych (w toku)
+
+- Dodano model `VenueSessionNotice` z osobną rewizją, rynkiem, kalendarzem, datą obowiązywania, referencją `source_object_id`, pochodzeniem, rodzajem komunikatu, opcjonalnym statusem dnia i sesjami produktów.
+- Rodzaje: `Informational` (bez zmiany sesji), `SessionOverride` (jawny status i komplet godzin) oraz `Cancellation` (wskazanie konkretnej wcześniejszej rewizji).
+- Dodano kolekcję `venue_session_notices` do `MarketDataSnapshot` i `MarketDataBatch`, opcjonalny odczyt JSON v1 oraz API `upsert_venue_session_notice`.
+- Walidacja obejmuje referencję do istniejącego obiektu archiwum, rynek/kalendarz, datę w zakresie, unikalność i rosnące rewizje, niezmienność, godziny produktów oraz poprawną referencję anulowania.
+- Testy obejmują komunikat informacyjny, jawne nadpisanie godzin, odrzucenie nadpisania bez godzin, atomowy zapis obiektu i anulowania, konflikt rewizji, datę poza zakresem i ochronę historii przed usunięciem.
+- Commity: `d2d64e6e4a3c7cb62b23dd1af4f685392734a4b0` (model), `a89e536628a4217ad90baa027d2f2e3aeed7e33a` (kolekcja i API), `10cdba3b5742a4fd58e587f02cd1df1ac674a6b5` / `fa6541d56a45a25025c483de4be4a3544f9bf880` (serializacja i walidacja), `8ea421ed3a9ad848ed7c0e2ad0f07158b34fb9a4` (klucze), `5de0f9ef59c5565c8eb347796bd4ad1bbd3bbef8` (niezmienność/upsert), `839e218c624882686b32a6b9af87c4b1585731c0` (testy), `4f10309c6f1a5e8e3c4a2d89ab476ec8268bce62` (deklaracje funkcji przed walidacją migawki).
+- Wcześniejsze CI dla przejściowych commitów wykazały brak implementacji metody wirtualnej i brak deklaracji funkcji walidujących przed ich użyciem. Poprawki są już na `main`; CI dla aktualnego SHA pozostaje w toku.
+- Status Etapu 17A: w trakcie — nie zamykać przed pełnym zielonym Configure/Build/Test.
+
+### Następny zakres po 17A
+1. Etap 17B: parser komunikatu HTML, który publikuje wyłącznie jawnie podane daty/statusy/godziny i odrzuca niejednoznaczny tekst.
+2. Etap 17C: funkcja efektywnego dnia sesyjnego nakładająca aktywne komunikaty na kopię bazowego dnia, bez mutacji kalendarza.
+3. Etap 17D: testy anulowania, konfliktów, priorytetów rewizji i idempotencji.
