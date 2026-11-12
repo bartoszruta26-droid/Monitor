@@ -87,10 +87,6 @@ struct SourceArchiveObject {
     std::string archive_relative_path;
     std::uint64_t content_length_bytes{};
     std::string content_type;
-    std::string source_uri;
-    std::optional<UtcTimestamp> retrieved_at;
-    std::string attribution;
-    VenueCalendarLicenseStatus license_status{VenueCalendarLicenseStatus::Unknown};
 };
 
 struct VenueSessionCalendar {
