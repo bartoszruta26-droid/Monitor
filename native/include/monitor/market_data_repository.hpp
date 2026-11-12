@@ -62,6 +62,8 @@ struct EffectiveVenueCalendarDay {
 // without mutating the stored base calendar.
 [[nodiscard]] EffectiveVenueCalendarDay resolve_effective_venue_calendar_day(
     const MarketDataSnapshot& snapshot,std::string_view calendar_id,CivilDate date);
+[[nodiscard]] std::vector<CivilDate> find_unresolved_venue_notice_dates(
+    const MarketDataSnapshot& snapshot,std::string_view calendar_id);
 
 struct JsonRepositoryConfig {
     std::size_t max_document_bytes{256U * 1024U * 1024U};
