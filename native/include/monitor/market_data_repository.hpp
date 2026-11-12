@@ -1,6 +1,7 @@
 #pragma once
 
 #include "monitor/market_data.hpp"
+#include "monitor/market_data_calendar.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -25,6 +26,7 @@ struct MarketDataBatch {
     std::vector<MarketObservation> observations;
     std::vector<SeriesMetadata> series_metadata;
     std::vector<MarketSessionCalendar> session_calendars;
+    std::vector<VenueSessionCalendar> venue_calendars;
 };
 
 struct MarketDataSnapshot {
@@ -56,6 +58,7 @@ public:
     [[nodiscard]] virtual std::uint64_t upsert_observation(const MarketObservation& observation) = 0;
     [[nodiscard]] virtual std::uint64_t upsert_series_metadata(const SeriesMetadata& metadata) = 0;
     [[nodiscard]] virtual std::uint64_t upsert_session_calendar(const MarketSessionCalendar& calendar) = 0;
+    [[nodiscard]] virtual std::uint64_t upsert_venue_calendar(const VenueSessionCalendar& calendar) = 0;
 };
 
 class JsonMarketDataRepository final : public MarketDataRepository {
@@ -71,6 +74,7 @@ public:
     [[nodiscard]] std::uint64_t upsert_observation(const MarketObservation& observation) override;
     [[nodiscard]] std::uint64_t upsert_series_metadata(const SeriesMetadata& metadata) override;
     [[nodiscard]] std::uint64_t upsert_session_calendar(const MarketSessionCalendar& calendar) override;
+    [[nodiscard]] std::uint64_t upsert_venue_calendar(const VenueSessionCalendar& calendar) override;
 
     // Explicit recovery only. A corrupt primary file is never silently replaced.
     [[nodiscard]] MarketDataSnapshot restore_backup();
