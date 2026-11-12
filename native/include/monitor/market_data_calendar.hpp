@@ -95,6 +95,8 @@ struct VenueSessionCalendar {
     // legacy record whose key is source.document_id + source.version.
     std::string calendar_id;
     std::uint32_t revision{};
+    // Identifier of the parser/ruleset that produced this interpretation.
+    std::string parser_version;
     SourceCalendarDocument source;
     std::vector<VenueCalendarDay> days;
 };
