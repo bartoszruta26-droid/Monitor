@@ -354,3 +354,6 @@ Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na ma
 - **CI dla kodu archiwizacji, testów i dokumentacji:** oczekuje na zakończenie; etap pozostaje weryfikowany.
 - Ograniczenia: testy są offline; nie pobierano na żywo oficjalnej strony. Status licencji pozostaje Unknown. Obecny parser nadal dotyczy wyłącznie 2026.
 - Następny etap po zielonym CI: rozdzielenie identyfikacji dokumentu źródłowego od wydania kalendarza, rejestrowanie metadanych archiwum i kontrola integralności plików podczas ponownego uruchomienia; następnie rozszerzenie parsera na kolejne lata oraz osobny importer okólników.
+
+- Dodatkowy przegląd etapu 13 wykrył, że strumień wejściowy z `istreambuf_iterator` nie gwarantuje ustawienia `eofbit`; warunek kontroli istniejącego pliku archiwum został poprawiony w `b21d6d8421b2b296e011b077847c8e734851cb42` i dodano test ponownego importu istniejącego pliku w `1148015a16e8d056aef460685cc51ef171411c3a`.
+- Ostateczna weryfikacja CI dla kodu po poprawce jest wymagana przed oznaczeniem etapu 13 jako zakończonego.
