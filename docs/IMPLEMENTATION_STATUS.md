@@ -28,7 +28,7 @@
 | 7 | Regresja HTF z segmentacją po brakujących okresach | Zakończony v1 | `market_data_regression.*`; okresy kalendarzowe, bez reguł sesji |
 | 8 | Jawny kalendarz sesyjny dla kompletności HTF | Zakończony v1 jako funkcja obliczeniowa | `MarketSessionCalendar` i `session_aware_rolling_regression()`; terminy przekazuje wywołujący |
 | 9 | Trwały magazyn i wersjonowanie kalendarzy sesyjnych | Zakończony | Commit `df867c6efaa7f8cebad74db3291a3c0dde12f67e`; CI [43264555372](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43264555372) sukces, kompilacja i CTest 7/7. Pochodzenie regresji zawiera `calendar_id` i `calendar_version`. |
-| 10 | Generator harmonogramów z IANA TZ/DST i reguł sesji | W toku — poprawka testu po pierwszym CI | Kompilacja przechodzi; pierwsze CTest: 7/8. Jedyny błąd to zakres fixture: koniec półotwarty nie obejmował 3 kwietnia. Poprawiono zakres i usunięto ostrzeżenie o nieużywanej funkcji; wymagane ponowne CI. |
+| 10 | Generator harmonogramów z IANA TZ/DST i reguł sesji | W toku — poprawka obsługi DST w ICU | CI `43265958349`: konfiguracja i kompilacja przeszły, CTest 7/8; test generatora przerwał się na `U_ILLEGAL_ARGUMENT_ERROR`. Zdiagnozowano konflikt `setLenient(false)` z jawną obsługą nieistniejącego czasu ICU; poprawiono tryb kalendarza, zachowując kontrolę odrzucania przez porównanie pól lokalnych. Oczekuje na ponowne CI. |
 | 11 | Oficjalne kalendarze instrumentów (NBP, metale, giełdy) | Do wykonania | Brak zweryfikowanych kalendarzy dostawców |
 | 12 | Wspólne fixture i porównanie C++/Pine | Do wykonania | Pine Editor niezweryfikowany; brak potwierdzonej kompilacji TradingView |
 | 13 | Serwer API, autoryzacja, REST/JSON i WebSocket | Do wykonania | Brak aktywnego modułu serwera |
@@ -113,3 +113,12 @@ Po każdym etapie:
 - nie oznaczać prac jako ukończonych na podstawie samego commita bez zielonego CI.
 
 Przy każdym kolejnym poleceniu kontynuacji należy najpierw odczytać ten plik i zweryfikować HEAD, gałęzie, PR, Issues oraz ostatni CI.
+
+
+## 22. Etap 10 — druga diagnoza CI i poprawka ICU
+
+- Commit `6845c071890a762fb7e9fe00fef220a31134af7e`, CI [43265958349](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43265958349): konfiguracja i kompilacja zakończone sukcesem; CTest 7/8.
+- Test `monitor-market-data-calendar-tests` przerwał proces wyjątkiem ICU `U_ILLEGAL_ARGUMENT_ERROR` przy konwersji lokalnego czasu na UTC. Nie był to błąd kompilacji ani zakresu dat.
+- Przyczyna: kalendarz ICU był ustawiany jako nielenientny, mimo że generator korzysta z jawnych opcji `UCAL_WALLTIME_NEXT_VALID` do rozstrzygania nieistniejących czasów. Tryb lenient jest wymagany do zastosowania polityki ICU; rygorystyczne odrzucanie pozostaje realizowane przez odczyt pól po konwersji i porównanie z żądanym czasem lokalnym.
+- Poprawka: w `market_data_calendar.cpp` włączono tryb lenient z komentarzem wyjaśniającym. Dla `NonexistentLocalTimePolicy::Reject` nadal porównywane są rok, miesiąc, dzień, godzina, minuta i sekunda; rozbieżność powoduje `invalid_argument`. Polityka `NextValidTime` akceptuje pierwszą poprawną chwilę po luce DST.
+- Status etapu 10 pozostaje „w toku” do czasu zielonego CI dla nowego SHA.

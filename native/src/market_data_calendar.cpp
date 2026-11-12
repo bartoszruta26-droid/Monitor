@@ -47,7 +47,10 @@ std::int64_t local_to_utc(const LocalSessionSchedule& schedule,
     if(!zone) throw std::runtime_error("Nie można utworzyć strefy czasowej ICU.");
     icu::GregorianCalendar calendar(zone.release(),status);
     check_icu(status,"Nie można utworzyć kalendarza gregoriańskiego");
-    calendar.setLenient(false);
+    // ICU musi działać w trybie lenient, aby zastosować jawne opcje wall-time
+    // dla przerwy DST. Dla polityki Reject odtwarzamy pola lokalne poniżej
+    // i odrzucamy każdą normalizację czasu nieistniejącego.
+    calendar.setLenient(true);
     switch(schedule.ambiguous_time_policy) {
     case AmbiguousLocalTimePolicy::Reject:
         calendar.setRepeatedWallTimeOption(UCAL_WALLTIME_FIRST);

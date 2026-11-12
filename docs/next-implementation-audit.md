@@ -698,3 +698,8 @@ Etap 10 rozpoczęty: generator terminów z IANA TZ/DST w C++20, wykorzystujący 
 ## 21. Etap 10 — pierwsza weryfikacja
 
 Commit `cedee367f5528abef5d956b9f560167a5b86aaf0`: konfiguracja i kompilacja C++20/ICU przeszły. CTest 7/8; niepowodzenie wynikało z błędnego zakresu dat fixture: `end_date_exclusive` ustawiono na 3 kwietnia, więc generator prawidłowo nie uwzględnił 3 kwietnia. Zakres testu poprawiono na 4 kwietnia. Usunięto również nieużywaną funkcję pomocniczą.
+
+
+## 22. Etap 10 — diagnoza i korekta integracji ICU (2026-11-12)
+
+CI `43265958349` dla commitu `6845c071890a762fb7e9fe00fef220a31134af7e` potwierdził konfigurację i kompilację, ale test generatora zakończył się wyjątkiem ICU `U_ILLEGAL_ARGUMENT_ERROR`. Analiza logu wskazała konflikt pomiędzy `GregorianCalendar::setLenient(false)` a jawną obsługą `UCAL_WALLTIME_NEXT_VALID`. Poprawka ustawia kalendarz w trybie lenient, aby ICU mogło zastosować reguły wall-time. Odrzucanie nieistniejącego czasu dla polityki `Reject` nadal jest jawne: po konwersji porównywane są wszystkie składowe lokalnej daty i czasu z żądaniem; każda normalizacja jest odrzucana. `NextValidTime` zachowuje zachowanie przesunięcia do pierwszej poprawnej chwili. Etap 10 pozostaje w toku do potwierdzenia pełnego CI dla nowego SHA.
