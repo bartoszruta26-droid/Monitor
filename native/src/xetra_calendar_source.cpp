@@ -206,6 +206,7 @@ std::uint64_t import_xetra_calendar(
     return repository.upsert_batch(batch);
 }
 }
+namespace {
 std::string read_source_object_bytes(const JsonMarketDataRepository& repository,
                                      const SourceArchiveObject& object) {
     const std::filesystem::path relative(object.archive_relative_path);
