@@ -629,3 +629,21 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 1. Etap 18: adaptacja parsera do rzeczywistego formatu oficjalnych komunikatów Xetra, po pobraniu i zarchiwizowaniu przykładowego komunikatu; fixture musi zachować dokładne bajty i atrybucję.
 2. Dodać możliwość ponownej interpretacji archiwizowanego komunikatu nową rewizją bez kolejnego HTTP, analogicznie do kalendarza.
 3. Etap 19: raport audytowy źródeł i sesji (pochodzenie, licencja, SHA-256, nierozstrzygnięte dni, zastosowane/anulowane komunikaty).
+
+## 58. Etap 18A — obsługa faz sesji i tekstu ogłoszenia PDF (w toku)
+
+- Weryfikacja źródeł publicznych wykazała, że komunikaty 049/2026 i 050/2026 odsyłają do osobnego oficjalnego ogłoszenia PDF o końcowej sesji 2026. PDF podaje fazy Xetra: pre-trading 07:00, retail early 08:00, opening auction 08:55, intraday auction 13:00, closing auction 14:00, najwcześniejsza cena zamknięcia 14:05, Trade-at-Close do 14:10, usługi TES OTC/LIS i Xetra EnLight do 14:59 oraz koniec post-trading 15:00 (CET).
+- Prosty przedział `opens_at`–`closes_at` nie opisuje tych zdarzeń bez utraty informacji; dodano `VenueSessionPhaseEventKind` i `VenueSessionPhaseEvent` z czasem lokalnym oraz zakresem produktu/usługi.
+- `VenueCalendarDay` i `VenueSessionNotice` mają teraz `phase_events`; JSON schema v1 zapisuje nowe pole, a odczyt starych rekordów pozostaje opcjonalny.
+- Walidacja dopuszcza handlowy dzień opisany samymi zdarzeniami fazowymi; resolver przenosi fazy na efektywny dzień bez tworzenia fikcyjnej sesji ciągłej.
+- Dodano `parse_xetra_session_notice_text` do odczytu tekstu wydobytego z oficjalnego PDF; parser sprawdza MIC XETR, datę, wszystkie dziewięć faz, konwersję AM/PM i zakresy usług.
+- Dodano syntetyczny fixture tekstowy z harmonogramem 30 grudnia 2026 i testy daty, MIC, kompletności faz, godzin i zakresów.
+- Commity: `84fdcb3bbaa5d71839f1acdbf9b39c64c1756900` (model), `c8c1ff8d6cef9e41916f126b2ea2be4e4cdc8bdc` (enum/serializacja faz), `5a4a2e4133a5cd28a7c2581dae5be90bbbf3556f` (JSON), `82c63d6c2e32af6ef5a157a03215577bc834c6f5` (walidacja i resolver), `885a41182f27546970d109384d4874314922396f` (API tekstowego parsera), `e9a5b767f56ad24be54c0035a133aaf24b9a9af5` / `5886bd697c573cde3ff8c0120722fc183b431062` / `f4dace7581630a6fa8f5af873ddf43de0c0e97c4` (parser), `39edb7ae8736a2313d03702743fae3035d0b3f60` (fixture), `67d241c053031fc998f64ed3f59ab4547f123890` (test), `5e92d67df8551322ae10ed4d15aaa04245835b14` (porównywanie faz przy replay), `767f4b74c84c6749969588418939b743f05b8887` (test JSON i resolvera), `07248ae304307d1328a79e09d1693acf24629130` (lokalna walidacja faz w parserze).
+- Wczesne CI ujawniły dwa problemy integracyjne: parser nie może wywoływać prywatnej walidacji repozytorium, a funkcja normalizacji czasu musi używać lokalnego helpera `normalized`. Poprawiono oba; CI dla końcowego SHA jest w toku.
+- Ograniczenie: parser przyjmuje tekst wydobyty z PDF. Pobieranie i bezpieczne wydobywanie tekstu z surowych bajtów PDF jest następnym podetapem 18B. Fixture jest syntetyczny, nie jest oryginalnym plikiem PDF.
+
+### Następne czynności
+1. Potwierdzić CI dla modelu faz i parsera tekstowego; poprawić błędy testów.
+2. Etap 18B: dodać bezpieczne wydobywanie tekstu z PDF i metodę `import_pdf_notice`, zachowując surowe bajty PDF jako obiekt SHA-256.
+3. Dodać test end-to-end z małym syntetycznym PDF oraz sprawdzić, że źródło PDF i komunikat zapisują się atomowo.
+4. Dopiero po zielonym CI oznaczyć Etap 18A/18B jako zakończony.
