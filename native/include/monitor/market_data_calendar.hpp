@@ -70,6 +70,10 @@ struct SourceCalendarDocument {
     // SHA-256 of the exact downloaded bytes. Empty until those bytes are
     // actually acquired; a URL or parsed text is not a substitute for it.
     std::optional<std::string> content_sha256;
+    // Relative path under the JSON repository directory; absent in legacy records.
+    std::optional<std::string> archive_relative_path;
+    std::optional<std::uint64_t> content_length_bytes;
+    std::optional<std::string> content_type;
     std::string attribution;
     VenueCalendarLicenseStatus license_status{VenueCalendarLicenseStatus::Unknown};
 };
