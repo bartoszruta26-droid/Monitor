@@ -351,9 +351,20 @@ Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na ma
 - Importer weryfikuje ponownie bajty, gdy ścieżka archiwum już istnieje. Identyczne `document_id + SHA-256` nie publikuje kolejnej wersji kalendarza; zmiana choćby jednego bajtu tworzy nowy skrót i może dopisać kolejną wersję.
 - Commit `1f3dfbd8313730e32f8946893f4641ab18fb26a2`: testy sprawdzają bitową zgodność archiwum z fixture, brak commitowania błędnego HTML, deduplikację identycznej treści przy innym numerze wersji oraz utworzenie wersji 2 po zmianie bajtów.
 - Commit `7c7e93f45a0873da25ad49a0dabe2920df56b796`: opisano strukturę archiwum i zasady deduplikacji w `docs/market-calendar-sources.md`.
-- **CI dla kodu archiwizacji, testów i dokumentacji:** oczekuje na zakończenie; etap pozostaje weryfikowany.
+- **CI dla finalnego SHA `a5423c69bf80d46b0658be6d61b06fa6216bb1ea`:** [43315452951](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43315452951) — Configure, Build i Test: success. Etap 13 zakończony.
 - Ograniczenia: testy są offline; nie pobierano na żywo oficjalnej strony. Status licencji pozostaje Unknown. Obecny parser nadal dotyczy wyłącznie 2026.
 - Następny etap po zielonym CI: rozdzielenie identyfikacji dokumentu źródłowego od wydania kalendarza, rejestrowanie metadanych archiwum i kontrola integralności plików podczas ponownego uruchomienia; następnie rozszerzenie parsera na kolejne lata oraz osobny importer okólników.
 
 - Dodatkowy przegląd etapu 13 wykrył, że strumień wejściowy z `istreambuf_iterator` nie gwarantuje ustawienia `eofbit`; warunek kontroli istniejącego pliku archiwum został poprawiony w `b21d6d8421b2b296e011b077847c8e734851cb42` i dodano test ponownego importu istniejącego pliku w `1148015a16e8d056aef460685cc51ef171411c3a`.
 - Ostateczna weryfikacja CI dla kodu po poprawce jest wymagana przed oznaczeniem etapu 13 jako zakończonego.
+
+
+## 42. Etap 14 — manifest archiwum i kontrola integralności
+
+- Potwierdzono zielony CI etapu 13 dla HEAD `a5423c69bf80d46b0658be6d61b06fa6216bb1ea`, run [43315452951](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43315452951).
+- Rozszerzono metadane dokumentu źródłowego o względną ścieżkę archiwum, długość bajtową i typ treści. Pola są opcjonalne, aby zachować odczyt starszych dokumentów JSON schema v1.
+- Importer zapisuje metadane po trwałym utworzeniu archiwum i przed publikacją kalendarza.
+- Odczyt repozytorium weryfikuje manifest: ścieżkę względną, brak komponentów traversal i symlinków, zwykły plik, długość oraz SHA-256. Brakujące lub uszkodzone archiwum blokuje odczyt migawki.
+- Testy negatywne dla braku, skrócenia, podmiany, traversal i symlinków oraz test migracji starszego JSON są wymagane w tej iteracji; etap nie jest jeszcze zakończony.
+- Ograniczenie: klucz `document_id + version` nadal wiąże dokument źródłowy z wersją interpretacji kalendarza; osobne wersjonowanie źródła i kalendarza pozostaje dalszą zmianą modelu.
+- Status: implementacja w toku; oczekuje na testy i CI dla nowego SHA.
