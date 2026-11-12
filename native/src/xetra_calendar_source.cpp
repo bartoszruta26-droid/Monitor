@@ -40,8 +40,9 @@ DownloadedCalendar download(HttpTransport& transport,SourceCalendarDocument sour
     validate_source_calendar_document(source);
     if (!allowed_xetra_url(source.source_uri))
         throw std::invalid_argument("Adres kalendarza Xetra musi używać zatwierdzonego hosta HTTPS.");
-    if (source.retrieved_at || source.content_sha256)
-        throw std::invalid_argument("Metadane pobrania i SHA-256 ustala importer, nie wywołujący.");
+    if (source.retrieved_at || source.content_sha256 || source.source_object_id ||
+        source.archive_relative_path || source.content_length_bytes || source.content_type)
+        throw std::invalid_argument("Metadane pobrania, obiektu i archiwum ustala importer, nie wywołujący.");
     HttpRequest request;
     request.url=source.source_uri;
     request.timeout=std::chrono::milliseconds{15000};
