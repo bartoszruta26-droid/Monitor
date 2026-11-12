@@ -743,3 +743,8 @@ Dodano `polish_statutory_holidays(year)`, opartą na art. 1 ustawy o dniach woln
 ## 28. Etap 11 — automatyczne stosowanie kalendarza świąt RP
 
 Dodano przeciążenie `generate_nbp_publication_windows(start, end_exclusive)`, które buduje listę świąt ustawowych dla każdego roku objętego półotwartym zakresem i stosuje ją do reguł A/B/C. Wariant przyjmujący jawne daty nadal obsługuje nadzwyczajne dni wolne i wyjątki. Testy obejmują 11 listopada 2026 r. i Wigilię 2025 r., gdy tabela B jest przesuwana na poprzedni dzień roboczy.
+
+
+## 29. Etap 11 — aktualny stan po CI (2026-11-12)
+
+Generator okien publikacji NBP A/B/C wraz z automatycznymi polskimi świętami ustawowymi przeszedł CI dla commitu `c76bf3dc697e93ad3f69bca82a5180e08c338feb`: [43304025796](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43304025796), 8/8 testów. Etap 11 pozostaje otwarty: należy dodać importer i wersjonowanie oficjalnych kalendarzy venue (najpierw Xetra), a także osobny model obserwowanych dat publikacji NBP. Nie mieszać tych kalendarzy z oczekiwanymi oknami publikacji.

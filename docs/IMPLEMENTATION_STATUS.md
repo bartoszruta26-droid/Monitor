@@ -29,7 +29,7 @@
 | 8 | Jawny kalendarz sesyjny dla kompletności HTF | Zakończony v1 jako funkcja obliczeniowa | `MarketSessionCalendar` i `session_aware_rolling_regression()`; terminy przekazuje wywołujący |
 | 9 | Trwały magazyn i wersjonowanie kalendarzy sesyjnych | Zakończony | Commit `df867c6efaa7f8cebad74db3291a3c0dde12f67e`; CI [43264555372](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43264555372) sukces, kompilacja i CTest 7/7. Pochodzenie regresji zawiera `calendar_id` i `calendar_version`. |
 | 10 | Generator harmonogramów z IANA TZ/DST i reguł sesji | Zakończony | Commit `da61302dc4de43308228e6f60e82e187bef566df`; CI [43301335250](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43301335250) sukces: konfiguracja, kompilacja i CTest 8/8. Testy obejmują DST wiosenny i jesienny, polityki czasu, weekendy, wyłączenia, błędne strefy i zakres dat. |
-| 11 | Kalendarze źródłowe i instrumentowe (NBP, metale, giełdy) | W toku — generator okien publikacji NBP | Generator okien A/B/C przeszedł CI 43303169211 (8/8). Funkcja polskich świąt ustawowych i dat ruchomych przeszła CI 43303677601 (8/8). Dodano teraz przeciążenie generatora NBP, które automatycznie stosuje święta ustawowe; oczekuje na CI. |
+| 11 | Kalendarze źródłowe i instrumentowe (NBP, metale, giełdy) | W toku — generator okien publikacji NBP | Generator okien A/B/C przeszedł CI 43303169211 (8/8). Generator okien A/B/C, świąt ustawowych i automatycznego stosowania kalendarza świąt przeszedł CI 43304025796 (8/8). Etap 11 nadal w toku: brakuje importu/wersjonowania oficjalnych kalendarzy venue (Xetra) i modelu observed publication. |
 | 12 | Wspólne fixture i porównanie C++/Pine | Do wykonania | Pine Editor niezweryfikowany; brak potwierdzonej kompilacji TradingView |
 | 13 | Serwer API, autoryzacja, REST/JSON i WebSocket | Do wykonania | Brak aktywnego modułu serwera |
 | 14 | Klienci Linux GUI, WebUI, TUI i Android | Do wykonania | Brak aktywnych modułów klientów |
@@ -174,3 +174,11 @@ Przy każdym kolejnym poleceniu kontynuacji należy najpierw odczytać ten plik 
 - Dodatkowe dni wolne ustanowione nadzwyczajnym rozporządzeniem nadal wymagają przekazania jawnego w wariancie z listą.
 - Nowe testy weryfikują automatyczne wyłączenie 11 listopada 2026 r. i Wigilii 2025 r. oraz przesunięcie tabeli B.
 - Oczekuje na CI.
+
+
+## 29. Etap 11 — potwierdzenie automatycznych świąt NBP
+
+- Commit: `c76bf3dc697e93ad3f69bca82a5180e08c338feb`.
+- CI: [43304025796](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43304025796) — konfiguracja i kompilacja sukces; CTest **8/8, 100%** (0,13 s).
+- Testy potwierdzają automatyczne wyłączenie 11 listopada 2026 r. oraz Wigilii 24 grudnia 2025 r. i przesunięcie tabeli B na poprzedni dzień roboczy.
+- Reguły NBP A/B/C i ustawowe święta RP są zaimplementowane w module kalendarza. Etap 11 pozostaje w toku do dodania kalendarza faktycznie zaobserwowanych publikacji i importera oficjalnego kalendarza giełdowego.

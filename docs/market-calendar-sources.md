@@ -123,3 +123,10 @@ Ograniczenie: generator obejmuje ustawowe dni wolne i zwykłe weekendy. Nie obej
 Dodano przeciążenie `generate_nbp_publication_windows(start, end_exclusive)`, które automatycznie wylicza ustawowe dni wolne dla wszystkich lat objętych zakresem, a następnie generuje okna A/B/C. Nie wymaga od wywołującego ręcznego przekazywania listy świąt ustawowych. Wariant z jawną listą pozostaje dostępny dla wyjątkowych dni wolnych ustanowionych rozporządzeniem lub dodatkowymi wyjątkami operacyjnymi.
 
 Fixture potwierdza wyłączenie 11 listopada 2026 r., przesunięcie tabeli B na 10 listopada oraz wyłączenie Wigilii 24 grudnia 2025 r. i przesunięcie tabeli B na 23 grudnia.
+
+
+## 11. Wynik CI — automatyczne święta w generatorze NBP
+
+Commit `c76bf3dc697e93ad3f69bca82a5180e08c338feb` przeszedł [CI 43304025796](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43304025796): konfiguracja, kompilacja i CTest **8/8**. Generator bez jawnej listy świąt automatycznie stosuje polskie święta ustawowe, w tym 11 listopada oraz Wigilię od 2025 r. Wariant z dodatkową listą nadal pozwala przekazać nadzwyczajne dni wolne.
+
+Pozostałe prace etapu 11: wersjonowany rejestr źródłowych kalendarzy i wyjątków Xetra/Frankfurt oraz model kalendarza obserwowanych publikacji NBP.
