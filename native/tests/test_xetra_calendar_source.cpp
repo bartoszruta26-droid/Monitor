@@ -88,6 +88,14 @@ int main() {
     require(saved.venue_calendars.size()==1U &&
             saved.venue_calendars.front().source.content_sha256==sha256_hex(html),
             "persist exact response SHA-256");
+    const auto archive_root=folder/"calendar.json.sources"/"xetra-2026-official-html";
+    const auto archive_v1=archive_root/("1-"+sha256_hex(html)+".html");
+    require(std::filesystem::exists(archive_v1),"archive exact original HTML bytes");
+    {
+        std::ifstream archived(archive_v1,std::ios::binary);
+        const std::string bytes((std::istreambuf_iterator<char>(archived)),{});
+        require(bytes==html,"archived bytes are byte-for-byte identical");
+    }
     auto next=source();
     next.version=2U;
     transport.response.body="<html>invalid</html>";
@@ -96,8 +104,20 @@ int main() {
             repository.load().venue_calendars.size()==1U,
             "failed import leaves repository unchanged");
     transport.response.body=html;
-    require(adapter.import(repository,next)==2U,"valid next version is appended");
-    require(repository.load().venue_calendars.size()==2U,"prior version preserved");
+    require(adapter.import(repository,next)==1U,"identical content hash is not imported as a new version");
+    require(repository.load().venue_calendars.size()==1U,
+            "identical content is deduplicated across requested versions");
+    require(std::filesystem::exists(archive_root/("2-"+sha256_hex(html)+".html")),
+            "each source version request archives its exact response");
+    transport.response.body=html+"\\n";
+    require(adapter.import(repository,next)==2U,"changed exact bytes append a new version");
+    const auto final_snapshot=repository.load();
+    require(final_snapshot.venue_calendars.size()==2U &&
+            final_snapshot.venue_calendars.back().source.version==2U &&
+            final_snapshot.venue_calendars.back().source.content_sha256==sha256_hex(html+"\\n"),
+            "new byte hash creates a new immutable version while preserving v1");
+    require(std::filesystem::exists(archive_root/("2-"+sha256_hex(html+"\\n")+".html")),
+            "new source version is archived under its content hash");
     std::filesystem::remove_all(folder);
     std::cout<<"Xetra HTTPS source adapter tests passed\n";
 }
