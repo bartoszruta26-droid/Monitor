@@ -15,10 +15,8 @@ void validate_single_series(const std::vector<MarketObservation>& observations) 
     const auto& first = observations.front();
     std::set<std::string> ids;
     for (const auto& item : observations) {
-        if (item.instrument_id != first.instrument_id ||
-            item.provider_id != first.provider_id ||
-            item.price_kind != first.price_kind ||
-            item.frequency != first.frequency)
+        if (item.instrument_id != first.instrument_id || item.provider_id != first.provider_id ||
+            item.price_kind != first.price_kind || item.frequency != first.frequency)
             throw std::invalid_argument("Wykres wymaga jednego, jednorodnego szeregu danych.");
         if (item.id.empty() || !ids.insert(item.id).second)
             throw std::invalid_argument("Identyfikatory punktów wykresu muszą być unikalne.");
@@ -26,12 +24,26 @@ void validate_single_series(const std::vector<MarketObservation>& observations) 
             throw std::invalid_argument("Punkt wykresu zawiera cenę niefinitywną.");
     }
 }
+bool same_candle(const OhlcCandle& a, const OhlcCandle& b) {
+    return a.semantics == b.semantics && a.has_intraperiod_range == b.has_intraperiod_range &&
+        a.instrument_id == b.instrument_id && a.provider_id == b.provider_id &&
+        a.price_kind == b.price_kind && a.source_frequency == b.source_frequency &&
+        a.frequency == b.frequency && a.period_start.unix_seconds == b.period_start.unix_seconds &&
+        a.period_end.unix_seconds == b.period_end.unix_seconds &&
+        a.open == b.open && a.high == b.high && a.low == b.low && a.close == b.close &&
+        a.observation_count == b.observation_count && a.period_status == b.period_status &&
+        a.quality == b.quality && a.quality_flags == b.quality_flags &&
+        a.source_observation_ids == b.source_observation_ids;
 }
-
+bool same_gap(const MarketDataGap& a, const MarketDataGap& b) {
+    return a.period_start.unix_seconds == b.period_start.unix_seconds &&
+        a.period_end.unix_seconds == b.period_end.unix_seconds && a.frequency == b.frequency;
+}
+}
 ChartSeries build_point_chart(const std::vector<MarketObservation>& observations,
                               ChartKind kind, std::size_t max_points) {
-    if (kind == ChartKind::Candlestick)
-        throw std::invalid_argument("Wykres świecowy wymaga build_candlestick_chart.");
+    if (kind != ChartKind::Line && kind != ChartKind::Area)
+        throw std::invalid_argument("Nieznany rodzaj wykresu punktowego.");
     if (max_points == 0U) throw std::invalid_argument("Limit punktów musi być dodatni.");
     validate_single_series(observations);
     ChartSeries result;
@@ -64,7 +76,6 @@ ChartSeries build_point_chart(const std::vector<MarketObservation>& observations
                                  item->period_status, item->id});
     return result;
 }
-
 ChartSeries build_candlestick_chart(const std::vector<MarketObservation>& observations,
                                     const AggregationResult& aggregation,
                                     std::size_t max_candles) {
@@ -77,6 +88,8 @@ ChartSeries build_candlestick_chart(const std::vector<MarketObservation>& observ
             throw std::invalid_argument("Agregacja bez szeregu źródłowego.");
         return result;
     }
+    if (aggregation.candles.empty())
+        throw std::invalid_argument("Brak świec dla niepustego szeregu źródłowego.");
     const auto& first = observations.front();
     result.instrument_id = first.instrument_id;
     result.provider_id = first.provider_id;
@@ -84,37 +97,25 @@ ChartSeries build_candlestick_chart(const std::vector<MarketObservation>& observ
     result.source_frequency = first.frequency;
     if (aggregation.candles.size() > max_candles)
         throw std::length_error("Liczba świec przekracza limit wykresu.");
-    result.candles = aggregation.candles;
-    std::int64_t previous_start = std::numeric_limits<std::int64_t>::min();
-    for (const auto& candle : result.candles) {
-        if (candle.instrument_id != result.instrument_id ||
-            candle.provider_id != result.provider_id ||
-            candle.price_kind != result.price_kind ||
-            candle.source_frequency != result.source_frequency ||
-            candle.period_start.unix_seconds <= previous_start ||
-            candle.period_end.unix_seconds <= candle.period_start.unix_seconds ||
-            candle.observation_count == 0U ||
-            candle.source_observation_ids.size() != candle.observation_count ||
-            !std::isfinite(candle.open) || !std::isfinite(candle.high) ||
-            !std::isfinite(candle.low) || !std::isfinite(candle.close) ||
-            candle.high < candle.low || candle.high < candle.open ||
-            candle.high < candle.close || candle.low > candle.open ||
-            candle.low > candle.close ||
-            candle.has_intraperiod_range != (candle.observation_count > 1U))
-            throw std::invalid_argument("Nieprawidłowa świeca lub niezgodna pochodność danych.");
-        previous_start = candle.period_start.unix_seconds;
+
+    const Frequency target_frequency = aggregation.candles.front().frequency;
+    const auto expected = aggregate_ohlc(observations, target_frequency, max_candles);
+    if (expected.candles.size() != aggregation.candles.size() ||
+        expected.gaps.size() != aggregation.gaps.size())
+        throw std::invalid_argument("Agregacja nie odpowiada szeregowi źródłowemu.");
+    for (std::size_t i = 0; i < expected.candles.size(); ++i) {
+        if (!same_candle(expected.candles[i], aggregation.candles[i]))
+            throw std::invalid_argument("Świeca nie odpowiada obserwacjom źródłowym.");
     }
+    for (std::size_t i = 0; i < expected.gaps.size(); ++i) {
+        if (!same_gap(expected.gaps[i], aggregation.gaps[i]))
+            throw std::invalid_argument("Luka wykresu nie odpowiada szeregowi źródłowemu.");
+    }
+    result.candles = aggregation.candles;
     result.gaps.reserve(aggregation.gaps.size());
     for (const auto& gap : aggregation.gaps)
         result.gaps.push_back({gap.period_start, gap.period_end, gap.frequency});
-    if (!result.candles.empty()) {
-        result.display_frequency = result.candles.front().frequency;
-        for (const auto& candle : result.candles) {
-            if (candle.frequency != result.display_frequency)
-                throw std::invalid_argument("Świece mają różne interwały wyświetlania.");
-        }
-    } else result.display_frequency = result.source_frequency;
+    result.display_frequency = target_frequency;
     return result;
 }
-
 } // namespace monitor::market

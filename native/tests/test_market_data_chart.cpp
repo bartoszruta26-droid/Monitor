@@ -13,8 +13,7 @@ void require(bool value, const char* message) {
 }
 template<class F> void throws(F&& fn, const char* message) {
     try { fn(); } catch (const std::exception&) { return; }
-    std::cerr << "FAIL: expected exception: " << message << '\n';
-    std::exit(EXIT_FAILURE);
+    std::cerr << "FAIL: expected exception: " << message << '\n'; std::exit(EXIT_FAILURE);
 }
 MarketObservation obs(std::string id, const char* time, double value) {
     MarketObservation x;
@@ -49,30 +48,33 @@ int main() {
 
     const auto aggregation = aggregate_ohlc(data, Frequency::Weekly);
     const auto candles = build_candlestick_chart(data, aggregation);
-    require(candles.kind == ChartKind::Candlestick &&
-            candles.candles.size() == 1 &&
-            candles.display_frequency == Frequency::Weekly,
-            "wykres świecowy z agregacji");
+    require(candles.kind == ChartKind::Candlestick && candles.candles.size() == 1 &&
+            candles.display_frequency == Frequency::Weekly, "wykres świecowy z agregacji");
     require(candles.candles.front().semantics == OhlcSemantics::SampledObservations &&
-            candles.candles.front().has_intraperiod_range,
-            "jawna semantyka świecy próbkowanej");
-    require(candles.source_frequency == Frequency::Daily,
-            "zachowanie częstotliwości źródłowej");
-
-    auto mixed = data;
-    mixed.back().provider_id = "other";
-    throws([&] { (void)build_point_chart(mixed); }, "izolacja dostawców");
-    throws([&] { (void)build_point_chart(data, ChartKind::Candlestick); },
-           "wymagany jawny model świec");
-    throws([&] { (void)build_point_chart(data, ChartKind::Line, 1); },
-           "limit punktów");
-    throws([&] { (void)build_candlestick_chart(data, aggregation, 0); },
-           "limit świec dodatni");
+            candles.candles.front().has_intraperiod_range, "jawna semantyka świecy próbkowanej");
+    require(candles.source_frequency == Frequency::Daily, "zachowanie częstotliwości źródłowej");
 
     auto wrong_candles = aggregation;
     wrong_candles.candles.front().provider_id = "other";
     throws([&] { (void)build_candlestick_chart(data, wrong_candles); },
            "świece muszą pochodzić z tego samego szeregu");
+    auto forged_source_ids = aggregation;
+    forged_source_ids.candles.front().source_observation_ids.front() = "not-a-source-id";
+    throws([&] { (void)build_candlestick_chart(data, forged_source_ids); },
+           "identyfikatory źródeł muszą być zweryfikowane");
+    auto forged_gap = aggregation;
+    forged_gap.gaps.push_back({parse_utc_timestamp("2024-01-02T00:00:00Z"),
+                               parse_utc_timestamp("2024-01-03T00:00:00Z"), Frequency::Weekly});
+    throws([&] { (void)build_candlestick_chart(data, forged_gap); },
+           "luki muszą odpowiadać obserwacjom");
+    throws([&] { (void)build_point_chart(data, ChartKind::Candlestick); },
+           "wymagany jawny model świec");
+    throws([&] { (void)build_point_chart(data, static_cast<ChartKind>(99)); },
+           "nieznany rodzaj wykresu");
+    throws([&] { (void)build_point_chart(data, ChartKind::Line, 1); },
+           "limit punktów");
+    throws([&] { (void)build_candlestick_chart(data, aggregation, 0); },
+           "limit świec dodatni");
 
     const std::vector<MarketObservation> empty;
     const auto empty_chart = build_point_chart(empty);

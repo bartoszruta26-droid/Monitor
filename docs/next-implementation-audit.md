@@ -620,4 +620,23 @@ Etap 2 można zamknąć dopiero po kompilacji w CI, przejściu testów adapteró
 - Dane są sortowane deterministycznie; serie mieszane są odrzucane.
 - Limity punktów i świec ograniczają zużycie pamięci.
 - Moduł nie zawiera renderera ani zależności GUI.
-- Następny etap: Etap 6 — audyt i rozwój regresji kroczącej oraz rzeczywistych interwałów HTF, z zachowaniem profili DGT i LonesomeTheBlue.
+- Audyt wykazał, że walidacja świec nie weryfikowała wszystkich identyfikatorów źródłowych ani treści luk. Poprawiono to przez ponowne wyliczenie agregacji z wejścia i porównanie całego wyniku.
+- Testy wykrywają zmienione identyfikatory źródeł, sfałszowane luki, nieznany rodzaj wykresu i niezgodność świec.
+
+## 15. Etap 6 — regresja krocząca i wariant n-2
+
+- Dodano `ResidualStandardErrorNMinus2` jako trzeci, odrębny wariant szerokości: `sqrt(SSE / (n - 2))`.
+- `SampleSd` (`n-1`, DGT) i `PopulationRms` (`n`, LonesomeTheBlue) zachowują dotychczasowe równania.
+- Dodano `rolling_linear_regression`, przesuwającą pełne okno o jedną obserwację i zwracającą indeksy okien.
+- Nieznane wartości enum, niepoprawne rozmiary okien i wyniki poza zakresem `double` są odrzucane.
+- Wersja 1 operuje na ciągłym segmencie wartości. Segmentację przy brakach oraz kontrolę rzeczywistych kalendarzowych interwałów HTF należy wykonać przed podaniem danych do regresji; okno nie może przekraczać luki.
+- Metoda n-2 nie jest automatycznie przedziałem ufności ani prognozy.
+
+## 16. Następny zakres — szeregi czasowe HTF
+
+1. Dodać adapter wartości wykresowych do regresji, zachowujący timestamp i identyfikatory źródeł.
+2. Segmentować szeregi przy brakujących okresach i zmianach częstotliwości.
+3. Zdefiniować jawne mapowanie LTF→HTF bez interpolacji i bez wypełniania luk.
+4. Testować okna przy granicach dni, tygodni, miesięcy, kwartałów i lat oraz w latach przestępnych.
+5. Zachować odrębne profile DGT, LonesomeTheBlue i klasyczną metodę n-2; porównać wyniki z referencyjnymi fixture.
+6. Dopiero po testach kontraktowych podłączyć obliczenia do wykresów i przyszłych klientów GUI.
