@@ -2,7 +2,7 @@
 
 **Repozytorium:** `bartoszruta26-droid/Monitor`  
 **Gałąź:** `main`  
-**Ostatnia weryfikacja:** 2026-11-12 23:4x Europe/Warsaw
+**Ostatnia weryfikacja:** 2026-11-12 23:5x Europe/Warsaw
 **Zasada prowadzenia:** status etapu zmienia się na „zakończony” dopiero po sprawdzeniu kodu, testów i CI dla konkretnego SHA. Ten plik jest bieżącym rejestrem wykonania; szczegóły techniczne pozostają w dokumentach etapów.
 
 ## Stan repozytorium przy audycie
@@ -539,3 +539,27 @@ Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na ma
 1. Etap 17B: parser komunikatu HTML, który publikuje wyłącznie jawnie podane daty/statusy/godziny i odrzuca niejednoznaczny tekst.
 2. Etap 17C: funkcja efektywnego dnia sesyjnego nakładająca aktywne komunikaty na kopię bazowego dnia, bez mutacji kalendarza.
 3. Etap 17D: testy anulowania, konfliktów, priorytetów rewizji i idempotencji.
+
+## 51. Etap 17A zamknięty; Etap 17B — parser oficjalnych komunikatów
+
+### Etap 17A — wynik
+- `VenueSessionNotice` i kolekcja `venue_session_notices` są zapisane w JSON schema v1 jako pole opcjonalne, z zachowaniem odczytu starszych plików.
+- Obsługiwane rodzaje: informacyjny, nadpisanie sesji i anulowanie wskazanej rewizji. Nadpisanie wymaga jawnego statusu dnia i godzin dla grup produktów; komunikat informacyjny nie zmienia sesji.
+- Walidacja sprawdza obiekt źródłowy, rynek, identyfikator kalendarza, datę w zakresie, monotoniczne i niezmienne rewizje, poprawność przedziałów godzin oraz istnienie anulowanej rewizji.
+- `upsert_venue_session_notice` i zapis atomowy obiektu archiwum wraz z komunikatem zostały dodane.
+- Testy obejmują JSON round-trip, replay bez duplikowania rewizji, niemodyfikowalność, override z godzinami, odrzucenie override bez godzin, atomowy zapis anulowania, brak celu anulowania, datę poza zakresem i ochronę historii przed usunięciem.
+- CI [43323528084](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43323528084) dla SHA `42d20e52c39748be35214e67707d33ee6726ae44`: Configure/Build/Test — success; CTest 9/9.
+- Wcześniejsze niepowodzenia ujawniły brakujące deklaracje funkcji przed `validate_snapshot` oraz błędny identyfikator kalendarza w fixture. Poprawiono deklaracje i test odwołuje się do stabilnego `calendar_id`, nie do zmienionego identyfikatora dokumentu źródłowego.
+- Status Etapu 17A: zakończony.
+
+### Etap 17B — parser komunikatów
+- Parser będzie przyjmował dokładne bajty HTML komunikatu oraz metadane kalendarza i obiektu archiwum.
+- Wspierany będzie wyłącznie jednoznaczny układ: rynek, data lokalna, rodzaj komunikatu, status dnia oraz jawne przedziały godzin dla nazwanych grup produktów.
+- Jeżeli komunikat nie zawiera godzin, parser może zwrócić wyłącznie `Informational`; nie tworzy zastępczego harmonogramu.
+- Brak roku, niejednoznaczna data, nieznany produkt, konflikt strefy lub niepełny zakres godzin będą odrzucane.
+- Fixture będzie syntetyczny i offline; zwykły CI nie będzie pobierał komunikatów na żywo.
+
+### Następne czynności
+1. Dodać `parse_xetra_session_notice_html` i testy dla komunikatu informacyjnego oraz jawnego skrócenia sesji.
+2. Podłączyć parser do importera archiwizującego dokładne bajty jako `SourceArchiveObject`.
+3. Następnie Etap 17C: wyliczanie efektywnego dnia z bazowego kalendarza i aktywnych komunikatów, bez mutacji bazowej rewizji.
