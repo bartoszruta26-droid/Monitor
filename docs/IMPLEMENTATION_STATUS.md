@@ -2,7 +2,7 @@
 
 **Repozytorium:** `bartoszruta26-droid/Monitor`  
 **Gałąź:** `main`  
-**Ostatnia weryfikacja:** 2026-11-12 23:15 Europe/Warsaw
+**Ostatnia weryfikacja:** 2026-11-12 23:28 Europe/Warsaw
 **Zasada prowadzenia:** status etapu zmienia się na „zakończony” dopiero po sprawdzeniu kodu, testów i CI dla konkretnego SHA. Ten plik jest bieżącym rejestrem wykonania; szczegóły techniczne pozostają w dokumentach etapów.
 
 ## Stan repozytorium przy audycie
@@ -283,3 +283,16 @@ Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na ma
 - Poprzedni HEAD `2ccca053e2f2018116018a0d0924f9ef3d3a21c1` przeszedł CI [43311241403](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43311241403) z sukcesem.
 - Ograniczenie: fixture jest transkrypcją oficjalnego kalendarza, nie automatycznym importerem HTML/PDF. `content_sha256` i `retrieved_at` pozostają puste, a status licencji `Unknown`, ponieważ nie pobrano i nie zweryfikowano dokładnych bajtów dokumentu ani warunków ponownego wykorzystania.
 - Następny zakres: parser semantycznej tabeli HTML oficjalnego kalendarza z fixture offline, wykrywanie zmian i tworzenie kolejnej wersji bez nadpisywania poprzedniej; osobno importer/obsługa okólników dla skróconych sesji.
+
+
+## 37. Etap 11 — SHA-256 źródła i audyt testów Xetra
+
+- Commit `769cfa99e785b11e4ef83c24162a5b26629ff784`: dodano własną, niezależną od zewnętrznych bibliotek implementację SHA-256 dla dokładnych bajtów źródła.
+- Commit `de2667ae054091dd57d5bba1791af037e7893fd4`: dodano standardowe wektory testowe SHA-256 dla pustego wejścia, `abc` i 1000 znaków `a`.
+- Commit `978e267e320e632dfebeca0c913659eac641fd2b1`: dokumentacja nakazuje liczyć hash przed dekodowaniem i parsowaniem źródła.
+- Fixture Xetra i walidator metadanych: CI [43311594077](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43311594077) — Configure, Build i Test: success.
+- Testy kalendarza Xetra: [43311572796](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43311572796) — Configure i Build: success; Test nadal w toku w ostatnim odczycie.
+- SHA-256: CI [43311709415](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43311709415) dla implementacji, [43311678837](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43311678837) dla deklaracji i [43311636252](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43311636252) dla rejestru były w toku; wymagana kontrola końcowego wyniku.
+- Ostatni zielony commit bazowy: `a063463480d71ccc60de858bb230182ccdfb3805`, CI [43311594077](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43311594077) zakończone sukcesem.
+- Nie zapisano sumy SHA-256 kalendarza Xetra 2026, ponieważ nie pobrano dokładnych bajtów pliku źródłowego. Nie potwierdzono również licencji redystrybucji; status pozostaje `Unknown`.
+- Następny etap: parser semantycznej tabeli HTML źródła Xetra z fixture offline, wykrywanie zmian i niezmienne wersje dokumentu. Po nim integracja źródła z repozytorium JSON i testy regresji wersji.
