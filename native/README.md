@@ -3,7 +3,7 @@
 Biblioteka monitor_core jest wspólną warstwą domenową i obliczeniową dla Linux GUI, WebUI (przez API serwera), TUI i Android App. Jest rozwijana w C++20.
 
 ## Zasady zależności
-Rdzeń nie zależy od Qt, Android SDK, serwera HTTP, JSON-owego magazynu ani MariaDB. Warstwy zewnętrzne korzystają z publicznych interfejsów rdzenia. Nie wolno powielać obliczeń w poszczególnych interfejsach.
+Model domenowy i obliczenia pozostają niezależne od Qt, Android SDK, serwera HTTP i konkretnego magazynu. Moduł infrastruktury storage-json korzysta z nlohmann-json i systemowych mechanizmów POSIX; MariaDB będzie osobnym adapterem tego samego kontraktu. Nie wolno powielać obliczeń w poszczególnych interfejsach.
 
 ## Aktualny zakres
 - wspólny model danych rynkowych v1: instrumenty, dostawcy, notowania i metadane szeregów;
@@ -17,6 +17,10 @@ Rdzeń nie zależy od Qt, Android SDK, serwera HTTP, JSON-owego magazynu ani Mar
 - wspólny interfejs adapterów dostawców i transport HTTP libcurl;
 - adaptery NBP A/B/C, Frankfurter v2, World Bank Pink Sheet i XAUS spot;
 - testy adapterów z atrapami HTTP, bez połączeń sieciowych;
+- kontrakt MarketDataRepository i implementacja JsonMarketDataRepository;
+- wersjonowany dokument JSON, rewizje, zapis atomowy, blokady międzyprocesowe i kopie zapasowe;
+- atomowe przyjmowanie partii adapterów oraz historia korekt notowań;
+- testy magazynu obejmujące round-trip, odzyskiwanie i współbieżność;
 - CLI, testy jednostkowe i CTest.
 
 ## Budowanie i testowanie
@@ -36,5 +40,5 @@ bash scripts/test-native.sh
 - clients/webui — aplikacja przeglądarkowa;
 - clients/android — Qt 6 albo Kotlin/JNI.
 
-Powyższy podział opisuje architekturę docelową. Poza aktualnym silnikiem regresji i modelem danych rynkowych moduły nie są jeszcze zaimplementowane.
+Powyższy podział opisuje architekturę docelową. Aktywnie zaimplementowane są rdzeń regresji, model danych, adaptery dostawców i pierwszy magazyn JSON. Serwer, MariaDB i klienci pozostają do wykonania.
 JSON jest docelowym domyślnym magazynem, a MariaDB opcjonalnym adapterem. Oba mają implementować wspólny kontrakt repozytorium. Serwer będzie jedynym komponentem uprawnionym do zapisu w magazynie serwerowym.

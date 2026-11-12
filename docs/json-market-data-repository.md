@@ -16,6 +16,7 @@ Daty są zapisane jako ISO-8601 (YYYY-MM-DD), znaczniki czasu jako UTC ISO-8601,
 ## Operacje
 - load() — odczyt i pełna walidacja; brak pliku oznacza pustą migawkę, pusty/uszkodzony plik jest błędem.
 - replace(snapshot) — atomowa zamiana całej migawki.
+- upsert_batch() — atomowe przyjęcie całego wyniku adaptera w jednej rewizji;
 - upsert_instrument/provider/observation/series_metadata() — operacje idempotentne z kontrolą powiązań.
 - restore_backup() — jawne odtworzenie ostatniej kopii; magazyn nie maskuje samoczynnie uszkodzeń.
 
@@ -38,4 +39,4 @@ Klucz notowania to (instrument_id, provider_id, observed_at, price_kind, frequen
 - Historyczny backend/market_data/storage.py nie jest częścią aktywnego C++ build/test path; korzysta z SQLite/PostgreSQL i nie zastępuje tego magazynu JSON.
 
 ## Testy
-native/tests/test_market_data_repository.cpp sprawdza round-trip, walidację, rewizje, deduplikację, historię korekt, kopie zapasowe, jawne odtwarzanie, odrzucanie nieznanej wersji schematu oraz współbieżne zapisy procesów. Testy nie korzystają z sieci.
+native/tests/test_market_data_repository.cpp sprawdza round-trip, walidację, rewizje, deduplikację, historię korekt, kopie zapasowe, jawne odtwarzanie, odrzucanie nieznanej wersji schematu oraz współbieżne zapisy procesów. Testy nie korzystają z sieci. Partia adaptera jest przyjmowana jako jedna transakcja plikowa, więc błąd walidacji nie pozostawia częściowo zapisanych instrumentów lub notowań.

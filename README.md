@@ -384,6 +384,7 @@ Brak wystarczających danych powinien skutkować komunikatem o braku wiarygodnej
 - [Audyt kolejnych etapów prac i kryteria akceptacji](docs/next-implementation-audit.md)
 - [Wspólny model danych rynkowych v1](docs/market-data-model.md)
 - [Adaptery dostawców C++20](docs/cpp-provider-adapters.md)
+- [Magazyn danych rynkowych JSON C++20](docs/json-market-data-repository.md)
 
 ## 15. Licencja
 

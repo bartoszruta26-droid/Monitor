@@ -2,9 +2,11 @@
   "storage": {
     "driver": "json",
     "json": {
-      "directory": "./data",
+      "file": "./data/market-data.json",
       "atomic_writes": true,
-      "backup_on_write": true
+      "backup_on_write": true,
+      "create_parent_directories": true,
+      "max_document_bytes": 268435456
     },
     "mariadb": {
       "host": "127.0.0.1",

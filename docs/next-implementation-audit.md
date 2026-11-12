@@ -560,3 +560,35 @@ Etap 2 można zamknąć dopiero po kompilacji w CI, przejściu testów adapteró
 - GitHub Actions: sukces; konfiguracja CMake, kompilacja i 3/3 testy CTest zakończone powodzeniem. [Przebieg CI](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43250128831).
 - Nie wykonano testu pobierania z rzeczywistymi usługami zewnętrznymi w tej sesji. Testy adapterów są deterministyczne i offline.
 - Etap 2 zamknięty. Następny etap to Etap 3 — magazyn JSON, wersjonowanie dokumentów, zapis atomowy, blokady, deduplikacja i kopie bezpieczeństwa.
+
+
+## 12. Etap 3 — magazyn JSON C++20 (implementacja i weryfikacja)
+
+### Zakres dostarczony w kodzie
+- Wspólny, niezależny od silnika magazynu kontrakt MarketDataRepository.
+- Implementacja JsonMarketDataRepository oraz typy MarketDataSnapshot i MarketDataBatch.
+- Wersjonowany dokument monitor.market_data (schema_version = 1), rewizja dokumentu i updated_at.
+- Serializacja/deserializacja instrumentów, dostawców, notowań, metadanych szeregów i historii korekt.
+- Walidacja referencji, identyfikatorów, unikalności kluczy, enumów, czasu i kompletności szeregu.
+- Zapis atomowy przez plik tymczasowy, fsync, rename i fsync katalogu.
+- Blokada międzyprocesowa flock obejmująca operacje odczyt-modyfikacja-zapis.
+- Kopia .bak poprzedniej poprawnej rewizji i jawne restore_backup(); uszkodzony dokument nie jest automatycznie maskowany.
+- Deduplikacja kluczem (instrument, provider, observed_at, price_kind, frequency), aktualizacja received_at dla ponownego pobrania oraz zachowanie poprzedniego payloadu w observation_history przy korekcie.
+- upsert_batch() przyjmuje instrumenty, dostawców, notowania i metadane jednym zatwierdzeniem; odrzucenie nieprawidłowej partii nie zmienia pliku.
+- Testy obejmują round-trip, korekty, backup, odzyskiwanie, nieznaną wersję dokumentu, pusty uszkodzony plik, współbieżnych piszących i powtórne przyjęcie partii.
+
+### Pliki
+- native/include/monitor/market_data_repository.hpp
+- native/src/market_data_repository.cpp
+- native/tests/test_market_data_repository.cpp
+- docs/json-market-data-repository.md
+
+### Ograniczenia
+- Pierwszy adapter plikowy korzysta z POSIX flock/fsync/rename i jest przeznaczony dla Linux/POSIX.
+- Nie ma jeszcze migracji starych formatów; wersja nieznana jest odrzucana. Migracje będą dodawane jawnie z fixture i testami.
+- Magazyn JSON używa jednej migawki dla prostoty atomowości; partycjonowanie wymaga pomiarów i nie należy go wprowadzać przed profilowaniem.
+- Historyczny Python storage SQLite/PostgreSQL pozostaje poza aktywnym procesem C++20.
+- MariaDB i serwer wymiany danych nie są jeszcze zaimplementowane.
+
+### Status
+Etap 3 jest w trakcie weryfikacji CI. Pierwszy przebieg wykazał błędy kompilacji (różne typy iteratorów i porównanie CivilDate bez operatora równości), które poprawiono. Następny przebieg przeszedł kompilację i trzy dotychczasowe zestawy testów; test magazynu wykrył nieprawidłowe czasy received_at w fixture, poprawione w kolejnym commicie. Nie oznaczać etapu jako ukończonego, dopóki najnowszy przebieg CI nie potwierdzi kompilacji i 4/4 testów.
