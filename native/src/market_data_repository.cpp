@@ -1171,7 +1171,7 @@ EffectiveVenueCalendarDay resolve_effective_venue_calendar_day(
         if(notice->kind!=VenueSessionNoticeKind::Cancellation) continue;
         const auto target=latest_notices.find(notice->cancels_notice_id);
         if(target!=latest_notices.end() && target->second->revision==notice->cancels_revision) {
-            const auto target_key=notice->cancels_notice_id+"\\x1f"+std::to_string(notice->cancels_revision);
+            const auto target_key=notice->cancels_notice_id+"\x1f"+std::to_string(notice->cancels_revision);
             if(!cancelled_revisions.insert(target_key).second)
                 throw std::invalid_argument("Kilka aktywnych komunikatów anuluje tę samą rewizję.");
         }
@@ -1180,7 +1180,7 @@ EffectiveVenueCalendarDay resolve_effective_venue_calendar_day(
     const VenueSessionNotice* active_override=nullptr;
     for(const auto& [id,notice]:latest_notices) {
         if(notice->kind==VenueSessionNoticeKind::Cancellation) continue;
-        const auto key=id+"\\x1f"+std::to_string(notice->revision);
+        const auto key=id+"\x1f"+std::to_string(notice->revision);
         if(cancelled_revisions.contains(key)) continue;
         result.applied_notice_ids.push_back(id);
         if(notice->kind==VenueSessionNoticeKind::SessionOverride) {
