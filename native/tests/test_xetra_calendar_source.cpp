@@ -119,6 +119,59 @@ int main() {
             "new byte hash creates a new immutable version while preserving v1");
     require(std::filesystem::exists(archive_root/("2-"+sha256_hex(html+"\\n")+".html")),
             "new source version is archived under its content hash");
+    const auto manifest=final_snapshot.venue_calendars.back().source;
+    require(manifest.archive_relative_path.has_value() &&
+            manifest.content_length_bytes==std::optional<std::uint64_t>(static_cast<std::uint64_t>((html+"\\n").size())) &&
+            manifest.content_type==std::optional<std::string>("text/html; charset=utf-8"),
+            "persist relative archive path, exact byte length and original content type");
+    const auto latest_archive=archive_root/("2-"+sha256_hex(html+"\\n")+".html");
+    const auto original_json=[&] {
+        std::ifstream input(folder/"calendar.json",std::ios::binary);
+        return std::string((std::istreambuf_iterator<char>(input)),{});
+    }();
+    const auto restore_json=[&] {
+        std::ofstream output(folder/"calendar.json",std::ios::binary|std::ios::trunc);
+        output<<original_json;
+    };
+    {
+        std::ofstream damaged(latest_archive,std::ios::binary|std::ios::trunc);
+        damaged<<"truncated";
+    }
+    throws([&]{(void)repository.load();},"reject archive with mismatched length or SHA-256");
+    {
+        std::ofstream restored(latest_archive,std::ios::binary|std::ios::trunc);
+        restored<<(html+"\\n");
+    }
+    std::filesystem::remove(latest_archive);
+    throws([&]{(void)repository.load();},"reject missing archive referenced by manifest");
+    {
+        std::ofstream restored(latest_archive,std::ios::binary|std::ios::trunc);
+        restored<<(html+"\\n");
+    }
+    std::filesystem::remove(latest_archive);
+    {
+        std::ofstream link_target(folder/"outside.html",std::ios::binary);
+        link_target<<(html+"\\n");
+    }
+    std::filesystem::create_symlink(folder/"outside.html",latest_archive);
+    throws([&]{(void)repository.load();},"reject symlink archive traversal");
+    std::filesystem::remove(latest_archive);
+    {
+        std::ofstream restored(latest_archive,std::ios::binary|std::ios::trunc);
+        restored<<(html+"\\n");
+    }
+    {
+        auto tampered=original_json;
+        const auto marker=manifest.archive_relative_path.value();
+        const auto at=tampered.find(marker);
+        require(at!=std::string::npos,"manifest path exists in persisted JSON");
+        tampered.replace(at,marker.size(),"../escape.html");
+        std::ofstream output(folder/"calendar.json",std::ios::binary|std::ios::trunc);
+        output<<tampered;
+    }
+    throws([&]{(void)repository.load();},"reject manifest path traversal");
+    restore_json();
+    require(repository.load().venue_calendars.size()==2U,"valid archive manifest loads after tamper recovery");
     std::filesystem::remove_all(folder);
     std::cout<<"Xetra HTTPS source adapter tests passed\n";
 }
