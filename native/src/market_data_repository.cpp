@@ -1127,6 +1127,79 @@ std::vector<SourceArchiveObject> find_orphaned_source_objects(
             orphaned.push_back(object);
     return orphaned;
 }
+EffectiveVenueCalendarDay resolve_effective_venue_calendar_day(
+    const MarketDataSnapshot& snapshot,std::string_view calendar_id,CivilDate date) {
+    if(calendar_id.empty() || !is_valid_date(date))
+        throw std::invalid_argument("Efektywny dzień kalendarza wymaga identyfikatora i poprawnej daty.");
+    const VenueSessionCalendar* base_calendar=nullptr;
+    std::uint32_t latest_calendar_revision=0U;
+    for(const auto& calendar:snapshot.venue_calendars) {
+        if(effective_venue_calendar_id(calendar)!=calendar_id) continue;
+        const auto revision=effective_venue_calendar_revision(calendar);
+        if(base_calendar==nullptr || revision>latest_calendar_revision) {
+            base_calendar=&calendar;
+            latest_calendar_revision=revision;
+        }
+    }
+    if(base_calendar==nullptr)
+        throw std::invalid_argument("Nie znaleziono kalendarza venue o wskazanym identyfikatorze.");
+    using namespace std::chrono;
+    const sys_days effective_date{year{date.year}/month{date.month}/day{date.day}};
+    const sys_days first{year{base_calendar->source.valid_from.year}/month{base_calendar->source.valid_from.month}/day{base_calendar->source.valid_from.day}};
+    const sys_days last{year{base_calendar->source.valid_to_exclusive.year}/month{base_calendar->source.valid_to_exclusive.month}/day{base_calendar->source.valid_to_exclusive.day}};
+    if(effective_date<first || effective_date>=last)
+        throw std::invalid_argument("Data wypada poza zakresem najnowszej rewizji kalendarza venue.");
+    const auto base_day=std::find_if(base_calendar->days.begin(),base_calendar->days.end(),
+        [&](const VenueCalendarDay& item){return format_date(item.date)==format_date(date);});
+    if(base_day==base_calendar->days.end())
+        throw std::invalid_argument("Najnowsza rewizja kalendarza nie zawiera wskazanego dnia.");
+
+    EffectiveVenueCalendarDay result;
+    result.day=*base_day;
+    result.requires_official_notice_unresolved=base_day->requires_official_notice;
+    std::map<std::string,const VenueSessionNotice*> latest_notices;
+    for(const auto& notice:snapshot.venue_session_notices) {
+        if(notice.calendar_id!=calendar_id || format_date(notice.effective_date)!=format_date(date))
+            continue;
+        const auto found=latest_notices.find(notice.notice_id);
+        if(found==latest_notices.end() || notice.revision>found->second->revision)
+            latest_notices[notice.notice_id]=&notice;
+    }
+    std::set<std::string> cancelled_revisions;
+    for(const auto& [id,notice]:latest_notices) {
+        (void)id;
+        if(notice->kind!=VenueSessionNoticeKind::Cancellation) continue;
+        const auto target=latest_notices.find(notice->cancels_notice_id);
+        if(target!=latest_notices.end() && target->second->revision==notice->cancels_revision) {
+            const auto target_key=notice->cancels_notice_id+"\\x1f"+std::to_string(notice->cancels_revision);
+            if(!cancelled_revisions.insert(target_key).second)
+                throw std::invalid_argument("Kilka aktywnych komunikatów anuluje tę samą rewizję.");
+        }
+        result.applied_notice_ids.push_back(notice->notice_id);
+    }
+    const VenueSessionNotice* active_override=nullptr;
+    for(const auto& [id,notice]:latest_notices) {
+        if(notice->kind==VenueSessionNoticeKind::Cancellation) continue;
+        const auto key=id+"\\x1f"+std::to_string(notice->revision);
+        if(cancelled_revisions.contains(key)) continue;
+        result.applied_notice_ids.push_back(id);
+        if(notice->kind==VenueSessionNoticeKind::SessionOverride) {
+            if(active_override!=nullptr)
+                throw std::invalid_argument("Konflikt: kilka aktywnych nadpisań sesji dotyczy tego samego dnia.");
+            active_override=notice;
+        }
+    }
+    if(active_override!=nullptr) {
+        if(!active_override->day_status)
+            throw std::invalid_argument("Aktywne nadpisanie sesji nie ma statusu dnia.");
+        result.day.status=*active_override->day_status;
+        result.day.product_sessions=active_override->product_sessions;
+        result.day.requires_official_notice=false;
+        result.requires_official_notice_unresolved=false;
+    }
+    std::sort(result.applied_notice_ids.begin(),result.applied_notice_ids.end());
+    return result;
+}
 MarketDataSnapshot JsonMarketDataRepository::restore_backup() {
     FileLock lock(file_path_.string()+".lock");
     const auto raw=read_file(backup_path(),config_.max_document_bytes,false);
