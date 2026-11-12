@@ -1,10 +1,15 @@
 #include "monitor/xetra_calendar_source.hpp"
 
 #include <algorithm>
+#include <array>
 #include <atomic>
+#include <cerrno>
 #include <chrono>
 #include <cctype>
-#include <fstream>
+#include <cstring>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -67,38 +72,74 @@ DownloadedCalendar download(HttpTransport& transport,SourceCalendarDocument sour
     return DownloadedCalendar{std::move(calendar),response.body,it->second};
 }
 void archive_exact_bytes(const std::filesystem::path& path,const std::string& bytes) {
-    std::error_code ec;
-    if (std::filesystem::exists(path,ec)) {
-        if (ec) throw std::runtime_error("Nie można sprawdzić istniejącego archiwum HTML.");
-        std::ifstream existing(path,std::ios::binary);
-        const std::string stored((std::istreambuf_iterator<char>(existing)),{});
-        if (existing.bad() || stored!=bytes)
-            throw std::runtime_error("Konflikt: archiwum SHA-256 istnieje, ale bajty są różne.");
-        return;
-    }
     std::filesystem::create_directories(path.parent_path());
     auto temporary=path;
-    temporary += ".tmp."+std::to_string(archive_counter.fetch_add(1));
+    temporary += ".tmp."+std::to_string(::getpid())+"."+std::to_string(archive_counter.fetch_add(1));
+    const int fd=::open(temporary.c_str(),O_WRONLY|O_CREAT|O_EXCL|O_CLOEXEC|O_NOFOLLOW,0600);
+    if(fd<0) throw std::runtime_error("Nie można utworzyć tymczasowego archiwum HTML: "+std::string(std::strerror(errno)));
+    bool open_fd=true;
     try {
-        {
-            std::ofstream output(temporary,std::ios::binary|std::ios::trunc);
-            if (!output) throw std::runtime_error("Nie można utworzyć tymczasowego archiwum HTML.");
-            output.write(bytes.data(),static_cast<std::streamsize>(bytes.size()));
-            output.flush();
-            if (!output) throw std::runtime_error("Nie udało się zapisać kompletnych bajtów HTML.");
-        }
-        std::filesystem::rename(temporary,path,ec);
-        if (ec) {
-            if (std::filesystem::exists(path)) {
-                std::filesystem::remove(temporary);
-                std::ifstream existing(path,std::ios::binary);
-                const std::string stored((std::istreambuf_iterator<char>(existing)),{});
-                if (!existing.bad() && stored==bytes) return;
+        std::size_t offset=0;
+        while(offset<bytes.size()) {
+            const auto written=::write(fd,bytes.data()+offset,bytes.size()-offset);
+            if(written<0) {
+                if(errno==EINTR) continue;
+                throw std::runtime_error("Błąd zapisu tymczasowego archiwum HTML: "+std::string(std::strerror(errno)));
             }
-            throw std::runtime_error("Nie udało się atomowo opublikować archiwum HTML: "+ec.message());
+            if(written==0) throw std::runtime_error("Zapis archiwum HTML nie postępuje.");
+            offset+=static_cast<std::size_t>(written);
         }
-    } catch (...) {
-        std::filesystem::remove(temporary,ec);
+        if(::fsync(fd)!=0)
+            throw std::runtime_error("Nie można zsynchronizować archiwum HTML: "+std::string(std::strerror(errno)));
+        if(::close(fd)!=0) {
+            open_fd=false;
+            throw std::runtime_error("Nie można zamknąć tymczasowego archiwum HTML.");
+        }
+        open_fd=false;
+
+        // link() publishes without replacing an existing immutable object.
+        if(::link(temporary.c_str(),path.c_str())!=0) {
+            const int link_error=errno;
+            if(link_error!=EEXIST)
+                throw std::runtime_error("Nie udało się opublikować archiwum HTML: "+std::string(std::strerror(link_error)));
+            const int existing_fd=::open(path.c_str(),O_RDONLY|O_CLOEXEC|O_NOFOLLOW);
+            if(existing_fd<0)
+                throw std::runtime_error("Istniejące archiwum jest niedostępne lub jest dowiązaniem symbolicznym.");
+            struct stat st{};
+            if(::fstat(existing_fd,&st)!=0 || !S_ISREG(st.st_mode)) {
+                ::close(existing_fd);
+                throw std::runtime_error("Istniejące archiwum nie jest zwykłym plikiem.");
+            }
+            std::string stored;
+            std::array<char,65536> buffer{};
+            while(true) {
+                const auto count=::read(existing_fd,buffer.data(),buffer.size());
+                if(count==0) break;
+                if(count<0) {
+                    if(errno==EINTR) continue;
+                    ::close(existing_fd);
+                    throw std::runtime_error("Błąd odczytu istniejącego archiwum HTML.");
+                }
+                stored.append(buffer.data(),static_cast<std::size_t>(count));
+            }
+            ::close(existing_fd);
+            if(stored!=bytes)
+                throw std::runtime_error("Konflikt: archiwum SHA-256 istnieje, ale bajty są różne.");
+        } else {
+            const int directory_fd=::open(path.parent_path().c_str(),O_RDONLY|O_DIRECTORY|O_CLOEXEC|O_NOFOLLOW);
+            if(directory_fd<0)
+                throw std::runtime_error("Nie można otworzyć katalogu archiwum HTML do synchronizacji.");
+            const int sync_result=::fsync(directory_fd);
+            const int sync_error=errno;
+            ::close(directory_fd);
+            if(sync_result!=0)
+                throw std::runtime_error("Nie można zsynchronizować katalogu archiwum HTML: "+std::string(std::strerror(sync_error)));
+        }
+        if(::unlink(temporary.c_str())!=0)
+            throw std::runtime_error("Nie można usunąć tymczasowego pliku archiwum HTML.");
+    } catch(...) {
+        if(open_fd) ::close(fd);
+        ::unlink(temporary.c_str());
         throw;
     }
 }
