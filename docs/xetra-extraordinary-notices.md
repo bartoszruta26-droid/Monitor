@@ -49,3 +49,7 @@ Komunikat jest niezmienny. Korekta publikuje nową rewizję. Ta sama rewizja nie
 - anulowanie nie usuwa archiwum ani poprzedniej rewizji;
 - konflikty sesji są jawne i deterministyczne;
 - pełny CI przechodzi dla konkretnego SHA.
+
+## Stan implementacji 17A
+
+Wprowadzono `VenueSessionNotice`, kolekcję `venue_session_notices` w migawce i partii, serializację JSON schema v1, `upsert_venue_session_notice` oraz walidację referencji do obiektu źródłowego, rynku, kalendarza, daty, rewizji, sesji i anulowań. Testy 17A przeszły w CI [43323528084](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43323528084), CTest 9/9.
