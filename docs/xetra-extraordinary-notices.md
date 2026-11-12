@@ -57,7 +57,7 @@ Wprowadzono `VenueSessionNotice`, kolekcję `venue_session_notices` w migawce i 
 
 ## Stan implementacji 17B
 
-Parser `parse_xetra_session_notice_html` przyjmuje jawne pola HTML: `Venue`, `Effective date`, `Notice kind`, opcjonalnie `Day status`, `Cancels` oraz tabelę `Product Group / Opens / Closes`. Obsługuje komunikaty informacyjne, nadpisania i anulowania. `XetraCalendarSourceAdapter::import_notice` pobiera komunikat z zatwierdzonego hosta HTTPS, archiwizuje dokładne bajty jako obiekt SHA-256 i zapisuje obiekt oraz komunikat w jednej partii. Powtórny import identycznej rewizji jest idempotentny; zmiana bajtów lub interpretacji dla tej samej rewizji jest odrzucana. Testy używają wyłącznie syntetycznych fixture offline.
+Parser `parse_xetra_session_notice_html` przyjmuje jawne pola HTML: `Venue`, `Effective date`, `Notice kind`, opcjonalnie `Day status`, `Cancels` oraz tabelę `Product Group / Opens / Closes`. Obsługuje komunikaty informacyjne, nadpisania i anulowania. `XetraCalendarSourceAdapter::import_notice` pobiera komunikat z zatwierdzonego hosta HTTPS, archiwizuje dokładne bajty jako obiekt SHA-256 i zapisuje obiekt oraz komunikat w jednej partii. Powtórny import identycznej rewizji jest idempotentny; zmiana bajtów lub interpretacji dla tej samej rewizji jest odrzucana. Testy używają wyłącznie syntetycznych fixture offline. CI [43324267708](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43324267708) zakończył się sukcesem dla parsera i importera; Etap 17B jest zamknięty.
 
 
 ## Stan implementacji 17C
