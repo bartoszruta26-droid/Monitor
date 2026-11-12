@@ -1201,6 +1201,29 @@ EffectiveVenueCalendarDay resolve_effective_venue_calendar_day(
     std::sort(result.applied_notice_ids.begin(),result.applied_notice_ids.end());
     return result;
 }
+std::vector<CivilDate> find_unresolved_venue_notice_dates(
+    const MarketDataSnapshot& snapshot,std::string_view calendar_id) {
+    validate_snapshot(snapshot);
+    const VenueSessionCalendar* latest_calendar=nullptr;
+    std::uint32_t latest_revision=0U;
+    for(const auto& calendar:snapshot.venue_calendars) {
+        if(effective_venue_calendar_id(calendar)!=calendar_id) continue;
+        const auto revision=effective_venue_calendar_revision(calendar);
+        if(latest_calendar==nullptr || revision>latest_revision) {
+            latest_calendar=&calendar;
+            latest_revision=revision;
+        }
+    }
+    if(latest_calendar==nullptr)
+        throw std::invalid_argument("Nie znaleziono kalendarza venue o wskazanym identyfikatorze.");
+    std::vector<CivilDate> unresolved;
+    for(const auto& day:latest_calendar->days) {
+        if(!day.requires_official_notice) continue;
+        const auto effective=resolve_effective_venue_calendar_day(snapshot,calendar_id,day.date);
+        if(effective.requires_official_notice_unresolved) unresolved.push_back(day.date);
+    }
+    return unresolved;
+}
 MarketDataSnapshot JsonMarketDataRepository::restore_backup() {
     FileLock lock(file_path_.string()+".lock");
     const auto raw=read_file(backup_path(),config_.max_document_bytes,false);
