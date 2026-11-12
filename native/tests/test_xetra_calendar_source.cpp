@@ -91,6 +91,7 @@ int main() {
     const auto archive_root=folder/"calendar.json.sources"/"xetra-2026-official-html";
     const auto archive_v1=archive_root/("1-"+sha256_hex(html)+".html");
     require(std::filesystem::exists(archive_v1),"archive exact original HTML bytes");
+    require(adapter.import(repository,source())==1U,"repeated import verifies existing archive and remains idempotent");
     {
         std::ifstream archived(archive_v1,std::ios::binary);
         const std::string bytes((std::istreambuf_iterator<char>(archived)),{});
