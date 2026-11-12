@@ -2,14 +2,14 @@
 
 **Repozytorium:** `bartoszruta26-droid/Monitor`  
 **Gałąź:** `main`  
-**Ostatnia weryfikacja:** 2026-11-12 22:23 Europe/Warsaw  
+**Ostatnia weryfikacja:** 2026-11-12 22:40 Europe/Warsaw
 **Zasada prowadzenia:** status etapu zmienia się na „zakończony” dopiero po sprawdzeniu kodu, testów i CI dla konkretnego SHA. Ten plik jest bieżącym rejestrem wykonania; szczegóły techniczne pozostają w dokumentach etapów.
 
 ## Stan repozytorium przy audycie
 
-- HEAD `main`: `fc88d20bf33fed2f9cc97ed49de4375ac2030a25`.
-- Najnowszy workflow: [CI 43309747099](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43309747099), zakończony sukcesem; Configure, Build i Test przeszły. Job `native-linux`: wszystkie kroki zakończone powodzeniem.
-- Workflow [CI 43309741566](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43309741566) dla commitu testów `a6085d7` również zakończony sukcesem; wszystkie kroki Configure, Build i Test przeszły.
+- HEAD `main` przed zapisem tego wpisu: `ae9ccf21716e6cf5300ca5258c0d3f28998fb063`.
+- Ostatni potwierdzony zielony CI przed bieżącym etapem: [CI 43310194865](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43310194865), commit `f01ed918`; Configure, Build i Test przeszły.
+- Bieżące zmiany importera NBP: workflow [43310994641](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43310994641) dla `3b47002` i [43311018764](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43311018764) dla `24fa3ef` były w toku podczas zapisu. Wynik należy uzupełnić po zakończeniu.
 - Poprzedni problem kompilacji testu kalendarza (brak `#include <algorithm>` w starszym SHA) został naprawiony; nie jest stanem bieżącym.
 - Poprzednie przebiegi obejmują jeden nieudany CI dla wcześniejszego SHA `aa3b7eb`, po którym późniejszy commit przeszedł poprawnie. Nie traktować błędu jako aktualnego, ale zachować go w historii.
 - Gałęzie: wyłącznie `main`.
@@ -31,7 +31,7 @@
 | 8 | Jawny kalendarz sesyjny dla kompletności HTF | Zakończony v1 jako funkcja obliczeniowa | `MarketSessionCalendar` i `session_aware_rolling_regression()`; terminy przekazuje wywołujący |
 | 9 | Trwały magazyn i wersjonowanie kalendarzy sesyjnych | Zakończony | Commit `df867c6efaa7f8cebad74db3291a3c0dde12f67e`; CI [43264555372](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43264555372) sukces, kompilacja i CTest 7/7. Pochodzenie regresji zawiera `calendar_id` i `calendar_version`. |
 | 10 | Generator harmonogramów z IANA TZ/DST i reguł sesji | Zakończony | Commit `da61302dc4de43308228e6f60e82e187bef566df`; CI [43301335250](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43301335250) sukces: konfiguracja, kompilacja i CTest 8/8. Testy obejmują DST wiosenny i jesienny, polityki czasu, weekendy, wyłączenia, błędne strefy i zakres dat. |
-| 11 | Kalendarze źródłowe i instrumentowe (NBP, metale, giełdy) | W toku — generator okien publikacji NBP | Generator okien A/B/C przeszedł CI 43303169211 (8/8). Generator okien A/B/C, świąt ustawowych i automatycznego stosowania kalendarza świąt przeszedł CI 43304025796 (8/8). Etap 11 nadal w toku: model obserwowanych publikacji NBP jest zaimplementowany i przetestowany; pozostaje import danych źródłowych NBP oraz import/wersjonowanie oficjalnego kalendarza venue (Xetra). |
+| 11 | Kalendarze źródłowe i instrumentowe (NBP, metale, giełdy) | W toku — generator okien publikacji NBP | Generator okien A/B/C przeszedł CI 43303169211 (8/8). Generator okien A/B/C, świąt ustawowych i automatycznego stosowania kalendarza świąt przeszedł CI 43304025796 (8/8). Etap 11 nadal w toku: model obserwowanych publikacji NBP jest zaimplementowany i przetestowany; importer NBP ma już podział zakresu 93-dniowego i obsługę 404 z testami offline (CI bieżącej zmiany w toku); pozostaje import/wersjonowanie oficjalnego kalendarza venue (Xetra). |
 | 12 | Wspólne fixture i porównanie C++/Pine | Do wykonania | Pine Editor niezweryfikowany; brak potwierdzonej kompilacji TradingView |
 | 13 | Serwer API, autoryzacja, REST/JSON i WebSocket | Do wykonania | Brak aktywnego modułu serwera |
 | 14 | Klienci Linux GUI, WebUI, TUI i Android | Do wykonania | Brak aktywnych modułów klientów |
@@ -209,7 +209,7 @@ Przy każdym kolejnym poleceniu kontynuacji należy najpierw odczytać ten plik 
 ### Priorytet następnej pracy — domknięcie Etapu 11
 Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na małe, testowalne zmiany:
 1. Model faktycznie zaobserwowanych publikacji NBP został dodany jako `ObservedPublication`; `provider_published_on` pozostaje datą, a `received_at` rzeczywistym czasem odbioru odpowiedzi. Nie konstruować sztucznej godziny publikacji z przedziału A/B/C.
-2. Dodać import danych kalendarza NBP z rzeczywistych odpowiedzi API z kontrolą 404 i limitu 93 dni, zachowując surową datę źródłową i pochodzenie.
+2. Import NBP: podział zakresu do 93 dni, obsługa 404/pustej odpowiedzi i czas odbioru mierzony per odpowiedź zostały wdrożone; po zielonym CI uznać ten podzakres za zakończony. Kolejny importer do zrobienia to wersjonowany kalendarz Xetra.
 3. Dodać wersjonowany rejestr źródłowego dokumentu kalendarza giełdowego (najpierw Xetra): URL, data publikacji, zakres obowiązywania, strefa IANA, skrót SHA-256, licencja/atrybucja.
 4. Dodać importer Xetra dla jawnie wybranego oficjalnego formatu i utrzymywać skrócone sesje, dni handlowe w święta, zamknięcia i wyjątki jako osobne reguły.
 5. Zachować istniejący JSON schema v1 przez kompatybilny odczyt i jawną migrację przy zmianie formatu; opublikowane wersje kalendarzy pozostają niezmienne.
@@ -249,3 +249,12 @@ Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na ma
 - Starsze nieudane przebiegi dotyczyły wcześniejszych SHA i zostały naprawione kolejnymi commitami; nie są wynikiem aktualnego HEAD.
 - Wniosek: wszystkie dostępne prace zostały już scalone/zapisane na `main`; nie było otwartego PR ani odrębnej gałęzi do scalenia. Nie wykonano sztucznego merge commita.
 - Etap 11 pozostaje w toku wyłącznie z powodu brakującego importera danych NBP i oficjalnego kalendarza Xetra oraz testów integracyjnych wskazanych powyżej.
+
+
+## 34. Etap 11 — wzmocnienie importera historycznego NBP
+
+- Commit `3b47002e337b36817c44eb8bfc3c358bc65f399d`: przeniesiono pobieranie `received_at` z początku całego `NbpAdapter::fetch` do obsługi każdej odpowiedzi HTTP. Czas odbioru opisuje teraz konkretną odpowiedź, a nie początek serii zapytań.
+- Commit `24fa3ef0f6cc35ece615225e72a5018da9a4c7dc`: dodano fixture testujący zakres 95-dniowy rozdzielony na 93 + 2 dni, wszystkie cztery endpointy NBP, 404 dla pierwszego fragmentu i pustą odpowiedź 200 dla drugiego.
+- Commit `ae9ccf21716e6cf5300ca5258c0d3f28998fb063`: dokumentacja wyjaśnia semantykę fragmentów, 404, pustych odpowiedzi, czasu odbioru i rozdzielenia `tradingDate` / `effectiveDate`.
+- Workflow [43310994641](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43310994641) dla zmiany czasu odbioru i [43311018764](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43311018764) dla testu 93 dni były w toku w chwili zapisu; nie oznaczać podetapu za zakończony przed potwierdzeniem Build i Test.
+- Następny zakres: pozyskać oficjalny plik/kalendarz Xetra, potwierdzić format i warunki ponownego wykorzystania, a następnie zaprojektować importer z SHA-256 i niezmiennymi wersjami.
