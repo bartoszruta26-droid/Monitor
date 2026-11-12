@@ -294,7 +294,7 @@ int main(){
     VenueSessionNotice informational_notice;
     informational_notice.notice_id="xetra-2026-dec30-circular";
     informational_notice.revision=1U;
-    informational_notice.calendar_id="XETRA-2026";
+    informational_notice.calendar_id="xetra-parser-fixture";
     informational_notice.venue="XETRA";
     informational_notice.effective_date=parse_date("2026-12-30");
     informational_notice.source_object_id=orphan_object.source_object_id;
@@ -338,7 +338,7 @@ int main(){
     VenueSessionNotice cancellation_notice;
     cancellation_notice.notice_id="xetra-2026-dec30-cancellation";
     cancellation_notice.revision=1U;
-    cancellation_notice.calendar_id="XETRA-2026";
+    cancellation_notice.calendar_id="xetra-parser-fixture";
     cancellation_notice.venue="XETRA";
     cancellation_notice.effective_date=parse_date("2026-12-30");
     cancellation_notice.source_object_id=cancellation_object.source_object_id;
