@@ -299,6 +299,7 @@ json encode(const VenueSessionCalendar& x) {
         {"timezone",source.timezone},{"source_uri",source.source_uri},
         {"retrieved_at",source.retrieved_at ? json(format_utc_timestamp(*source.retrieved_at)) : json(nullptr)},
         {"content_sha256",source.content_sha256 ? json(*source.content_sha256) : json(nullptr)},
+        {"source_object_id",source.source_object_id ? json(*source.source_object_id) : json(nullptr)},
         {"archive_relative_path",source.archive_relative_path ? json(*source.archive_relative_path) : json(nullptr)},
         {"content_length_bytes",source.content_length_bytes ? json(*source.content_length_bytes) : json(nullptr)},
         {"content_type",source.content_type ? json(*source.content_type) : json(nullptr)},
@@ -333,6 +334,8 @@ VenueSessionCalendar decode_venue_calendar(const json& j) {
         result.source.retrieved_at=parse_utc_timestamp(s.at("retrieved_at").get<std::string>());
     if (!s.at("content_sha256").is_null())
         result.source.content_sha256=s.at("content_sha256").get<std::string>();
+    if (s.contains("source_object_id") && !s.at("source_object_id").is_null())
+        result.source.source_object_id=s.at("source_object_id").get<std::string>();
     if (s.contains("archive_relative_path") && !s.at("archive_relative_path").is_null())
         result.source.archive_relative_path=s.at("archive_relative_path").get<std::string>();
     if (s.contains("content_length_bytes") && !s.at("content_length_bytes").is_null())
@@ -357,6 +360,43 @@ VenueSessionCalendar decode_venue_calendar(const json& j) {
         result.days.push_back(std::move(day));
     }
     return result;
+}
+json encode(const SourceArchiveObject& x) {
+    return {{"source_object_id",x.source_object_id},{"content_sha256",x.content_sha256},
+        {"archive_relative_path",x.archive_relative_path},{"content_length_bytes",x.content_length_bytes},
+        {"content_type",x.content_type},{"source_uri",x.source_uri},
+        {"retrieved_at",x.retrieved_at ? json(format_utc_timestamp(*x.retrieved_at)) : json(nullptr)},
+        {"attribution",x.attribution},{"license_status",enum_name(x.license_status)}};
+}
+SourceArchiveObject decode_source_object(const json& j) {
+    SourceArchiveObject x;
+    x.source_object_id=j.at("source_object_id").get<std::string>();
+    x.content_sha256=j.at("content_sha256").get<std::string>();
+    x.archive_relative_path=j.at("archive_relative_path").get<std::string>();
+    x.content_length_bytes=j.at("content_length_bytes").get<std::uint64_t>();
+    x.content_type=j.at("content_type").get<std::string>();
+    x.source_uri=j.at("source_uri").get<std::string>();
+    if(!j.at("retrieved_at").is_null()) x.retrieved_at=parse_utc_timestamp(j.at("retrieved_at").get<std::string>());
+    x.attribution=j.at("attribution").get<std::string>();
+    x.license_status=parse_venue_license_status(j.at("license_status").get<std::string>());
+    return x;
+}
+void validate_source_object(const SourceArchiveObject& x) {
+    const auto valid_hash=[](const std::string& hash) {
+        return hash.size()==64U && std::all_of(hash.begin(),hash.end(),[](unsigned char ch) {
+            return (ch>='0'&&ch<='9')||(ch>='a'&&ch<='f');
+        });
+    };
+    const std::filesystem::path path(x.archive_relative_path);
+    if(!valid_hash(x.content_sha256) || x.source_object_id!="sha256:"+x.content_sha256 ||
+       x.archive_relative_path.empty() || path.is_absolute() || path.has_root_name() ||
+       path.has_root_directory() || x.content_length_bytes==0U || x.content_type.empty() ||
+       x.source_uri.rfind("https://",0)!=0 || x.attribution.empty())
+        throw std::invalid_argument("Obiekt źródłowy wymaga identyfikatora SHA-256, względnego archiwum i kompletnego pochodzenia.");
+    for(const auto& component:path)
+        if(component.empty() || component=="." || component=="..")
+            throw std::invalid_argument("Ścieżka obiektu źródłowego zawiera niedozwolony komponent.");
+    (void)enum_name(x.license_status);
 }
 std::string venue_calendar_key(const VenueSessionCalendar& x) {
     return x.source.document_id + "\x1f" + std::to_string(x.source.version);
@@ -468,10 +508,22 @@ void validate_snapshot(const MarketDataSnapshot& s) {
         if(x.version<=latest) throw std::invalid_argument("Wersje kalendarza muszą być rosnące.");
         latest=x.version;
     }
+    std::map<std::string,const SourceArchiveObject*> source_objects;
+    for(const auto& object:s.source_objects) {
+        validate_source_object(object);
+        if(!source_objects.emplace(object.source_object_id,&object).second)
+            throw std::invalid_argument("Powielony niezmienny obiekt źródłowy.");
+    }
     std::set<std::string> venue_keys;
     std::map<std::string,std::uint32_t> latest_venue_versions;
     for (const auto& calendar : s.venue_calendars) {
         validate_venue_calendar(calendar);
+        if(calendar.source.source_object_id) {
+            const auto object=source_objects.find(*calendar.source.source_object_id);
+            if(object==source_objects.end() || !calendar.source.content_sha256 ||
+               *calendar.source.content_sha256!=object->second->content_sha256)
+                throw std::invalid_argument("Kalendarz venue wskazuje brakujący lub niezgodny obiekt źródłowy.");
+        }
         const auto key=venue_calendar_key(calendar);
         if (!venue_keys.insert(key).second)
             throw std::invalid_argument("Powielona wersja kalendarza sesyjnego venue.");
@@ -497,7 +549,7 @@ void validate_snapshot(const MarketDataSnapshot& s) {
     }
 }
 json encode_snapshot(const MarketDataSnapshot& s) {
-    json instruments=json::array(),providers=json::array(),observations=json::array(),series=json::array(),history=json::array(),calendars=json::array(),venue_calendars=json::array();
+    json instruments=json::array(),providers=json::array(),observations=json::array(),series=json::array(),history=json::array(),calendars=json::array(),venue_calendars=json::array(),source_objects=json::array();
     for(const auto& x:s.instruments)instruments.push_back(encode(x));
     for(const auto& x:s.providers)providers.push_back(encode(x));
     for(const auto& x:s.observations)observations.push_back(encode(x));
@@ -505,10 +557,11 @@ json encode_snapshot(const MarketDataSnapshot& s) {
     for(const auto& x:s.observation_history)history.push_back(encode(x));
     for(const auto& x:s.session_calendars)calendars.push_back(encode(x));
     for(const auto& x:s.venue_calendars)venue_calendars.push_back(encode(x));
+    for(const auto& x:s.source_objects)source_objects.push_back(encode(x));
     return {{"document_type","monitor.market_data"},{"schema_version",s.schema_version},{"revision",s.revision},
         {"updated_at",format_utc_timestamp(s.updated_at)},{"instruments",std::move(instruments)},
         {"providers",std::move(providers)},{"observations",std::move(observations)},
-        {"series_metadata",std::move(series)},{"observation_history",std::move(history)},{"session_calendars",std::move(calendars)},{"venue_calendars",std::move(venue_calendars)}};
+        {"series_metadata",std::move(series)},{"observation_history",std::move(history)},{"session_calendars",std::move(calendars)},{"venue_calendars",std::move(venue_calendars)},{"source_objects",std::move(source_objects)}};
 }
 MarketDataSnapshot decode_snapshot(const json& j) {
     if(!j.is_object()||j.at("document_type").get<std::string>()!="monitor.market_data")
@@ -524,6 +577,7 @@ MarketDataSnapshot decode_snapshot(const json& j) {
     for(const auto& x:j.at("observation_history"))s.observation_history.push_back(decode_revision(x));
     if(j.contains("session_calendars")) for(const auto& x:j.at("session_calendars")) s.session_calendars.push_back(decode_session_calendar(x));
     if(j.contains("venue_calendars")) for(const auto& x:j.at("venue_calendars")) s.venue_calendars.push_back(decode_venue_calendar(x));
+    if(j.contains("source_objects")) for(const auto& x:j.at("source_objects")) s.source_objects.push_back(decode_source_object(x));
     validate_snapshot(s);return s;
 }
 std::string read_file(const std::filesystem::path& path,std::size_t limit,bool missing_ok) {
@@ -654,6 +708,12 @@ void JsonMarketDataRepository::write_unlocked(const MarketDataSnapshot& input,bo
         if(!existed&&previous_latest>0U&&candidate.version<=previous_latest)
             throw std::invalid_argument("Nowa wersja kalendarza musi być większa od poprzednich.");
     }
+    for(const auto& old_object:previous.source_objects) {
+        const auto found=std::find_if(s.source_objects.begin(),s.source_objects.end(),
+            [&](const auto& candidate){return candidate.source_object_id==old_object.source_object_id;});
+        if(found==s.source_objects.end() || encode(*found)!=encode(old_object))
+            throw std::invalid_argument("Nie można usunąć ani zmienić niezmiennego obiektu źródłowego.");
+    }
     for (const auto& old_calendar : previous.venue_calendars) {
         const auto found=std::find_if(s.venue_calendars.begin(),s.venue_calendars.end(),
             [&](const auto& candidate) {
@@ -753,6 +813,20 @@ std::uint64_t JsonMarketDataRepository::upsert_batch(const MarketDataBatch& batc
         if(item.version<=latest) throw std::invalid_argument("Nowa wersja kalendarza musi mieć większy numer.");
         snapshot.session_calendars.push_back(item);
     }
+    std::set<std::string> incoming_source_objects;
+    for(const auto& item:batch.source_objects) {
+        validate_source_object(item);
+        if(!incoming_source_objects.insert(item.source_object_id).second)
+            throw std::invalid_argument("Powielony obiekt źródłowy w jednej partii.");
+        const auto found=std::find_if(snapshot.source_objects.begin(),snapshot.source_objects.end(),
+            [&](const auto& value){return value.source_object_id==item.source_object_id;});
+        if(found!=snapshot.source_objects.end()) {
+            if(encode(*found)!=encode(item))
+                throw std::invalid_argument("Obiekt źródłowy o tym samym SHA-256 ma sprzeczne metadane.");
+            continue;
+        }
+        snapshot.source_objects.push_back(item);
+    }
     std::set<std::string> incoming_venue_calendars;
     for (const auto& item : batch.venue_calendars) {
         validate_venue_calendar(item);
@@ -795,6 +869,9 @@ std::uint64_t JsonMarketDataRepository::upsert_session_calendar(const MarketSess
 }
 std::uint64_t JsonMarketDataRepository::upsert_venue_calendar(const VenueSessionCalendar& item) {
     MarketDataBatch batch;batch.venue_calendars.push_back(item);return upsert_batch(batch);
+}
+std::uint64_t JsonMarketDataRepository::upsert_source_object(const SourceArchiveObject& item) {
+    MarketDataBatch batch;batch.source_objects.push_back(item);return upsert_batch(batch);
 }
 MarketDataSnapshot JsonMarketDataRepository::restore_backup() {
     FileLock lock(file_path_.string()+".lock");
