@@ -2,13 +2,14 @@
 
 **Repozytorium:** `bartoszruta26-droid/Monitor`  
 **Gałąź:** `main`  
-**Ostatnia weryfikacja:** 2026-11-12 22:18 Europe/Warsaw  
+**Ostatnia weryfikacja:** 2026-11-12 22:23 Europe/Warsaw  
 **Zasada prowadzenia:** status etapu zmienia się na „zakończony” dopiero po sprawdzeniu kodu, testów i CI dla konkretnego SHA. Ten plik jest bieżącym rejestrem wykonania; szczegóły techniczne pozostają w dokumentach etapów.
 
 ## Stan repozytorium przy audycie
 
-- HEAD `main`: `5ee3b1c22733ba4b7e589e5c8daa8f439bdb5ce3`.
-- Najnowszy workflow: [CI 43304376496](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43304376496), zakończony sukcesem; konfiguracja, kompilacja i CTest przeszły. Job `native-linux`: wszystkie kroki zakończone powodzeniem.
+- HEAD `main`: `fc88d20bf33fed2f9cc97ed49de4375ac2030a25`.
+- Najnowszy workflow: [CI 43309747099](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43309747099), zakończony sukcesem; Configure, Build i Test przeszły. Job `native-linux`: wszystkie kroki zakończone powodzeniem.
+- Workflow [CI 43309741566](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43309741566) dla commitu testów `a6085d7` również zakończony sukcesem; wszystkie kroki Configure, Build i Test przeszły.
 - Poprzedni problem kompilacji testu kalendarza (brak `#include <algorithm>` w starszym SHA) został naprawiony; nie jest stanem bieżącym.
 - Poprzednie przebiegi obejmują jeden nieudany CI dla wcześniejszego SHA `aa3b7eb`, po którym późniejszy commit przeszedł poprawnie. Nie traktować błędu jako aktualnego, ale zachować go w historii.
 - Gałęzie: wyłącznie `main`.
@@ -30,7 +31,7 @@
 | 8 | Jawny kalendarz sesyjny dla kompletności HTF | Zakończony v1 jako funkcja obliczeniowa | `MarketSessionCalendar` i `session_aware_rolling_regression()`; terminy przekazuje wywołujący |
 | 9 | Trwały magazyn i wersjonowanie kalendarzy sesyjnych | Zakończony | Commit `df867c6efaa7f8cebad74db3291a3c0dde12f67e`; CI [43264555372](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43264555372) sukces, kompilacja i CTest 7/7. Pochodzenie regresji zawiera `calendar_id` i `calendar_version`. |
 | 10 | Generator harmonogramów z IANA TZ/DST i reguł sesji | Zakończony | Commit `da61302dc4de43308228e6f60e82e187bef566df`; CI [43301335250](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43301335250) sukces: konfiguracja, kompilacja i CTest 8/8. Testy obejmują DST wiosenny i jesienny, polityki czasu, weekendy, wyłączenia, błędne strefy i zakres dat. |
-| 11 | Kalendarze źródłowe i instrumentowe (NBP, metale, giełdy) | W toku — generator okien publikacji NBP | Generator okien A/B/C przeszedł CI 43303169211 (8/8). Generator okien A/B/C, świąt ustawowych i automatycznego stosowania kalendarza świąt przeszedł CI 43304025796 (8/8). Etap 11 nadal w toku: brakuje importu/wersjonowania oficjalnych kalendarzy venue (Xetra) i modelu observed publication. |
+| 11 | Kalendarze źródłowe i instrumentowe (NBP, metale, giełdy) | W toku — generator okien publikacji NBP | Generator okien A/B/C przeszedł CI 43303169211 (8/8). Generator okien A/B/C, świąt ustawowych i automatycznego stosowania kalendarza świąt przeszedł CI 43304025796 (8/8). Etap 11 nadal w toku: model obserwowanych publikacji NBP jest zaimplementowany i przetestowany; pozostaje import danych źródłowych NBP oraz import/wersjonowanie oficjalnego kalendarza venue (Xetra). |
 | 12 | Wspólne fixture i porównanie C++/Pine | Do wykonania | Pine Editor niezweryfikowany; brak potwierdzonej kompilacji TradingView |
 | 13 | Serwer API, autoryzacja, REST/JSON i WebSocket | Do wykonania | Brak aktywnego modułu serwera |
 | 14 | Klienci Linux GUI, WebUI, TUI i Android | Do wykonania | Brak aktywnych modułów klientów |
@@ -201,13 +202,13 @@ Przy każdym kolejnym poleceniu kontynuacji należy najpierw odczytać ten plik 
 - Agregacja próbkowanego OHLC: `native/src/market_data_aggregation.cpp`; nie zwiększa częstotliwości i jawnie zwraca luki.
 - Model wykresów: `native/src/market_data_chart.cpp`; to kontrakt danych, nie renderer GUI.
 - Regresja krocząca HTF, osobne metody n, n-1 i n-2 oraz tryb kalendarza sesyjnego: `native/src/market_data_regression.cpp`.
-- Kalendarz sesyjny IANA/DST i okna publikacji NBP ze świętami ustawowymi RP: `native/src/market_data_calendar.cpp`.
+- Kalendarz sesyjny IANA/DST, okna publikacji NBP ze świętami ustawowymi RP oraz model obserwowanych publikacji: `native/src/market_data_calendar.cpp`.
 - CMake zawiera testy dla rdzenia, modelu danych, adapterów, magazynu, agregacji, wykresów, regresji i kalendarzy.
 - Serwer API, autoryzacja, WebSocket, klienci Linux GUI/WebUI/TUI/Android i MariaDB pozostają niezaimplementowane. Pine Script nadal wymaga niezależnego potwierdzenia w TradingView Pine Editor.
 
 ### Priorytet następnej pracy — domknięcie Etapu 11
 Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na małe, testowalne zmiany:
-1. Wprowadzić odrębny model kalendarza faktycznie zaobserwowanych publikacji NBP, z rozróżnieniem daty notowania, daty publikacji i czasu odpowiedzi. Nie konstruować sztucznej godziny publikacji z przedziału A/B/C.
+1. Model faktycznie zaobserwowanych publikacji NBP został dodany jako `ObservedPublication`; `provider_published_on` pozostaje datą, a `received_at` rzeczywistym czasem odbioru odpowiedzi. Nie konstruować sztucznej godziny publikacji z przedziału A/B/C.
 2. Dodać import danych kalendarza NBP z rzeczywistych odpowiedzi API z kontrolą 404 i limitu 93 dni, zachowując surową datę źródłową i pochodzenie.
 3. Dodać wersjonowany rejestr źródłowego dokumentu kalendarza giełdowego (najpierw Xetra): URL, data publikacji, zakres obowiązywania, strefa IANA, skrót SHA-256, licencja/atrybucja.
 4. Dodać importer Xetra dla jawnie wybranego oficjalnego formatu i utrzymywać skrócone sesje, dni handlowe w święta, zamknięcia i wyjątki jako osobne reguły.
@@ -234,3 +235,17 @@ Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na ma
 - Dodano testy fixture do `monitor-market-data-calendar-tests`: grupowanie wielu obserwacji walutowych z jednej publikacji, rozdzielenie tabeli A i złota, zachowanie rzeczywistego `received_at`, pomijanie rekordu bez `provider_published_on` oraz odrzucenie pustego `provider_id`.
 - Kod produkcyjny i dokumentacja modelu są już zapisane w commitach `7177c44` i `e7d4558`; testy dodano osobnym commitem, aby CI wskazywało jednoznacznie weryfikowany zakres.
 - Status Etapu 11 pozostaje w toku do zielonego CI dla najnowszego SHA.
+
+
+## 33. Scalanie prac z main — weryfikacja 2026-11-12 22:23 (Europe/Warsaw)
+
+- Gałąź docelowa: `main`; aktualny HEAD: `fc88d20bf33fed2f9cc97ed49de4375ac2030a25`.
+- Audyt gałęzi: istnieje wyłącznie `main`; brak dodatkowych gałęzi.
+- Audyt pull requestów: 0 otwartych PR; brak zmian oczekujących na scalenie.
+- Audyt commitów: seria zmian modelu obserwowanych publikacji, testów i dokumentacji jest już osiągalna z `main`. Najnowszy commit `fc88d20` ma rodzica `a6085d7`, co potwierdza bezpośrednią ciągłość tej serii na gałęzi.
+- CI dla najnowszego HEAD: [43309747099](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43309747099) — sukces; job `native-linux`, Configure, Build i Test: success.
+- CI dla testów modelu: [43309741566](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43309741566) — sukces; Configure, Build i Test: success.
+- CI dla implementacji modelu: [43309669837](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43309669837) — sukces; Configure, Build i Test: success.
+- Starsze nieudane przebiegi dotyczyły wcześniejszych SHA i zostały naprawione kolejnymi commitami; nie są wynikiem aktualnego HEAD.
+- Wniosek: wszystkie dostępne prace zostały już scalone/zapisane na `main`; nie było otwartego PR ani odrębnej gałęzi do scalenia. Nie wykonano sztucznego merge commita.
+- Etap 11 pozostaje w toku wyłącznie z powodu brakującego importera danych NBP i oficjalnego kalendarza Xetra oraz testów integracyjnych wskazanych powyżej.
