@@ -546,8 +546,6 @@ std::uint64_t XetraCalendarSourceAdapter::publish_notice_revision_from_archive(
             previous=&item;
     if(previous==nullptr)
         throw std::invalid_argument("Nie znaleziono wcześniejszej rewizji komunikatu do ponownej interpretacji.");
-    if(notice.revision<=previous->revision)
-        throw std::invalid_argument("Nowa rewizja komunikatu musi być większa od poprzedniej.");
     if(notice.calendar_id.empty()) notice.calendar_id=previous->calendar_id;
     if(notice.venue.empty()) notice.venue=previous->venue;
     if(!is_valid_date(notice.effective_date)) notice.effective_date=previous->effective_date;
@@ -576,6 +574,8 @@ std::uint64_t XetraCalendarSourceAdapter::publish_notice_revision_from_archive(
             throw std::invalid_argument("Istniejąca rewizja komunikatu ma inną interpretację.");
         return snapshot.revision;
     }
+    if(parsed_notice.revision<=previous->revision)
+        throw std::invalid_argument("Nowa rewizja komunikatu musi być większa od poprzedniej.");
     return repository.upsert_venue_session_notice(parsed_notice);
 }
 std::uint64_t XetraCalendarSourceAdapter::publish_revision_from_archive(
