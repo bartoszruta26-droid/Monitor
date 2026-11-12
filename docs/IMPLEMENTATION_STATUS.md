@@ -2,7 +2,7 @@
 
 **Repozytorium:** `bartoszruta26-droid/Monitor`  
 **Gałąź:** `main`  
-**Ostatnia weryfikacja:** 2026-11-12 23:28 Europe/Warsaw
+**Ostatnia weryfikacja:** 2026-11-12 23:4x Europe/Warsaw
 **Zasada prowadzenia:** status etapu zmienia się na „zakończony” dopiero po sprawdzeniu kodu, testów i CI dla konkretnego SHA. Ten plik jest bieżącym rejestrem wykonania; szczegóły techniczne pozostają w dokumentach etapów.
 
 ## Stan repozytorium przy audycie
@@ -370,3 +370,30 @@ Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na ma
 - Commit `afcb85e927765b86917cf2e133a66c4ab8226bdf` poprawił oczekiwaną wartość testu, aby odpowiadała rzeczywistemu nagłówkowi fixture. CI dla poprawionego SHA `43316159732` pozostaje w toku; etap nadal nie jest zakończony.
 - Ograniczenie: klucz `document_id + version` nadal wiąże dokument źródłowy z wersją interpretacji kalendarza; osobne wersjonowanie źródła i kalendarza pozostaje dalszą zmianą modelu.
 - Status: implementacja w toku; oczekuje na testy i CI dla nowego SHA.
+
+
+## 43. Audyt ciągłości, etap 14 — kontrola symlink race i zgodność legacy
+
+### Audyt bieżącego repozytorium
+- `main` jest jedyną gałęzią; brak otwartych PR i Issues w chwili audytu.
+- HEAD przed rozpoczęciem tego podetapu: `1c6519fb1d2d526c729eefadf4a590fe88e93466`; CI [43316262104](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43316262104) — sukces.
+- Etap 13 pozostaje zakończony; Etap 14 wymagał jawnego testu pól manifestu pominiętych w starszym JSON v1 oraz ochrony przed podmianą pośredniego katalogu na symlink.
+
+### Zmiany bezpieczeństwa i testy
+- Commit `3a00acecfa902a8b341c65bd9ed114bb090b1b3a`: kontrola archiwum zmieniona z sekwencji `symlink_status` + `open` na przechodzenie po ścieżce przez deskryptory katalogów i `openat(O_NOFOLLOW)`. Każdy katalog pośredni jest otwierany z `O_DIRECTORY|O_NOFOLLOW`, a plik końcowy z `O_NOFOLLOW`; eliminuje to wyścig pomiędzy sprawdzeniem ścieżki i otwarciem pliku.
+- CI [43317179202](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43317179202) dla tego commitu — sukces (Configure/Build/Test).
+- Commit `0869dee951e5846aee602f079e8fb82aa2378b53`: test legacy JSON v1 z usuniętymi polami `archive_relative_path`, `content_length_bytes` i `content_type`, a także test symlinku w katalogu nadrzędnym archiwum. CI [43317206138](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43317206138) — w toku w chwili aktualizacji; Etap 14 pozostaje otwarty do zakończenia tego przebiegu.
+- Commit `13cf9433af0e04c019002fef79c481b24f9dfb93`: jawny nagłówek `<iterator>` dla `std::next`. CI [43317220372](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43317220372) — sukces.
+- Testy negatywne nadal obejmują traversal, symlink pliku końcowego, brak/uszkodzenie archiwum, niezgodny rozmiar i SHA-256.
+
+### Etap 15 — projekt rozdzielenia źródła i rewizji kalendarza
+- Dodano `docs/market-calendar-versioning.md` (commit `8508a670627d2c9d0ed0feb0a8545e10ff0470b3`).
+- Dokument definiuje docelowe `SourceArchiveObject` jako niezmienny obiekt treści identyfikowany SHA-256 oraz odrębny `VenueCalendarRevision` jako semantyczną rewizję kalendarza.
+- Implementacja rozbita na 15A (model/JSON/walidacja), 15B (archiwum content-addressed i adapter), 15C (oddzielne numerowanie rewizji) i 15D (raport osieroconych obiektów). Nie zmieniać dotychczasowego JSON v1 bez testów migracyjnych.
+- CI dokumentacji [43317354117](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43317354117) — w toku w chwili aktualizacji.
+
+### Następne czynności
+1. Potwierdzić pełny CI dla `0869dee`; w razie błędu pobrać log i poprawić test.
+2. Zaktualizować status Etapu 14 na zakończony dopiero po zielonym Configure/Build/Test dla testu legacy i symlinku katalogu.
+3. Rozpocząć Etap 15A: model `SourceArchiveObject`, kolekcja `source_objects`, serializacja, walidacja unikalności SHA-256 i referencji, testy round-trip oraz starego JSON v1.
+4. Następnie podłączyć adapter Xetra w Etapie 15B; nie usuwać starych ścieżek ani metadanych, dopóki migracja i testy współistnienia nie będą zakończone.
