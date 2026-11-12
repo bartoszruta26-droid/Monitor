@@ -47,6 +47,7 @@ std::string safe_component(const std::string& value) {
 struct DownloadedCalendar {
     VenueSessionCalendar calendar;
     std::string raw_html;
+    std::string content_type;
 };
 DownloadedCalendar download(HttpTransport& transport,SourceCalendarDocument source) {
     validate_source_calendar_document(source);
@@ -75,7 +76,7 @@ DownloadedCalendar download(HttpTransport& transport,SourceCalendarDocument sour
         std::chrono::system_clock::now().time_since_epoch()).count();
     source.retrieved_at=UtcTimestamp{now};
     auto calendar=parse_xetra_html_calendar(response.body,source);
-    return DownloadedCalendar{std::move(calendar),response.body};
+    return DownloadedCalendar{std::move(calendar),response.body,it->second};
 }
 void archive_exact_bytes(const std::filesystem::path& path,const std::string& bytes) {
     std::error_code ec;
@@ -130,6 +131,11 @@ std::uint64_t XetraCalendarSourceAdapter::import(
     // can leave an orphaned content-addressed object, but never a metadata
     // record pointing at missing source bytes.
     archive_exact_bytes(archive_path,downloaded.raw_html);
+    auto relative_archive=std::filesystem::relative(archive_path,repository.file_path().parent_path().empty()
+        ? std::filesystem::path(".") : repository.file_path().parent_path());
+    downloaded.calendar.source.archive_relative_path=relative_archive.generic_string();
+    downloaded.calendar.source.content_length_bytes=static_cast<std::uint64_t>(downloaded.raw_html.size());
+    downloaded.calendar.source.content_type=downloaded.content_type;
     auto snapshot=repository.load();
     const auto duplicate=std::find_if(snapshot.venue_calendars.begin(),
         snapshot.venue_calendars.end(),[&](const VenueSessionCalendar& item) {
