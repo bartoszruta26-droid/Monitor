@@ -373,6 +373,7 @@ Brak wystarczających danych powinien skutkować komunikatem o braku wiarygodnej
 - [Status historycznego backendu](backend/README.md)
 - [Założenia architektury i wymiany danych](docs/architecture.md)
 - [Audyt funkcjonalny i priorytetowy plan realizacji](docs/market-monitor-audit-and-roadmap.md)
+- [Audyt kolejnych etapów prac i kryteria akceptacji](docs/next-implementation-audit.md)
 
 ## 15. Licencja
 
