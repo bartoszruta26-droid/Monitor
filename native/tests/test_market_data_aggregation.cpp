@@ -43,8 +43,8 @@ int main() {
             "OHLC zgodne z chronologią");
     require(jan.observation_count == 4 && jan.source_observation_ids.size() == 4,
             "liczność i pochodzenie świecy");
-    require(jan.period_start == parse_utc_timestamp("2024-01-01T00:00:00Z") &&
-            jan.period_end == parse_utc_timestamp("2024-02-01T00:00:00Z"),
+    require(jan.period_start.unix_seconds == parse_utc_timestamp("2024-01-01T00:00:00Z").unix_seconds &&
+            jan.period_end.unix_seconds == parse_utc_timestamp("2024-02-01T00:00:00Z").unix_seconds,
             "granice miesiąca z końcem wyłącznym");
 
     const std::vector<MarketObservation> gaps{
@@ -54,8 +54,8 @@ int main() {
     const auto daily_gaps = aggregate_ohlc(gaps, Frequency::Daily);
     require(daily_gaps.candles.size() == 2 && daily_gaps.gaps.size() == 1,
             "jawna luka pomiędzy okresami");
-    require(daily_gaps.gaps.front().period_start ==
-            parse_utc_timestamp("2024-01-02T00:00:00Z"), "data luki");
+    require(daily_gaps.gaps.front().period_start.unix_seconds ==
+            parse_utc_timestamp("2024-01-02T00:00:00Z").unix_seconds, "data luki");
 
     const std::vector<MarketObservation> weekly_input{
         obs("sun", "2024-01-07T23:59:00Z", 5.0),
@@ -107,16 +107,16 @@ int main() {
     };
     const auto quarters = aggregate_ohlc(calendar_edges, Frequency::Quarterly);
     require(quarters.candles.size() == 2, "granica kwartału");
-    require(quarters.candles.front().period_end ==
-            parse_utc_timestamp("2024-04-01T00:00:00Z"), "koniec pierwszego kwartału");
+    require(quarters.candles.front().period_end.unix_seconds ==
+            parse_utc_timestamp("2024-04-01T00:00:00Z").unix_seconds, "koniec pierwszego kwartału");
     const auto halves = aggregate_ohlc(calendar_edges, Frequency::SemiAnnual);
     require(halves.candles.size() == 1 &&
-            halves.candles.front().period_end ==
-            parse_utc_timestamp("2024-07-01T00:00:00Z"), "granica półrocza");
+            halves.candles.front().period_end.unix_seconds ==
+            parse_utc_timestamp("2024-07-01T00:00:00Z").unix_seconds, "granica półrocza");
     const auto years = aggregate_ohlc(calendar_edges, Frequency::Annual);
     require(years.candles.size() == 1 &&
-            years.candles.front().period_end ==
-            parse_utc_timestamp("2025-01-01T00:00:00Z"), "granica roku");
+            years.candles.front().period_end.unix_seconds ==
+            parse_utc_timestamp("2025-01-01T00:00:00Z").unix_seconds, "granica roku");
 
     const std::vector<MarketObservation> intraday{
         obs("i1", "2024-03-31T23:59:59Z", 1.0, Frequency::Hour),
@@ -130,7 +130,7 @@ int main() {
     duplicate_id.back().id = duplicate_id.front().id;
     throws([&] { (void)aggregate_ohlc(duplicate_id, Frequency::Monthly); },
            "unikalne identyfikatory obserwacji");
-    throws([&] { (void)aggregate_ohlc(daily, Frequency::Monthly, 1); },
+    throws([&] { (void)aggregate_ohlc(daily, Frequency::Daily, 1); },
            "limit liczby świec");
 
     std::cout << "Wszystkie testy agregacji danych rynkowych zakończone powodzeniem.\n";
