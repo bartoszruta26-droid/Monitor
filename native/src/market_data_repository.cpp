@@ -358,6 +358,12 @@ VenueSessionCalendar decode_venue_calendar(const json& j) {
         result.source.content_type=s.at("content_type").get<std::string>();
     result.source.attribution=s.at("attribution").get<std::string>();
     result.source.license_status=parse_venue_license_status(s.at("license_status").get<std::string>());
+    // Old schema-v1 records used source.document_id + source.version as the
+    // calendar key. Materialize that legacy key into the new explicit fields.
+    if(result.calendar_id.empty() && result.revision==0U) {
+        result.calendar_id=result.source.document_id;
+        result.revision=result.source.version;
+    }
     for (const auto& value : j.at("days")) {
         VenueCalendarDay day;
         day.date=parse_date(value.at("date").get<std::string>());
