@@ -215,8 +215,12 @@ int main() {
     source_v1.version=1U;
     require(adapter.import(revision_repository,source_v1,"XETRA-2026",10U)==1U,
             "publish calendar revision 10 from source document version 1");
-    require(adapter.import(revision_repository,source_v1,"XETRA-2026",11U)==2U,
-            "publish calendar revision 11 from the same source document version");
+    const auto requests_before_offline_revision=transport.calls;
+    require(adapter.publish_revision_from_archive(revision_repository,source_v1,"XETRA-2026",11U,
+                "sha256:"+sha256_hex(html))==2U,
+            "publish calendar revision 11 by re-parsing archived bytes");
+    require(transport.calls==requests_before_offline_revision,
+            "offline calendar revision does not issue another HTTP request");
     auto source_v2=source();
     source_v2.version=2U;
     require(adapter.import(revision_repository,source_v2,"XETRA-2026",12U)==3U,
