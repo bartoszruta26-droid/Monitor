@@ -73,3 +73,8 @@ Resolver efektywnego dnia i raport nierozstrzygniętych dat są wdrożone. Testy
 ## Wynik Etapu 17D
 
 Testy regresji potwierdzają dokładne anulowanie wskazanej rewizji, pozostawienie nowszej rewizji aktywnej, odrzucanie wielu anulowań tej samej rewizji, konflikt kilku aktywnych nadpisań, przywrócenie bazowego harmonogramu i raport nierozstrzygniętych dat. CI [43325240256](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43325240256) — success. Etapy 17A–17D są zakończone dla syntetycznych fixture offline. Rzeczywisty format aktualnego okólnika giełdy nie został jeszcze pobrany ani zweryfikowany; to osobny następny etap.
+
+
+## Etap 18A — fazy sesji w ogłoszeniu PDF
+
+Wprowadzono `VenueSessionPhaseEventKind` i `VenueSessionPhaseEvent`, aby zachować kamienie milowe sesji, których nie da się opisać jednym przedziałem otwarcia/zamknięcia. Model obejmuje start pre-trading, retail early, aukcję otwarcia, aukcję śróddzienną, aukcję zamknięcia, najwcześniejszy moment ustalenia ceny, koniec Trade-at-Close, koniec usług off-book oraz koniec post-trading. `parse_xetra_session_notice_text` czyta tekst wydobyty z PDF, sprawdza MIC XETR, datę i kompletność dziewięciu faz oraz konwertuje AM/PM na lokalny czas 24-godzinny. Import i archiwizacja surowego PDF nie są jeszcze zaimplementowane — to Etap 18B.
