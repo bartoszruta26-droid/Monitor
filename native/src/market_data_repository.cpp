@@ -316,6 +316,70 @@ VenueSessionNoticeKind parse_venue_session_notice_kind(const std::string& value)
     if(value=="cancellation") return VenueSessionNoticeKind::Cancellation;
     throw std::invalid_argument("Nieznany rodzaj komunikatu sesyjnego w JSON.");
 }
+std::string enum_name(VenueSessionPhaseEventKind value) {
+    switch(value) {
+    case VenueSessionPhaseEventKind::PreTradingStart:return "pre_trading_start";
+    case VenueSessionPhaseEventKind::RetailEarlyStart:return "retail_early_start";
+    case VenueSessionPhaseEventKind::OpeningAuctionCall:return "opening_auction_call";
+    case VenueSessionPhaseEventKind::IntradayAuctionCall:return "intraday_auction_call";
+    case VenueSessionPhaseEventKind::ClosingAuctionCall:return "closing_auction_call";
+    case VenueSessionPhaseEventKind::ClosingAuctionPriceDeterminationNotBefore:return "closing_auction_price_determination_not_before";
+    case VenueSessionPhaseEventKind::TradeAtCloseEnd:return "trade_at_close_end";
+    case VenueSessionPhaseEventKind::PostTradingEnd:return "post_trading_end";
+    case VenueSessionPhaseEventKind::OffBookServicesEnd:return "off_book_services_end";
+    }
+    throw std::invalid_argument("Nieznany rodzaj zdarzenia fazy sesji.");
+}
+VenueSessionPhaseEventKind parse_venue_session_phase_event_kind(const std::string& value) {
+    if(value=="pre_trading_start") return VenueSessionPhaseEventKind::PreTradingStart;
+    if(value=="retail_early_start") return VenueSessionPhaseEventKind::RetailEarlyStart;
+    if(value=="opening_auction_call") return VenueSessionPhaseEventKind::OpeningAuctionCall;
+    if(value=="intraday_auction_call") return VenueSessionPhaseEventKind::IntradayAuctionCall;
+    if(value=="closing_auction_call") return VenueSessionPhaseEventKind::ClosingAuctionCall;
+    if(value=="closing_auction_price_determination_not_before") return VenueSessionPhaseEventKind::ClosingAuctionPriceDeterminationNotBefore;
+    if(value=="trade_at_close_end") return VenueSessionPhaseEventKind::TradeAtCloseEnd;
+    if(value=="post_trading_end") return VenueSessionPhaseEventKind::PostTradingEnd;
+    if(value=="off_book_services_end") return VenueSessionPhaseEventKind::OffBookServicesEnd;
+    throw std::invalid_argument("Nieznany rodzaj zdarzenia fazy sesji w JSON.");
+}
+json encode_phase_events(const std::vector<VenueSessionPhaseEvent>& events) {
+    json result=json::array();
+    for(const auto& event:events)
+        result.push_back({{"kind",enum_name(event.kind)},
+            {"at",{{"hour",event.at.hour},{"minute",event.at.minute},{"second",event.at.second}}},
+            {"scope",event.scope}});
+    return result;
+}
+std::vector<VenueSessionPhaseEvent> decode_phase_events(const json& events) {
+    std::vector<VenueSessionPhaseEvent> result;
+    for(const auto& item:events) {
+        const auto& time=item.at("at");
+        result.push_back({parse_venue_session_phase_event_kind(item.at("kind").get<std::string>()),
+            {time.at("hour").get<unsigned>(),time.at("minute").get<unsigned>(),time.at("second").get<unsigned>()},
+            item.at("scope").get<std::string>()});
+    }
+    return result;
+}
+void validate_phase_events(const std::vector<VenueSessionPhaseEvent>& events) {
+    std::set<std::string> keys;
+    std::optional<std::tuple<unsigned,unsigned,unsigned>> previous;
+    for(const auto& event:events) {
+        (void)enum_name(event.kind);
+        if(event.at.hour>23U || event.at.minute>59U || event.at.second>59U ||
+           event.scope.size()>128U || std::any_of(event.scope.begin(),event.scope.end(),[](unsigned char ch){return ch<0x20U||ch==0x7fU;}))
+            throw std::invalid_argument("Zdarzenie fazy sesji ma nieprawidłową godzinę lub zakres.");
+        if((event.kind==VenueSessionPhaseEventKind::TradeAtCloseEnd ||
+            event.kind==VenueSessionPhaseEventKind::OffBookServicesEnd) && event.scope.empty())
+            throw std::invalid_argument("Zdarzenie końca usługi wymaga jawnego zakresu.");
+        const auto key=enum_name(event.kind)+"\\x1f"+event.scope;
+        if(!keys.insert(key).second)
+            throw std::invalid_argument("Powtórzone zdarzenie fazy sesji.");
+        const auto current=std::tuple{event.at.hour,event.at.minute,event.at.second};
+        if(previous && current<*previous)
+            throw std::invalid_argument("Zdarzenia fazy sesji muszą być uporządkowane chronologicznie.");
+        previous=current;
+    }
+}
 json encode(const VenueSessionCalendar& x) {
     const auto& source = x.source;
     json source_json = {
