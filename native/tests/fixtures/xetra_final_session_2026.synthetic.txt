@@ -1,0 +1,17 @@
+# Synthetic extracted-text fixture based on the published Xetra final-session schedule.
+# The fixture is not the original PDF and is used only for deterministic parser tests.
+Final trading session 2026
+Effective date: 30 December 2026
+
+Market Deutsche Börse Xetra (electronic trading system T7 - MIC: XETR)
+from 7.00 a.m. Start of pre-trading
+from 8.00 a.m. Start of retail early
+from 8.55 a.m. Start of opening auction call
+from 1.00 p.m. Start of intraday auction call
+from 2.00 p.m. Start of closing auction call
+Price determination in the closing auction will take place no earlier than 2.05 p.m.
+Trade-at-Close period will end at 2.10 p.m. for DAX, MDAX and SDAX
+TES OTC and TES LIS trades may be entered, and Xetra EnLight may be used, until 2.59 p.m.
+End of post-trading at 3.00 p.m.
+
+3. Availability
