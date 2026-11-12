@@ -8,6 +8,8 @@
 #include <cctype>
 #include <chrono>
 #include <map>
+#include <limits>
+#include <optional>
 #include <memory>
 #include <regex>
 #include <set>
@@ -309,7 +311,7 @@ VenueSessionNotice parse_xetra_session_notice_html(std::string_view html,VenueSe
         if(target) throw std::invalid_argument(std::string("Powtórzone pole komunikatu Xetra: ")+field);
         target=std::move(value);
     };
-    const std::regex field_pattern(R"(^([a-z ]+):\\s*(.+)$)");
+    const std::regex field_pattern(R"(^([a-z ]+):\s*(.+)$)");
     for(xmlNode* paragraph:paragraphs) {
         const auto text=normalized(node_text(paragraph));
         std::smatch match;
