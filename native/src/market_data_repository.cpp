@@ -371,7 +371,7 @@ void validate_phase_events(const std::vector<VenueSessionPhaseEvent>& events) {
         if((event.kind==VenueSessionPhaseEventKind::TradeAtCloseEnd ||
             event.kind==VenueSessionPhaseEventKind::OffBookServicesEnd) && event.scope.empty())
             throw std::invalid_argument("Zdarzenie końca usługi wymaga jawnego zakresu.");
-        const auto key=enum_name(event.kind)+"\\x1f"+event.scope;
+        const auto key=enum_name(event.kind)+"\x1f"+event.scope;
         if(!keys.insert(key).second)
             throw std::invalid_argument("Powtórzone zdarzenie fazy sesji.");
         const auto current=std::tuple{event.at.hour,event.at.minute,event.at.second};
