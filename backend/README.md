@@ -1,19 +1,31 @@
-# Warstwa danych — status migracji
+# Historyczny prototyp backendu — zamrożony
 
-## Kierunek projektu
+Katalog zawiera wcześniejszy prototyp warstwy danych. Nie jest on częścią aktywnej architektury ani procesu budowania i testowania. Nowy kod należy rozwijać w C++20.
 
-Docelowa implementacja Monitora jest rozwijana w C++20. Nie należy instalować ani uruchamiać starego prototypu serwerowego jako wymagania projektu. Nowy rdzeń C++ jest niezależny od interfejsu i będzie wspólny dla aplikacji Linux Desktop, Android oraz usługi danych.
+## Docelowa architektura
 
-## Status
+Monitor ma posiadać odrębny serwer wymiany danych, który komunikuje się z wieloma backendami/adaptorami oraz czterema klientami: Linux GUI, WebUI, TUI i Android App.
 
-- **Aktywny kod:** `../native` — biblioteka C++20 regresji i kanałów.
-- **Budowanie/testy:** `../scripts/build-native.sh` oraz `../scripts/test-native.sh`.
-- **Dostawcy danych:** migracja adapterów NBP, Frankfurter i World Bank do C++ jest kolejnym etapem.
-- **Baza danych:** docelowo SQLite lokalnie oraz PostgreSQL dla usługi serwerowej.
-- **API HTTP:** do odtworzenia w C++ po ustaleniu kontraktu API; dotychczasowe trasy są opisane w głównym README jako historyczny zakres prototypu, nie jako działająca usługa natywna.
+Serwer udostępnia wersjonowane API HTTP/REST z JSON oraz kanał WebSocket dla zdarzeń i aktualizacji. Backend dostawcy nie zapisuje bezpośrednio do magazynu ani do bazy innego modułu — przekazuje znormalizowane dane do usług serwera.
 
-## Ważne
+## Trwały magazyn danych
 
-Katalog zawiera historyczny prototyp backendu. Nie jest on częścią aktualnego procesu budowania, testowania ani wdrażania. Nie rozwijaj nowych funkcji w tym katalogu. Kod zostanie usunięty po przeniesieniu i zweryfikowaniu równoważnych funkcji w natywnej implementacji C++.
+- Domyślnie: pliki JSON w katalogu danych skonfigurowanym przez użytkownika.
+- Opcjonalnie: MariaDB, wybierana przez konfigurację.
+- Oba warianty mają implementować ten sam kontrakt repozytorium.
+- Klienci nie łączą się bezpośrednio z MariaDB.
+- Hasła i tokeny są dostarczane przez bezpieczne zmienne środowiskowe lub magazyn sekretów.
 
-Do czasu zakończenia migracji nie należy deklarować, że natywna usługa API, import danych lub synchronizacja automatyczna są gotowe.
+SQLite i PostgreSQL nie są obecnie założonymi magazynami docelowymi.
+
+## Status migracji
+
+- Aktywny rdzeń: `../native`.
+- Budowanie i testy: `../scripts/build-native.sh`, `../scripts/test-native.sh`.
+- Serwer wymiany danych: planowany, jeszcze niezaimplementowany.
+- Adaptery NBP, Frankfurter i World Bank w C++: planowane.
+- Magazyn JSON: planowany.
+- Adapter MariaDB: planowany.
+- Linux GUI, WebUI, TUI i Android App: planowane.
+
+Nie rozwijaj nowych funkcji w tym historycznym katalogu. Pliki prototypu można usunąć dopiero po przeniesieniu i zweryfikowaniu wszystkich potrzebnych funkcji w implementacji C++.
