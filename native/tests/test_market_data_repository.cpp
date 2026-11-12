@@ -1,5 +1,6 @@
 #include "monitor/market_data_repository.hpp"
 
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -305,6 +306,14 @@ int main(){
             "informational official notice is persisted separately from the base calendar");
     require(venue_repo.load().venue_session_notices.size()==1U,
             "notice JSON round-trip retains its source reference");
+    const auto effective_informational=resolve_effective_venue_calendar_day(
+        venue_repo.load(),"deutsche-boerse-xetra-2026",parse_date("2026-12-30"));
+    require(effective_informational.day.product_sessions.front().closes_at.hour==17U &&
+            effective_informational.requires_official_notice_unresolved &&
+            std::find(effective_informational.applied_notice_ids.begin(),
+                      effective_informational.applied_notice_ids.end(),
+                      informational_notice.notice_id)!=effective_informational.applied_notice_ids.end(),
+            "informational notice leaves the base schedule unchanged and unresolved");
     require(venue_repo.upsert_venue_session_notice(informational_notice)==9U &&
             venue_repo.load().venue_session_notices.size()==1U,
             "replaying the same notice does not duplicate its revision");
@@ -319,6 +328,13 @@ int main(){
     override_notice.product_sessions.push_back({"xetra_regular",{9,0,0},{13,0,0}});
     require(venue_repo.upsert_venue_session_notice(override_notice)==10U,
             "new notice revision may publish an explicit product session override");
+    const auto effective_override=resolve_effective_venue_calendar_day(
+        venue_repo.load(),"deutsche-boerse-xetra-2026",parse_date("2026-12-30"));
+    require(effective_override.day.status==VenueDayStatus::Trading &&
+            effective_override.day.product_sessions.size()==1U &&
+            effective_override.day.product_sessions.front().closes_at.hour==13U &&
+            !effective_override.requires_official_notice_unresolved,
+            "active session override is applied to a copy of the base calendar day");
     auto incomplete_override=override_notice;
     incomplete_override.revision=3U;
     incomplete_override.product_sessions.clear();
@@ -352,6 +368,31 @@ int main(){
     cancellation_batch.venue_session_notices.push_back(cancellation_notice);
     require(venue_repo.upsert_batch(cancellation_batch)==11U,
             "cancellation notice and its immutable source object commit atomically");
+    const auto effective_cancelled=resolve_effective_venue_calendar_day(
+        venue_repo.load(),"deutsche-boerse-xetra-2026",parse_date("2026-12-30"));
+    require(effective_cancelled.day.product_sessions.front().closes_at.hour==17U &&
+            effective_cancelled.requires_official_notice_unresolved &&
+            std::find(effective_cancelled.applied_notice_ids.begin(),
+                      effective_cancelled.applied_notice_ids.end(),
+                      cancellation_notice.notice_id)!=effective_cancelled.applied_notice_ids.end() &&
+            std::find(effective_cancelled.applied_notice_ids.begin(),
+                      effective_cancelled.applied_notice_ids.end(),
+                      override_notice.notice_id)==effective_cancelled.applied_notice_ids.end(),
+            "cancellation removes the override and restores the unresolved base schedule");
+    auto conflicting_snapshot=venue_repo.load();
+    conflicting_snapshot.venue_session_notices.erase(
+        std::remove_if(conflicting_snapshot.venue_session_notices.begin(),
+            conflicting_snapshot.venue_session_notices.end(),[](const VenueSessionNotice& item) {
+                return item.kind==VenueSessionNoticeKind::Cancellation;
+            }),conflicting_snapshot.venue_session_notices.end());
+    auto conflicting_override=override_notice;
+    conflicting_override.notice_id="xetra-2026-dec30-other-override";
+    conflicting_override.revision=1U;
+    conflicting_override.product_sessions={{"shares_and_etps",{9,0,0},{15,0,0}}};
+    conflicting_snapshot.venue_session_notices.push_back(conflicting_override);
+    throws([&]{(void)resolve_effective_venue_calendar_day(
+        conflicting_snapshot,"deutsche-boerse-xetra-2026",parse_date("2026-12-30"));},
+        "two active session overrides for one date are rejected as a conflict");
     auto missing_cancellation= cancellation_notice;
     missing_cancellation.notice_id="bad-cancellation";
     missing_cancellation.cancels_notice_id="missing-notice";
