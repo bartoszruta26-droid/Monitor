@@ -1,72 +1,19 @@
-# Market Data API
+# Warstwa danych — status migracji
 
-## Wymagania
-Python 3.11+. Domyślnie SQLite; PostgreSQL przez `DATABASE_URL`.
+## Kierunek projektu
 
-## Instalacja i uruchomienie
+Docelowa implementacja Monitora jest rozwijana w C++20. Nie należy instalować ani uruchamiać starego prototypu serwerowego jako wymagania projektu. Nowy rdzeń C++ jest niezależny od interfejsu i będzie wspólny dla aplikacji Linux Desktop, Android oraz usługi danych.
 
-```bash
-cd backend
-python -m venv .venv
-. .venv/bin/activate
-pip install -r requirements.txt
-export ADMIN_API_TOKEN='wygeneruj-dlugi-losowy-sekret'
-export DATABASE_URL='sqlite:///./market_data.db'
-uvicorn market_data.main:app --host 0.0.0.0 --port 8080
-```
+## Status
 
-Na produkcji użyj PostgreSQL, HTTPS reverse proxy, zapory i sekretów środowiskowych. Nie wystawiaj portu administracyjnego publicznie bez dodatkowej warstwy uwierzytelniania.
+- **Aktywny kod:** `../native` — biblioteka C++20 regresji i kanałów.
+- **Budowanie/testy:** `../scripts/build-native.sh` oraz `../scripts/test-native.sh`.
+- **Dostawcy danych:** migracja adapterów NBP, Frankfurter i World Bank do C++ jest kolejnym etapem.
+- **Baza danych:** docelowo SQLite lokalnie oraz PostgreSQL dla usługi serwerowej.
+- **API HTTP:** do odtworzenia w C++ po ustaleniu kontraktu API; dotychczasowe trasy są opisane w głównym README jako historyczny zakres prototypu, nie jako działająca usługa natywna.
 
-## API
+## Ważne
 
-- `GET /health` — stan usługi.
-- `POST /sources` — dodanie źródła (wymaga `X-Admin-Token`).
-- `GET /sources` — lista źródeł.
-- `POST /sources/{source_id}/ingest` — ręczne uruchomienie pobrania (wymaga tokenu).
-- `GET /candles?symbol=XAUUSD&interval=1d&start=...&end=...` — historia świec.
-- `GET /valuations?symbol=AMBER&start=...&end=...` — historia wycen.
+Katalog zawiera historyczny prototyp backendu. Nie jest on częścią aktualnego procesu budowania, testowania ani wdrażania. Nie rozwijaj nowych funkcji w tym katalogu. Kod zostanie usunięty po przeniesieniu i zweryfikowaniu równoważnych funkcji w natywnej implementacji C++.
 
-### Przykład: NBP
-
-```json
-{
-  "name": "NBP tabela A USD",
-  "kind": "nbp_fx",
-  "config": {"table": "A", "code": "USD", "base_currency": "PLN"}
-}
-```
-
-### Przykład: dostawca świec OHLCV
-
-```json
-{
-  "name": "Mój dostawca XAUUSD",
-  "kind": "rest_ohlcv",
-  "config": {
-    "url": "https://provider.example/api/candles?symbol=XAUUSD&interval=1h",
-    "symbol": "XAUUSD",
-    "interval": "1h",
-    "timestamp_unit": "iso",
-    "fields": {
-      "items": "data",
-      "time": "time", "open": "open", "high": "high",
-      "low": "low", "close": "close", "volume": "volume"
-    },
-    "currency": "USD",
-    "unit": "troy_ounce",
-    "secret_env": "PROVIDER_API_KEY",
-    "auth_header": "Authorization",
-    "auth_prefix": "Bearer "
-  }
-}
-```
-
-`secret_env` wskazuje nazwę zmiennej środowiskowej, a nie sam sekret. Wartość sekretu nie jest zapisywana w bazie. Adresy muszą być HTTPS i opcjonalnie ograniczone przez `ALLOWED_SOURCE_HOSTS` (lista hostów oddzielona przecinkami).
-
-### Przykład: wyceny bursztynu/kamieni
-
-`rest_valuation` zapisuje obserwacje punktowe. W `config.fields` mapuj `items`, `time`, `price`, `currency`, `unit`, `grade`, `weight`, `stone_type`/`amber_type` i `certificate`. Dla porównywalności wymagaj tych samych atrybutów jakościowych.
-
-## Ograniczenia
-
-Adapter NBP pobiera dzienne kursy referencyjne. Nie generuje śróddziennych danych rynkowych. Adaptery REST wymagają zgodności dostawcy z mapowaniem i limitami API. Harmonogram automatyczny nie jest uruchamiany w tej minimalnej usłudze — pobieranie inicjuje endpoint ingest; harmonogram można dodać w infrastrukturze wdrożeniowej po poznaniu limitów dostawców.
+Do czasu zakończenia migracji nie należy deklarować, że natywna usługa API, import danych lub synchronizacja automatyczna są gotowe.
