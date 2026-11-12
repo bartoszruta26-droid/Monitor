@@ -103,6 +103,14 @@ std::vector<CivilDate> dates_in_text(const std::string& text, int expected_year)
     return result;
 }
 
+LocalTimeOfDay parse_clock_time(const std::smatch& match,std::size_t hour_index,std::size_t minute_index) {
+    const auto hour=static_cast<unsigned>(std::stoul(match[hour_index].str()));
+    const auto minute=static_cast<unsigned>(std::stoul(match[minute_index].str()));
+    if(hour>23U || minute>59U)
+        throw std::invalid_argument("Godzina sesji Xetra wykracza poza zakres doby.");
+    return {hour,minute,0U};
+}
+
 } // namespace
 
 VenueSessionCalendar parse_xetra_html_calendar(
@@ -167,6 +175,36 @@ VenueSessionCalendar parse_xetra_html_calendar(
 
     std::vector<xmlNode*> paragraphs;
     collect_elements(xmlDocGetRootElement(parsed.get()), "p", paragraphs);
+    std::string paragraph_text;
+    for(xmlNode* paragraph:paragraphs) {
+        if(!paragraph_text.empty()) paragraph_text.push_back(' ');
+        paragraph_text+=normalized(node_text(paragraph));
+    }
+    std::smatch regular_hours_match;
+    const std::regex regular_hours_pattern(
+        R"(regular trading hours are from ([0-9]{1,2}):([0-9]{2}) to ([0-9]{1,2}):([0-9]{2}))",
+        std::regex::icase);
+    if(!std::regex_search(paragraph_text,regular_hours_match,regular_hours_pattern))
+        throw std::invalid_argument("Brak jednoznacznych regularnych godzin sesji w dokumencie Xetra.");
+    const auto regular_open=parse_clock_time(regular_hours_match,1U,2U);
+    const auto regular_close=parse_clock_time(regular_hours_match,3U,4U);
+    if(std::tie(regular_open.hour,regular_open.minute)>=std::tie(regular_close.hour,regular_close.minute))
+        throw std::invalid_argument("Regularne godziny sesji Xetra są odwrócone lub puste.");
+
+    std::smatch shares_hours_match,structured_hours_match;
+    const std::regex shares_hours_pattern(
+        R"(shares and exchange traded products ends at ([0-9]{1,2}):([0-9]{2}))",std::regex::icase);
+    const std::regex structured_hours_pattern(
+        R"(structured products are traded until ([0-9]{1,2}):([0-9]{2}))",std::regex::icase);
+    if(!std::regex_search(paragraph_text,shares_hours_match,shares_hours_pattern) ||
+       !std::regex_search(paragraph_text,structured_hours_match,structured_hours_pattern))
+        throw std::invalid_argument("Brak jednoznacznych godzin sesji świątecznej Xetra.");
+    const auto shares_close=parse_clock_time(shares_hours_match,1U,2U);
+    const auto structured_close=parse_clock_time(structured_hours_match,1U,2U);
+    if(std::tie(shares_close.hour,shares_close.minute)<=std::tie(regular_open.hour,regular_open.minute) ||
+       std::tie(structured_close.hour,structured_close.minute)<=std::tie(regular_open.hour,regular_open.minute))
+        throw std::invalid_argument("Godziny zakończenia sesji świątecznej Xetra są nieprawidłowe.");
+
     const std::string notice_marker="in the year "+std::to_string(calendar_year)+" regular stock exchange trading takes place";
     const bool has_notice = std::any_of(paragraphs.begin(), paragraphs.end(), [&](xmlNode* node) {
         return normalized(node_text(node)).find(notice_marker) != std::string::npos;
@@ -231,10 +269,10 @@ VenueSessionCalendar parse_xetra_html_calendar(
         } else {
             day.status = VenueDayStatus::Trading;
             if(trading_dates.contains(key)) {
-                day.product_sessions.push_back({"shares_and_etps",{9,0,0},{20,0,0}});
-                day.product_sessions.push_back({"structured_products",{9,0,0},{22,0,0}});
+                day.product_sessions.push_back({"shares_and_etps",regular_open,shares_close});
+                day.product_sessions.push_back({"structured_products",regular_open,structured_close});
             } else {
-                day.product_sessions.push_back({"xetra_regular",{9,0,0},{17,30,0}});
+                day.product_sessions.push_back({"xetra_regular",regular_open,regular_close});
             }
             day.requires_official_notice=extraordinary_notice_dates.contains(key);
         }
