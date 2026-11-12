@@ -154,3 +154,8 @@ Domyślnie alert po zamknięciu świecy. Każde zdarzenie musi mieć klucz dedup
 ## 8. Status
 
 To jest audyt kodu źródłowego i specyfikacja realizacji. Nie oznacza, że silnik regresji, wykresy, baza danych lub alerty zostały już zaimplementowane. Do uruchomienia modułu potrzebne są rzeczywiste dane OHLCV, źródło notowań, silnik obliczeniowy i warstwa trwałego zapisu.
+
+
+## Aktualizacja implementacyjna — 2026-11-12
+
+W repozytorium dodano połączony wskaźnik Pine Script v6: [`tradingview/monitor_combined_linear_regression.pine`](../tradingview/monitor_combined_linear_regression.pine) oraz instrukcję [`tradingview/README.md`](../tradingview/README.md). Implementacja zachowuje odrębne mianowniki i ustawienia profili. Kod został zapisany i ponownie odczytany z gałęzi `main`; nie został jednak skompilowany w TradingView Pine Editor. Audyt nadal opisuje także szerszą docelową integrację backendową, która pozostaje osobnym zadaniem.
