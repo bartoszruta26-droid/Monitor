@@ -340,23 +340,23 @@ VenueSessionNotice parse_xetra_session_notice_text(
     };
     std::vector<VenueSessionPhaseEvent> events;
     events.push_back({VenueSessionPhaseEventKind::PreTradingStart,
-        extract_time(R"(from\\s+([0-9]{1,2})\\.([0-9]{2})\\s*(a\\.m\\.|p\\.m\\.).{0,100}pre-trading)","pre-trading"),{}});
+        extract_time(R"(from\s+([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.).{0,100}pre-trading)","pre-trading"),{}});
     events.push_back({VenueSessionPhaseEventKind::RetailEarlyStart,
-        extract_time(R"(from\\s+([0-9]{1,2})\\.([0-9]{2})\\s*(a\\.m\\.|p\\.m\\.).{0,100}retail early)","retail early"),{}});
+        extract_time(R"(from\s+([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.).{0,100}retail early)","retail early"),{}});
     events.push_back({VenueSessionPhaseEventKind::OpeningAuctionCall,
-        extract_time(R"(from\\s+([0-9]{1,2})\\.([0-9]{2})\\s*(a\\.m\\.|p\\.m\\.).{0,100}opening auction call)","opening auction"),{}});
+        extract_time(R"(from\s+([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.).{0,100}opening auction call)","opening auction"),{}});
     events.push_back({VenueSessionPhaseEventKind::IntradayAuctionCall,
-        extract_time(R"(from\\s+([0-9]{1,2})\\.([0-9]{2})\\s*(a\\.m\\.|p\\.m\\.).{0,100}intraday auction call)","intraday auction"),{}});
+        extract_time(R"(from\s+([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.).{0,100}intraday auction call)","intraday auction"),{}});
     events.push_back({VenueSessionPhaseEventKind::ClosingAuctionCall,
-        extract_time(R"(from\\s+([0-9]{1,2})\\.([0-9]{2})\\s*(a\\.m\\.|p\\.m\\.).{0,100}closing auction call)","closing auction"),{}});
+        extract_time(R"(from\s+([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.).{0,100}closing auction call)","closing auction"),{}});
     events.push_back({VenueSessionPhaseEventKind::ClosingAuctionPriceDeterminationNotBefore,
-        extract_time(R"(no earlier than\\s+([0-9]{1,2})\\.([0-9]{2})\\s*(a\\.m\\.|p\\.m\\.))","closing auction price"),{}});
+        extract_time(R"(no earlier than\s+([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.))","closing auction price"),{}});
     events.push_back({VenueSessionPhaseEventKind::TradeAtCloseEnd,
-        extract_time(R"(trade-at-close.{0,180}?(?:end|until)[^0-9]{0,40}([0-9]{1,2})\\.([0-9]{2})\\s*(a\\.m\\.|p\\.m\\.))","Trade-at-Close"),"DAX, MDAX, SDAX"});
+        extract_time(R"(trade-at-close.{0,180}?(?:end|until)[^0-9]{0,40}([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.))","Trade-at-Close"),"DAX, MDAX, SDAX"});
     events.push_back({VenueSessionPhaseEventKind::OffBookServicesEnd,
-        extract_time(R"(tes otc.{0,240}?(?:until|up to)[^0-9]{0,40}([0-9]{1,2})\\.([0-9]{2})\\s*(a\\.m\\.|p\\.m\\.))","TES OTC/LIS and Xetra EnLight"),"TES OTC, TES LIS, Xetra EnLight"});
+        extract_time(R"(tes otc.{0,240}?(?:until|up to)[^0-9]{0,40}([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.))","TES OTC/LIS and Xetra EnLight"),"TES OTC, TES LIS, Xetra EnLight"});
     events.push_back({VenueSessionPhaseEventKind::PostTradingEnd,
-        extract_time(R"(end of post-trading[^0-9]{0,40}([0-9]{1,2})\\.([0-9]{2})\\s*(a\\.m\\.|p\\.m\\.))","post-trading"),{}});
+        extract_time(R"(end of post-trading[^0-9]{0,40}([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.))","post-trading"),{}});
     std::sort(events.begin(),events.end(),[](const auto& a,const auto& b) {
         return std::tie(a.at.hour,a.at.minute,a.at.second)<std::tie(b.at.hour,b.at.minute,b.at.second);
     });
