@@ -260,6 +260,13 @@ void archive_exact_bytes(const std::filesystem::path& path,const std::string& by
 }
 }
 
+bool xetra_pdf_import_available() noexcept {
+#ifdef MONITOR_PDFTOTEXT_EXECUTABLE
+    return true;
+#else
+    return false;
+#endif
+}
 VenueSessionCalendar XetraCalendarSourceAdapter::fetch(SourceCalendarDocument source) const {
     return download(transport_,std::move(source)).calendar;
 }
