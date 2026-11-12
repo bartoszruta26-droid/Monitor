@@ -670,3 +670,20 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 3. Wydobyć tekst przez `pdftotext` i porównać z dziewięcioma fazami zapisanymi w fixture.
 4. Dodać oryginalny PDF jako fixture, jeżeli warunki licencji i repozytorium na to pozwalają; w przeciwnym razie dodać kontrolowany test z hash/metryką i tekstem wyodrębnionym.
 5. Dodać raport audytowy: źródło, parser_version, obiekt archiwalny, zastosowane/anulowane komunikaty i daty wymagające dalszego ogłoszenia.
+
+## 62. Etap 19A — dopasowanie parsera do oryginalnego układu PDF (w toku)
+
+- Otworzono bezpośredni, oficjalny PDF: `https://cashmarket.deutsche-boerse.com/resource/blob/5673886/22764993c4b1617c5f465186066344e6/data/Final%20trading%20session%202026.pdf`.
+- Oryginalny układ potwierdza, że Trade-at-Close jest rozdzielony między wiersze sekcji 2, a usługi off-book Xetra znajdują się w osobnej sekcji 3, pod literą b). Parser v1 oparty na syntetycznym układzie nie obsługiwał tej struktury.
+- Parser zmieniono na `xetra-pdf-text-notice-v2`: rozdziela sekcję głównego rynku Xetra i podsekcję off-book Xetra, potrafi odczytać kontynuację Trade-at-Close między wierszami i nie pobiera godzin z sekcji Frankfurt.
+- Dodano transkrypcję tekstową rzeczywistego układu PDF jako fixture testowy oraz test negatywny, który odrzuca MIC XFRA w podsekcji usług off-book.
+- Zaktualizowano syntetyczny generator PDF do odzwierciedlenia rzeczywistego układu i podziału wierszy.
+- Oryginalny PDF nie został pobrany jako plik binarny do repozytorium; fixture jest transkrypcją tekstu odczytanego z oficjalnego PDF. Nie podano fikcyjnego SHA-256 ani długości oryginalnego pliku.
+- Commity: `eeed490b8a44bba7984662b109a40f595c2a9402` (parser v2), `136b121081edf732772499abafb6d4f533466dab` (fixture), `bbed8147fdfe1facec3e41416a9e06e6d52e6f68` (testy), `18d0f9b80d9f71914bbbdc62026b4a4f944102ea` (PDF end-to-end fixture).
+- CI aktualnego SHA jest w toku; Etap 19A pozostaje otwarty do zielonego Configure/Build/Test.
+
+### Następne czynności
+1. Potwierdzić parser v2 na oryginalnym układzie i syntetycznym PDF w CI.
+2. Ustalić, czy warunki licencji pozwalają umieścić oryginalny PDF jako fixture; jeśli nie, zachować wyłącznie tekstową transkrypcję i metadane źródła.
+3. Jeśli dostęp do pliku binarnego będzie możliwy, zarchiwizować oryginalne bajty przez `import_pdf_notice`, aby rejestr obiektów zawierał rzeczywisty SHA-256.
+4. Dopiero wtedy oznaczyć Etap 19A jako zweryfikowany.
