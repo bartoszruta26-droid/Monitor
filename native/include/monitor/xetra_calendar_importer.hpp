@@ -12,4 +12,9 @@ namespace monitor::market {
 [[nodiscard]] VenueSessionNotice parse_xetra_session_notice_html(
     std::string_view html, VenueSessionNotice notice);
 
+// Parses text extracted from an official PDF announcement. The effective date
+// is supplied by the caller and must be explicitly present in the extracted text.
+[[nodiscard]] VenueSessionNotice parse_xetra_session_notice_text(
+    std::string_view extracted_text, VenueSessionNotice notice);
+
 } // namespace monitor::market
