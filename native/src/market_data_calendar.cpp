@@ -274,4 +274,16 @@ std::vector<NbpPublicationWindow> generate_nbp_publication_windows(
     });
     return result;
 }
+
+std::vector<NbpPublicationWindow> generate_nbp_publication_windows(
+    const CivilDate& start_date, const CivilDate& end_date_exclusive) {
+    if(!is_valid_date(start_date)||!is_valid_date(end_date_exclusive))
+        throw std::invalid_argument("Niepoprawna data zakresu kalendarza NBP.");
+    std::vector<CivilDate> holidays;
+    for(int year_value=start_date.year;year_value<=end_date_exclusive.year;++year_value) {
+        auto year_holidays=polish_statutory_holidays(year_value);
+        holidays.insert(holidays.end(),year_holidays.begin(),year_holidays.end());
+    }
+    return generate_nbp_publication_windows(start_date,end_date_exclusive,holidays);
+}
 } // namespace monitor::market

@@ -738,3 +738,8 @@ CI `43302839736` wykazało brak bezpośredniego include `<algorithm>` w teście 
 ## 27. Etap 11 — polskie święta ustawowe
 
 Dodano `polish_statutory_holidays(year)`, opartą na art. 1 ustawy o dniach wolnych od pracy (tekst jednolity Dz.U. 2025 poz. 296). Lista zawiera 10 świąt stałych oraz cztery ruchome: Wielkanoc, Poniedziałek Wielkanocny, Zielone Świątki i Boże Ciało. Wielkanoc wyliczana jest algorytmem gregoriańskim Meeusa/Jonesa/Butchera; testy weryfikują 2025 i 2026, w tym Wigilię jako dzień wolny od 2025 r. Źródło pierwotne: https://api.sejm.gov.pl/eli/acts/DU/2025/296/text.pdf. Funkcja nie obejmuje nadzwyczajnych dni wolnych ustanowionych odrębnym rozporządzeniem; te pozostają jawnymi wyjątkami wejściowymi.
+
+
+## 28. Etap 11 — automatyczne stosowanie kalendarza świąt RP
+
+Dodano przeciążenie `generate_nbp_publication_windows(start, end_exclusive)`, które buduje listę świąt ustawowych dla każdego roku objętego półotwartym zakresem i stosuje ją do reguł A/B/C. Wariant przyjmujący jawne daty nadal obsługuje nadzwyczajne dni wolne i wyjątki. Testy obejmują 11 listopada 2026 r. i Wigilię 2025 r., gdy tabela B jest przesuwana na poprzedni dzień roboczy.

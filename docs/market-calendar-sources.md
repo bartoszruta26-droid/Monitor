@@ -116,3 +116,10 @@ Dodano `polish_statutory_holidays(year)` w `market_data_calendar`. Funkcja zwrac
 Podstawa: tekst jednolity ustawy o dniach wolnych od pracy, Dz.U. 2025 poz. 296, art. 1: https://api.sejm.gov.pl/eli/acts/DU/2025/296/text.pdf. Zmiana wprowadzająca 24 grudnia weszła w życie 1 lutego 2025 r.: https://api.sejm.gov.pl/eli/acts/DU/2024/1965/text.html.
 
 Ograniczenie: generator obejmuje ustawowe dni wolne i zwykłe weekendy. Nie obejmuje dodatkowego dnia wolnego ustanowionego odrębnym rozporządzeniem w szczególnym stanie ani ewentualnych wyjątków operacyjnych NBP; takie wyjątki powinny być przekazywane jako dodatkowe daty wyłączenia.
+
+
+## 10. Automatyczne święta ustawowe w generatorze NBP
+
+Dodano przeciążenie `generate_nbp_publication_windows(start, end_exclusive)`, które automatycznie wylicza ustawowe dni wolne dla wszystkich lat objętych zakresem, a następnie generuje okna A/B/C. Nie wymaga od wywołującego ręcznego przekazywania listy świąt ustawowych. Wariant z jawną listą pozostaje dostępny dla wyjątkowych dni wolnych ustanowionych rozporządzeniem lub dodatkowymi wyjątkami operacyjnymi.
+
+Fixture potwierdza wyłączenie 11 listopada 2026 r., przesunięcie tabeli B na 10 listopada oraz wyłączenie Wigilii 24 grudnia 2025 r. i przesunięcie tabeli B na 23 grudnia.

@@ -55,6 +55,12 @@ struct NbpPublicationWindow {
 // already excluded by the weekday rule). Includes movable Easter holidays.
 [[nodiscard]] std::vector<CivilDate> polish_statutory_holidays(int year);
 
+// Uses the statutory Polish holiday dates calculated for every year touched
+// by the half-open range. Extraordinary days off still require the explicit
+// holiday-list overload below.
+[[nodiscard]] std::vector<NbpPublicationWindow> generate_nbp_publication_windows(
+    const CivilDate& start_date, const CivilDate& end_date_exclusive);
+
 // The holiday list is explicit input from an authoritative, versioned source.
 [[nodiscard]] std::vector<NbpPublicationWindow> generate_nbp_publication_windows(
     const CivilDate& start_date, const CivilDate& end_date_exclusive,

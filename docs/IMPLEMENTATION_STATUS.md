@@ -29,7 +29,7 @@
 | 8 | Jawny kalendarz sesyjny dla kompletności HTF | Zakończony v1 jako funkcja obliczeniowa | `MarketSessionCalendar` i `session_aware_rolling_regression()`; terminy przekazuje wywołujący |
 | 9 | Trwały magazyn i wersjonowanie kalendarzy sesyjnych | Zakończony | Commit `df867c6efaa7f8cebad74db3291a3c0dde12f67e`; CI [43264555372](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43264555372) sukces, kompilacja i CTest 7/7. Pochodzenie regresji zawiera `calendar_id` i `calendar_version`. |
 | 10 | Generator harmonogramów z IANA TZ/DST i reguł sesji | Zakończony | Commit `da61302dc4de43308228e6f60e82e187bef566df`; CI [43301335250](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43301335250) sukces: konfiguracja, kompilacja i CTest 8/8. Testy obejmują DST wiosenny i jesienny, polityki czasu, weekendy, wyłączenia, błędne strefy i zakres dat. |
-| 11 | Kalendarze źródłowe i instrumentowe (NBP, metale, giełdy) | W toku — generator okien publikacji NBP | Generator okien A/B/C przeszedł CI 43303169211 (8/8). Dodano teraz funkcję obliczania polskich świąt ustawowych wraz z ruchomymi datami; oczekuje na CI. |
+| 11 | Kalendarze źródłowe i instrumentowe (NBP, metale, giełdy) | W toku — generator okien publikacji NBP | Generator okien A/B/C przeszedł CI 43303169211 (8/8). Funkcja polskich świąt ustawowych i dat ruchomych przeszła CI 43303677601 (8/8). Dodano teraz przeciążenie generatora NBP, które automatycznie stosuje święta ustawowe; oczekuje na CI. |
 | 12 | Wspólne fixture i porównanie C++/Pine | Do wykonania | Pine Editor niezweryfikowany; brak potwierdzonej kompilacji TradingView |
 | 13 | Serwer API, autoryzacja, REST/JSON i WebSocket | Do wykonania | Brak aktywnego modułu serwera |
 | 14 | Klienci Linux GUI, WebUI, TUI i Android | Do wykonania | Brak aktywnych modułów klientów |
@@ -165,3 +165,12 @@ Przy każdym kolejnym poleceniu kontynuacji należy najpierw odczytać ten plik 
 - Dodano `polish_statutory_holidays(year)`: święta stałe oraz Wielkanoc, Poniedziałek Wielkanocny, Zielone Świątki i Boże Ciało. Daty ruchome wyliczane są algorytmem gregoriańskim Meeusa/Jonesa/Butchera.
 - Podstawa prawna: ustawa o dniach wolnych od pracy, tekst jednolity Dz.U. 2025 poz. 296; Wigilia 24 grudnia obowiązuje od 1 lutego 2025 r. Źródło: https://api.sejm.gov.pl/eli/acts/DU/2025/296/text.pdf.
 - Testy dla 2025/2026 weryfikują daty ruchome, 24 grudnia i odrzucenie roku 0. Nowa funkcja oczekuje na CI.
+
+
+## 28. Etap 11 — automatyczne stosowanie świąt ustawowych
+
+- CI [43303677601](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43303677601) dla commitu `b92c02f3250f21ca02a0203ee61600b1e7e47bc4`: konfiguracja, kompilacja i CTest 8/8 zakończone sukcesem.
+- Dodano przeciążenie `generate_nbp_publication_windows(start, end_exclusive)`, które samodzielnie zbiera święta ustawowe dla wszystkich lat objętych zakresem i deleguje do wariantu z jawną listą świąt.
+- Dodatkowe dni wolne ustanowione nadzwyczajnym rozporządzeniem nadal wymagają przekazania jawnego w wariancie z listą.
+- Nowe testy weryfikują automatyczne wyłączenie 11 listopada 2026 r. i Wigilii 2025 r. oraz przesunięcie tabeli B.
+- Oczekuje na CI.

@@ -122,5 +122,22 @@ int main() {
         return format_date(d)=="2025-12-24";
     }),"Christmas Eve is a public holiday from 2025");
     throws([&]{(void)polish_statutory_holidays(0);},"year zero is rejected");
+    const auto automatic_nbp=generate_nbp_publication_windows(
+        parse_date("2026-11-10"),parse_date("2026-11-13"));
+    require(automatic_nbp.size()==5,"default NBP calendar applies statutory holidays automatically");
+    require(std::none_of(automatic_nbp.begin(),automatic_nbp.end(),[](const auto& w) {
+        return format_date(w.local_date)=="2026-11-11";
+    }),"default NBP calendar excludes 11 November");
+    require(std::any_of(automatic_nbp.begin(),automatic_nbp.end(),[](const auto& w) {
+        return w.table==NbpPublicationTable::B&&format_date(w.local_date)=="2026-11-10";
+    }),"default NBP calendar moves table B for a statutory Wednesday holiday");
+    const auto christmas_eve=generate_nbp_publication_windows(
+        parse_date("2025-12-23"),parse_date("2025-12-26"));
+    require(std::none_of(christmas_eve.begin(),christmas_eve.end(),[](const auto& w) {
+        return format_date(w.local_date)=="2025-12-24";
+    }),"default NBP calendar excludes Christmas Eve from 2025");
+    require(std::any_of(christmas_eve.begin(),christmas_eve.end(),[](const auto& w) {
+        return w.table==NbpPublicationTable::B&&format_date(w.local_date)=="2025-12-23";
+    }),"table B moves to 23 December when Christmas Eve is a holiday Wednesday");
     std::cout<<"All IANA and NBP publication calendar tests passed.\n";
 }
