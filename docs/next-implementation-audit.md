@@ -401,3 +401,72 @@ Po zamknięciu Etapu 0 rozpocząć Etap 1 — wspólny model danych rynkowych �
 - [Audyt LonesomeTheBlue](lonesometheblue-linear-regression-audit.md)
 - [Wskaźnik TradingView](../tradingview/README.md)
 - [Rdzeń natywny](../native/README.md)
+
+
+## 9. Wyniki wykonania Etapu 0 — audyt stanu faktycznego (2026-11-12)
+
+### 9.1. Stan repozytorium i zarządzanie zmianami
+
+- Repozytorium publiczne: `bartoszruta26-droid/Monitor`; gałąź domyślna: `main`.
+- Drzewo `main` zawiera wyłącznie gałąź aplikacyjną `main` (brak dodatkowych gałęzi do odzyskania).
+- W chwili audytu wyszukiwanie GitHub nie zwróciło otwartych PR ani otwartych Issues.
+- Drzewo zawiera jeden workflow CI: `.github/workflows/backend-tests.yml`, nazwany „Native C++ checks”.
+- Nie ma katalogów ani implementacji czterech klientów, serwera C++ ani docelowych adapterów C++.
+
+### 9.2. Status funkcjonalny — stan rzeczywisty
+
+| Obszar | Status | Uzasadnienie |
+|---|---|---|
+| Rdzeń regresji C++20 | **Gotowe — zakres podstawowy** | `native/src/regression.cpp`, publiczny nagłówek, CLI i testy są w CMake. |
+| CMake i skrypty Bash | **Gotowe — zakres podstawowy** | `native/CMakeLists.txt`, `scripts/build-native.sh`, `scripts/test-native.sh`. |
+| GitHub Actions Linux | **Gotowe — zakres podstawowy** | Workflow instaluje CMake/Ninja/G++, konfiguruje, buduje i uruchamia CTest. |
+| Adapter NBP | **Częściowe — tylko prototyp Python** | `backend/market_data/open_providers.py` i `adapters.py`; brak adaptera C++ w CMake. |
+| Adapter Frankfurter | **Częściowe — tylko prototyp Python** | Import historyczny przez FastAPI; brak adaptera C++ i aktywnego testu integracyjnego. |
+| Adapter World Bank Pink Sheet | **Częściowe — tylko prototyp Python** | Parser XLSX i import historyczny; brak adaptera C++ i aktywnego CI dla tego kodu. |
+| API `/providers/*` | **Częściowe — tylko prototyp Python** | Trasy w `providers_api.py` są dołączane do FastAPI w `main.py`; nie są częścią aplikacji natywnej. |
+| Magazyn SQLite/PostgreSQL | **Częściowe — tylko prototyp Python** | `storage.py` implementuje te dwa warianty; nie jest docelowym magazynem. |
+| Magazyn JSON | **Brak** | Nie znaleziono implementacji repozytorium JSON ani testów trwałego zapisu/odczytu. |
+| Adapter MariaDB | **Brak** | Nie znaleziono implementacji. |
+| Wspólny model instrumentów i notowań C++ | **Brak** | Brak modelu domenowego poza strukturami wyniku regresji. |
+| Agregacja okresowa i wykresy | **Brak** | Brak implementacji. |
+| Rolling regression i rzeczywiste HTF | **Brak** | Rdzeń liczy jedną serię przekazaną przez wywołującego. |
+| Wariant błędu standardowego `n-2` | **Brak** | `WidthMethod` ma wyłącznie `PopulationRms` (`n`) i `SampleSd` (`n-1`). |
+| Portfel, transakcje i macierz stanów | **Brak** | Brak modeli i modułów. |
+| Serwer C++ REST/JSON/WebSocket | **Brak** | Brak implementacji i konfiguracji budowania. |
+| Linux GUI, WebUI, TUI, Android | **Brak** | Brak klientów. |
+| Nextcloud i MCP | **Brak** | Brak integracji. |
+| Pine Script | **Częściowe** | Plik v6 jest w repozytorium; brak potwierdzenia kompilacji w Pine Editor i porównania wyników z C++. |
+
+### 9.3. Python — rozdzielenie prototypu od aktywnego procesu
+
+W repozytorium pozostał kod Python w `backend/`, w tym FastAPI, adaptery, SQLite/PostgreSQL i pytest. `backend/README.md` określa go jako historyczny prototyp. Aktualny workflow CI nie instaluje Pythona ani zależności Python i nie uruchamia pytest; buduje wyłącznie C++20 przez CMake i CTest. Skrypty `scripts/build-native.sh` i `scripts/test-native.sh` również uruchamiają wyłącznie CMake, kompilator C++ i CTest. W ramach audytu nie usuwano prototypu ani jego testów.
+
+Wniosek: Python nie jest zależnością aktywnego procesu budowania i testowania rdzenia C++20. Historyczny prototyp może pozostać, ale jego endpointów i adapterów nie należy przedstawiać jako funkcji aktywnej aplikacji.
+
+### 9.4. Kompilacja i testy — dowód CI
+
+Dla aktualnego `main` (`ea8f80538e65c0849877ea1aec896eb655b1e7f0`) GitHub Actions uruchomił przebieg **43244544593**, zakończony statusem `success`. Wszystkie kroki `Checkout`, instalacja narzędzi, `Configure`, `Build` i `Test` zakończyły się powodzeniem. Jest to potwierdzenie kompilacji i CTest w czystym środowisku `ubuntu-latest` przez CI. Nie wykonywano osobnej lokalnej kompilacji w tej sesji.
+
+Przebieg historyczny 43237592885 zakończył się niepowodzeniem na wcześniejszym commicie; późniejsze przebiegi, w tym aktualny, są zakończone powodzeniem. Za stan bieżący należy uznawać wynik najnowszego przebiegu, nie historyczną porażkę.
+
+- [Aktualny przebieg CI](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43244544593)
+- [Commit aktualnego `main`](https://github.com/bartoszruta26-droid/Monitor/commit/ea8f80538e65c0849877ea1aec896eb655b1e7f0)
+
+### 9.5. Rozstrzygnięcie rozbieżności dokumentacji
+
+`docs/open-data-providers.md` opisuje istniejący kod, ale pomija kluczowy kontekst: jest to prototyp Python, a nie aktywna implementacja C++20. Ponadto magazyn prototypu obsługuje SQLite i PostgreSQL, a nie docelowe JSON i MariaDB. Dokument został uzupełniony o ostrzeżenie statusowe, a `backend/README.md` o potwierdzony zakres prototypu. Nie usuwano istniejących danych ani kodu.
+
+### 9.6. Wnioski techniczne
+
+1. Nie rozpoczynać przenoszenia adapterów przed zdefiniowaniem wspólnego modelu danych i jednostek.
+2. Etap 1 powinien dostarczyć typy C++ dla instrumentu, notowania, źródła, jednostki, waluty, częstotliwości, rodzaju ceny, czasu obserwacji i metadanych jakości.
+3. W Etapie 2 przenieść adaptery do C++20, korzystając z prototypu Python wyłącznie jako materiału referencyjnego. Nie przenosić automatycznie jego założeń magazynowych.
+4. W Etapie 3 zaimplementować JSON jako domyślny magazyn. SQLite/PostgreSQL z prototypu nie zastępują wymogu JSON/MariaDB.
+5. Dodać `n-2` jako osobny wariant statystyczny w Etapie 6; nie zmieniać profili DGT (`n-1`) ani LTB (`n`).
+6. Rozszerzyć CI o testy kontraktowe i integracyjne dla kolejnych modułów C++, gdy zostaną włączone do CMake. Nie uruchamiać historycznego pytest jako części aktywnego procesu.
+
+### 9.7. Decyzja o zamknięciu Etapu 0
+
+**Etap 0: ukończony w zakresie audytu repozytorium i potwierdzenia CI.** Rozbieżność dokumentacji została rozstrzygnięta, a statusy funkcji zapisane powyżej. Ograniczenie: kompilacja i testy zostały potwierdzone przez GitHub Actions, bez osobnego uruchomienia lokalnego w tej sesji. Etap 0 nie oznacza, że adaptery lub magazyn są gotowe — przeciwnie, ich aktywna implementacja pozostaje do wykonania.
+
+**Następny etap: Etap 1 — wspólny model danych rynkowych w C++20.**
