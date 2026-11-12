@@ -429,7 +429,7 @@ void validate_venue_calendar(const VenueSessionCalendar& x) {
     validate_source_calendar_document(x.source);
     if(x.calendar_id.empty()!=(x.revision==0U))
         throw std::invalid_argument("Kalendarz wymaga jednocześnie identyfikatora i dodatniego numeru rewizji albo klucza legacy.");
-    if(!x.calendar_id.empty() && x.calendar_id.find_first_of("\\r\\n")!=std::string::npos)
+    if(!x.calendar_id.empty() && x.calendar_id.find_first_of("\r\n")!=std::string::npos)
         throw std::invalid_argument("Identyfikator kalendarza zawiera niedozwolone znaki.");
     using namespace std::chrono;
     const sys_days begin{year{x.source.valid_from.year}/month{x.source.valid_from.month}/day{x.source.valid_from.day}};
@@ -541,6 +541,7 @@ void validate_snapshot(const MarketDataSnapshot& s) {
     }
     std::set<std::string> venue_keys;
     std::map<std::string,std::uint32_t> latest_venue_versions;
+    std::map<std::string,std::string> venue_by_calendar_id;
     for (const auto& calendar : s.venue_calendars) {
         validate_venue_calendar(calendar);
         if(calendar.source.source_object_id) {
@@ -554,6 +555,9 @@ void validate_snapshot(const MarketDataSnapshot& s) {
             throw std::invalid_argument("Powielona wersja kalendarza sesyjnego venue.");
         const auto calendar_id=effective_venue_calendar_id(calendar);
         const auto revision=effective_venue_calendar_revision(calendar);
+        const auto [venue_it,venue_inserted]=venue_by_calendar_id.emplace(calendar_id,calendar.source.venue);
+        if(!venue_inserted && venue_it->second!=calendar.source.venue)
+            throw std::invalid_argument("Identyfikator kalendarza nie może obejmować różnych rynków.");
         auto& latest=latest_venue_versions[calendar_id];
         if (revision<=latest)
             throw std::invalid_argument("Rewizje kalendarza venue muszą być rosnące.");
