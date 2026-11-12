@@ -139,5 +139,37 @@ int main() {
     require(std::any_of(christmas_eve.begin(),christmas_eve.end(),[](const auto& w) {
         return w.table==NbpPublicationTable::B&&format_date(w.local_date)=="2025-12-23";
     }),"table B moves to 23 December when Christmas Eve is a holiday Wednesday");
+
+    MarketObservation observed_a;
+    observed_a.provider_id = "nbp-a";
+    observed_a.provider_published_on = parse_date("2026-11-10");
+    observed_a.received_at = parse_utc_timestamp("2026-11-10T11:58:12Z");
+    observed_a.source_uri = "https://api.nbp.pl/api/exchangerates/tables/A/2026-11-10/";
+    MarketObservation observed_a_second = observed_a;
+    observed_a_second.instrument_id = "FX:USD:PLN";
+    MarketObservation observed_gold = observed_a;
+    observed_gold.provider_id = "nbp-gold";
+    observed_gold.source_uri = "https://api.nbp.pl/api/cenyzlota/2026-11-10/";
+    MarketObservation no_publication_date = observed_a;
+    no_publication_date.provider_published_on.reset();
+    const auto observed = build_observed_publications(
+        {observed_a, observed_a_second, observed_gold, no_publication_date});
+    require(observed.size() == 2U,
+            "observed publication groups provider responses and ignores rows without publication date");
+    require(observed[0].provider_id == "nbp-a" &&
+            observed[0].observation_count == 2U &&
+            format_date(observed[0].publication_date) == "2026-11-10",
+            "same NBP table publication groups all currency observations");
+    require(observed[0].received_at.unix_seconds ==
+            parse_utc_timestamp("2026-11-10T11:58:12Z").unix_seconds,
+            "observed calendar preserves actual retrieval timestamp");
+    require(observed[1].provider_id == "nbp-gold" &&
+            observed[1].observation_count == 1U,
+            "NBP gold remains a distinct provider publication");
+    auto invalid_observed = observed_a;
+    invalid_observed.provider_id.clear();
+    throws([&] { (void)build_observed_publications({invalid_observed}); },
+           "observed publication rejects missing provider identity");
+
     std::cout<<"All IANA and NBP publication calendar tests passed.\n";
 }
