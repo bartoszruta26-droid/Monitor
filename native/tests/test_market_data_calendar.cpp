@@ -22,7 +22,7 @@ LocalSessionSchedule base() {
     s.source_frequency=Frequency::Daily;
     s.timezone="Europe/Warsaw";
     s.start_date=parse_date("2024-03-29");
-    s.end_date_exclusive=parse_date("2024-04-03");
+    s.end_date_exclusive=parse_date("2024-04-04");
     s.weekdays_iso={1,2,3,4,5};
     s.local_times={{12,0,0}};
     return s;

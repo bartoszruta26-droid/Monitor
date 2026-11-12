@@ -693,3 +693,8 @@ Ostatni CI dla HEAD `d2bc1364986bee6f4474bfce9ad2549e60c90f97` zakończył się 
 Etap 9 potwierdzony: commit `df867c6efaa7f8cebad74db3291a3c0dde12f67e`, CI 43264555372 — sukces, kompilacja i testy zakończone powodzeniem. Wersje kalendarzy są trwałe, niezmienne i identyfikowane w wynikach regresji.
 
 Etap 10 rozpoczęty: generator terminów z IANA TZ/DST w C++20, wykorzystujący ICU. Polityki czasu nieistniejącego i powtórzonego są jawne; domyślnie oba przypadki są odrzucane. Zakres dat, dni tygodnia i wyłączenia są jawnie podawane. Etap oczekuje na CI.
+
+
+## 21. Etap 10 — pierwsza weryfikacja
+
+Commit `cedee367f5528abef5d956b9f560167a5b86aaf0`: konfiguracja i kompilacja C++20/ICU przeszły. CTest 7/8; niepowodzenie wynikało z błędnego zakresu dat fixture: `end_date_exclusive` ustawiono na 3 kwietnia, więc generator prawidłowo nie uwzględnił 3 kwietnia. Zakres testu poprawiono na 4 kwietnia. Usunięto również nieużywaną funkcję pomocniczą.

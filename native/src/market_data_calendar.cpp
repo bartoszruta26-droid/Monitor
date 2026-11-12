@@ -111,9 +111,6 @@ std::int64_t local_to_utc(const LocalSessionSchedule& schedule,
         throw std::overflow_error("Wynik konwersji czasu przekracza zakres UTC.");
     return static_cast<std::int64_t>(std::llround(seconds));
 }
-bool same_date(const CivilDate& a,const CivilDate& b) {
-    return a.year==b.year&&a.month==b.month&&a.day==b.day;
-}
 }
 MarketSessionCalendar generate_session_calendar(const LocalSessionSchedule& s) {
     if(s.calendar_id.empty()||s.version==0U||s.instrument_id.empty()||

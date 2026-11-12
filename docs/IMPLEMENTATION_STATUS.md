@@ -28,7 +28,7 @@
 | 7 | Regresja HTF z segmentacją po brakujących okresach | Zakończony v1 | `market_data_regression.*`; okresy kalendarzowe, bez reguł sesji |
 | 8 | Jawny kalendarz sesyjny dla kompletności HTF | Zakończony v1 jako funkcja obliczeniowa | `MarketSessionCalendar` i `session_aware_rolling_regression()`; terminy przekazuje wywołujący |
 | 9 | Trwały magazyn i wersjonowanie kalendarzy sesyjnych | Zakończony | Commit `df867c6efaa7f8cebad74db3291a3c0dde12f67e`; CI [43264555372](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43264555372) sukces, kompilacja i CTest 7/7. Pochodzenie regresji zawiera `calendar_id` i `calendar_version`. |
-| 10 | Generator harmonogramów z IANA TZ/DST i reguł sesji | W toku — implementacja na main, oczekuje na CI | Generator C++20/ICU: zakres dat, dni tygodnia, godziny lokalne, wyłączenia, jawna polityka czasu nieistniejącego i powtórzonego; testy przejść DST w Europe/Warsaw. |
+| 10 | Generator harmonogramów z IANA TZ/DST i reguł sesji | W toku — poprawka testu po pierwszym CI | Kompilacja przechodzi; pierwsze CTest: 7/8. Jedyny błąd to zakres fixture: koniec półotwarty nie obejmował 3 kwietnia. Poprawiono zakres i usunięto ostrzeżenie o nieużywanej funkcji; wymagane ponowne CI. |
 | 11 | Oficjalne kalendarze instrumentów (NBP, metale, giełdy) | Do wykonania | Brak zweryfikowanych kalendarzy dostawców |
 | 12 | Wspólne fixture i porównanie C++/Pine | Do wykonania | Pine Editor niezweryfikowany; brak potwierdzonej kompilacji TradingView |
 | 13 | Serwer API, autoryzacja, REST/JSON i WebSocket | Do wykonania | Brak aktywnego modułu serwera |
@@ -48,6 +48,10 @@
 - Kroki: konfiguracja, kompilacja i testy zakończone powodzeniem.
 - CTest: 7/7; 100% testów zaliczonych; czas testów 0,09 s.
 - Commit zawiera dokumentację i rejestr, nie zmienia logiki aplikacji.
+
+## Weryfikacja etapu 10 — historia
+
+- Commit `cedee367f5528abef5d956b9f560167a5b86aaf0`, CI 43265633802: konfiguracja i kompilacja sukces; CTest 7/8. Test generatora nie przeszedł przez błędnie ustawiony koniec zakresu półotwartego (fixture wykluczał 3 kwietnia). Poprawka w kolejnym commicie.
 
 ## Weryfikacja etapu 9 — końcowa
 
