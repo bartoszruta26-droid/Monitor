@@ -122,28 +122,50 @@ VenueSessionCalendar XetraCalendarSourceAdapter::fetch(SourceCalendarDocument so
 std::uint64_t XetraCalendarSourceAdapter::import(
     JsonMarketDataRepository& repository,SourceCalendarDocument source) const {
     auto downloaded=download(transport_,std::move(source));
-    const auto& metadata=downloaded.calendar.source;
+    auto& metadata=downloaded.calendar.source;
+    const auto hash=*metadata.content_sha256;
     const auto archive_root=repository.file_path().parent_path()/
-        (repository.file_path().filename().string()+".sources");
-    const auto archive_path=archive_root/safe_component(metadata.document_id)/
-        (std::to_string(metadata.version)+"-"+*metadata.content_sha256+".html");
-    // Keep the raw evidence before publishing metadata. An interrupted import
-    // can leave an orphaned content-addressed object, but never a metadata
-    // record pointing at missing source bytes.
+        (repository.file_path().filename().string()+".sources")/"objects";
+    const auto archive_path=archive_root/(hash+".html");
+    // Archive by content identity, independently of calendar revision. An
+    // interrupted import may leave an unreferenced object, never a dangling
+    // calendar reference.
     archive_exact_bytes(archive_path,downloaded.raw_html);
-    auto relative_archive=std::filesystem::relative(archive_path,repository.file_path().parent_path().empty()
-        ? std::filesystem::path(".") : repository.file_path().parent_path());
-    downloaded.calendar.source.archive_relative_path=relative_archive.generic_string();
-    downloaded.calendar.source.content_length_bytes=static_cast<std::uint64_t>(downloaded.raw_html.size());
-    downloaded.calendar.source.content_type=downloaded.content_type;
+    const auto relative_archive=std::filesystem::relative(archive_path,
+        repository.file_path().parent_path().empty() ? std::filesystem::path(".")
+                                                     : repository.file_path().parent_path());
+
+    SourceArchiveObject source_object;
+    source_object.source_object_id="sha256:"+hash;
+    source_object.content_sha256=hash;
+    source_object.archive_relative_path=relative_archive.generic_string();
+    source_object.content_length_bytes=static_cast<std::uint64_t>(downloaded.raw_html.size());
+    source_object.content_type=downloaded.content_type;
+    metadata.source_object_id=source_object.source_object_id;
+    // New records store byte metadata only in SourceArchiveObject. The
+    // optional fields on SourceCalendarDocument remain for legacy records.
+    metadata.archive_relative_path.reset();
+    metadata.content_length_bytes.reset();
+    metadata.content_type.reset();
+
     auto snapshot=repository.load();
     const auto duplicate=std::find_if(snapshot.venue_calendars.begin(),
         snapshot.venue_calendars.end(),[&](const VenueSessionCalendar& item) {
             return item.source.document_id==metadata.document_id &&
                    item.source.content_sha256==metadata.content_sha256;
         });
-    if (duplicate!=snapshot.venue_calendars.end())
+    if (duplicate!=snapshot.venue_calendars.end()) {
+        const auto existing_object=std::find_if(snapshot.source_objects.begin(),
+            snapshot.source_objects.end(),[&](const SourceArchiveObject& item) {
+                return item.source_object_id==source_object.source_object_id;
+            });
+        if(existing_object==snapshot.source_objects.end())
+            (void)repository.upsert_source_object(source_object);
         return snapshot.revision;
-    return repository.upsert_venue_calendar(downloaded.calendar);
+    }
+    MarketDataBatch batch;
+    batch.source_objects.push_back(std::move(source_object));
+    batch.venue_calendars.push_back(std::move(downloaded.calendar));
+    return repository.upsert_batch(batch);
 }
 } // namespace monitor::market
