@@ -1,5 +1,7 @@
 #include "monitor/xetra_calendar_source.hpp"
 
+#include <nlohmann/json.hpp>
+
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -134,6 +136,22 @@ int main() {
         output<<original_json;
     };
     {
+        auto legacy_json=nlohmann::json::parse(original_json);
+        auto& legacy_source=legacy_json.at("venue_calendars").at(1).at("source");
+        legacy_source.erase("archive_relative_path");
+        legacy_source.erase("content_length_bytes");
+        legacy_source.erase("content_type");
+        std::ofstream output(folder/"calendar.json",std::ios::binary|std::ios::trunc);
+        output<<legacy_json.dump(2);
+    }
+    const auto legacy_loaded=repository.load();
+    require(legacy_loaded.venue_calendars.size()==2U &&
+            !legacy_loaded.venue_calendars.back().source.archive_relative_path &&
+            !legacy_loaded.venue_calendars.back().source.content_length_bytes &&
+            !legacy_loaded.venue_calendars.back().source.content_type,
+            "legacy schema-v1 venue source without archive manifest fields remains readable");
+    restore_json();
+    {
         std::ofstream damaged(latest_archive,std::ios::binary|std::ios::trunc);
         damaged<<"truncated";
     }
@@ -172,6 +190,15 @@ int main() {
     throws([&]{(void)repository.load();},"reject manifest path traversal");
     restore_json();
     require(repository.load().venue_calendars.size()==2U,"valid archive manifest loads after tamper recovery");
+    const auto archive_directory=folder/"calendar.json.sources";
+    const auto real_archive_directory=folder/"calendar.json.sources.real";
+    std::filesystem::rename(archive_directory,real_archive_directory);
+    std::filesystem::create_directory_symlink(real_archive_directory,archive_directory);
+    throws([&]{(void)repository.load();},"reject symlinked parent directory in archive path");
+    std::filesystem::remove(archive_directory);
+    std::filesystem::rename(real_archive_directory,archive_directory);
+    require(repository.load().venue_calendars.size()==2U,
+            "archive verifies after symlinked parent directory is restored");
     std::filesystem::remove_all(folder);
     std::cout<<"Xetra HTTPS source adapter tests passed\n";
 }
