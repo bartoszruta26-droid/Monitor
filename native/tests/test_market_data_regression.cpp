@@ -122,6 +122,76 @@ int main() {
         february, Frequency::Weekly, 2U, static_cast<WidthMethod>(99)); },
         "nieznana metoda jest odrzucana niezależnie od liczby okien");
 
+    const std::vector<MarketObservation> monthly_quarters{
+        observation("q1", "2023-10-15T10:00:00Z", 10.0, Frequency::Monthly),
+        observation("q2", "2023-11-15T10:00:00Z", 12.0, Frequency::Monthly),
+        observation("q3", "2024-01-15T10:00:00Z", 15.0, Frequency::Monthly),
+        observation("q4", "2024-04-15T10:00:00Z", 18.0, Frequency::Monthly),
+        observation("q5", "2024-07-15T10:00:00Z", 21.0, Frequency::Monthly),
+        observation("q6", "2025-01-15T10:00:00Z", 24.0, Frequency::Monthly)
+    };
+    const auto quarterly = time_aware_rolling_regression(
+        monthly_quarters, Frequency::Quarterly, 2U, WidthMethod::SampleSd);
+    require(quarterly.size() == 3U, "kwartały sąsiadujące tworzą okna do luki w Q4 2024");
+    require(quarterly[0].window_start.unix_seconds ==
+                parse_utc_timestamp("2023-10-01T00:00:00Z").unix_seconds &&
+            quarterly[0].window_end.unix_seconds ==
+                parse_utc_timestamp("2024-04-01T00:00:00Z").unix_seconds,
+            "kwartał IV i I prawidłowo przechodzą przez granicę roku");
+    require(quarterly[2].segment_index == 0U,
+            "segment kwartalny pozostaje ciągły do Q3 2024");
+
+    const std::vector<MarketObservation> monthly_halves{
+        observation("h1", "2024-01-15T10:00:00Z", 2.0, Frequency::Monthly),
+        observation("h2", "2024-06-15T10:00:00Z", 4.0, Frequency::Monthly),
+        observation("h3", "2024-07-15T10:00:00Z", 6.0, Frequency::Monthly),
+        observation("h4", "2024-12-15T10:00:00Z", 8.0, Frequency::Monthly),
+        observation("h5", "2025-01-15T10:00:00Z", 10.0, Frequency::Monthly)
+    };
+    const auto half_yearly = time_aware_rolling_regression(
+        monthly_halves, Frequency::SemiAnnual, 2U, WidthMethod::SampleSd);
+    require(half_yearly.size() == 2U, "półrocza sąsiadujące tworzą dwa okna");
+    require(half_yearly[1].window_start.unix_seconds ==
+                parse_utc_timestamp("2024-07-01T00:00:00Z").unix_seconds &&
+            half_yearly[1].window_end.unix_seconds ==
+                parse_utc_timestamp("2025-07-01T00:00:00Z").unix_seconds,
+            "granica półrocza i roku jest poprawna");
+
+    const std::vector<MarketObservation> annual_data{
+        observation("y1", "2023-02-28T10:00:00Z", 1.0, Frequency::Monthly),
+        observation("y2", "2024-02-29T10:00:00Z", 2.0, Frequency::Monthly),
+        observation("y3", "2025-03-01T10:00:00Z", 4.0, Frequency::Monthly)
+    };
+    const auto annual = time_aware_rolling_regression(
+        annual_data, Frequency::Annual, 2U, WidthMethod::SampleSd);
+    require(annual.size() == 2U, "lata kalendarzowe tworzą dwa sąsiadujące okna");
+    require(annual[0].window_start.unix_seconds ==
+                parse_utc_timestamp("2023-01-01T00:00:00Z").unix_seconds &&
+            annual[0].window_end.unix_seconds ==
+                parse_utc_timestamp("2025-01-01T00:00:00Z").unix_seconds,
+            "roczne okno zachowuje granice kalendarzowe w roku przestępnym");
+
+    const std::vector<MarketObservation> method_fixture{
+        observation("r1", "2024-02-26T12:00:00Z", 10.0),
+        observation("r2", "2024-02-27T12:00:00Z", 11.0),
+        observation("r3", "2024-03-04T12:00:00Z", 13.0),
+        observation("r4", "2024-03-05T12:00:00Z", 14.0),
+        observation("r5", "2024-03-11T12:00:00Z", 17.0),
+        observation("r6", "2024-03-12T12:00:00Z", 18.0)
+    };
+    const std::vector<double> expected_values{11.0, 14.0, 18.0};
+    for (const auto method : {WidthMethod::PopulationRms, WidthMethod::SampleSd,
+                              WidthMethod::ResidualStandardErrorNMinus2}) {
+        const auto htf = time_aware_rolling_regression(
+            method_fixture, Frequency::Weekly, 3U, method);
+        const auto expected = linear_regression(expected_values, method);
+        require(htf.size() == 1U, "trzy okresy HTF tworzą jedno okno");
+        require(near(htf[0].regression.slope, expected.slope) &&
+                near(htf[0].regression.intercept, expected.intercept) &&
+                near(htf[0].regression.residual_width, expected.residual_width),
+                "każda metoda HTF odpowiada wspólnemu silnikowi regresji");
+    }
+
     std::cout << "Wszystkie testy regresji czasowej HTF zakończone powodzeniem.\n";
     return EXIT_SUCCESS;
 }
