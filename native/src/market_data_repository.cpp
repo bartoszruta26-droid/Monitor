@@ -1117,6 +1117,7 @@ std::uint64_t JsonMarketDataRepository::upsert_venue_session_notice(const VenueS
 }
 std::vector<SourceArchiveObject> find_orphaned_source_objects(
     const MarketDataSnapshot& snapshot) {
+    validate_snapshot(snapshot);
     std::set<std::string> referenced;
     for(const auto& calendar:snapshot.venue_calendars)
         if(calendar.source.source_object_id)
