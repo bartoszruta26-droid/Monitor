@@ -41,6 +41,8 @@ int main() {
     const auto& jan = monthly.candles.front();
     require(jan.open == 4.0 && jan.high == 4.4 && jan.low == 3.8 && jan.close == 4.2,
             "OHLC zgodne z chronologią");
+    require(jan.semantics == OhlcSemantics::SampledObservations && jan.has_intraperiod_range,
+            "jawna semantyka próbkowanego OHLC");
     require(jan.observation_count == 4 && jan.source_observation_ids.size() == 4,
             "liczność i pochodzenie świecy");
     require(jan.period_start.unix_seconds == parse_utc_timestamp("2024-01-01T00:00:00Z").unix_seconds &&
@@ -70,7 +72,8 @@ int main() {
     };
     const auto retained = aggregate_ohlc(monthly_source, Frequency::Monthly);
     require(retained.candles.size() == 2 &&
-            retained.candles.front().source_frequency == Frequency::Monthly,
+            retained.candles.front().source_frequency == Frequency::Monthly &&
+            !retained.candles.front().has_intraperiod_range,
             "dane miesięczne pozostają miesięczne");
     throws([&] { (void)aggregate_ohlc(monthly_source, Frequency::Daily); },
            "zakaz sztucznego zwiększania częstotliwości");
@@ -125,6 +128,11 @@ int main() {
     const auto intraday_daily = aggregate_ohlc(intraday, Frequency::Daily);
     require(intraday_daily.candles.size() == 2,
             "granica doby UTC niezależna od czasu letniego");
+
+    auto invalid_enum = daily;
+    invalid_enum.front().quality = static_cast<QualityStatus>(255);
+    throws([&] { (void)aggregate_ohlc(invalid_enum, Frequency::Monthly); },
+           "odrzucanie nieznanego statusu jakości");
 
     auto duplicate_id = daily;
     duplicate_id.back().id = duplicate_id.front().id;

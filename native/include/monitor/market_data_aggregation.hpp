@@ -9,7 +9,11 @@
 
 namespace monitor::market {
 
+enum class OhlcSemantics { SampledObservations };
+
 struct OhlcCandle {
+    OhlcSemantics semantics{OhlcSemantics::SampledObservations};
+    bool has_intraperiod_range{false};
     std::string instrument_id;
     std::string provider_id;
     PriceKind price_kind{PriceKind::Reference};

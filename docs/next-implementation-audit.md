@@ -600,3 +600,24 @@ Etap 2 można zamknąć dopiero po kompilacji w CI, przejściu testów adapteró
 - Historyczny backend Python SQLite/PostgreSQL pozostaje poza aktywnym C++20 build/test path.
 
 **Następny etap: Etap 4 — agregacja i normalizacja szeregów danych oraz budowa świec OHLC z zachowaniem częstotliwości źródłowej i brakujących okresów.**
+
+
+## 13. Etap 4 — agregacja i świece próbkowane OHLC
+
+- Moduł `market_data_aggregation` jest częścią `monitor_core`.
+- Obsługuje okresy minutowe, godzinowe, dzienne, tygodniowe, miesięczne, kwartalne, półroczne i roczne; nie zwiększa częstotliwości źródłowej.
+- Granice okresów są wyznaczane w UTC; tydzień rozpoczyna się w poniedziałek.
+- Zwraca jawne luki, statusy jakości, flagi i identyfikatory obserwacji źródłowych.
+- Świece mają semantykę `SampledObservations`; `has_intraperiod_range` jest prawdziwe dopiero przy co najmniej dwóch próbkach. To nie jest równoważne natywnym OHLC dostawcy.
+- Wolumen nie jest szacowany; dane miesięczne nie są rozszerzane do dziennych.
+- Testy obejmują granice okresów, rok przestępny, luki, deterministyczność, izolację szeregów i zakaz upsamplingu.
+
+## 14. Etap 5 — wspólny model danych wykresów
+
+- Moduł `market_data_chart` udostępnia model serii liniowej, obszarowej i świecowej.
+- Zachowuje UTC, wartości, jakość, status okresu, identyfikatory źródeł i jawne luki.
+- Wykres świecowy przyjmuje wynik `aggregate_ohlc`, bez drugiej implementacji agregacji.
+- Dane są sortowane deterministycznie; serie mieszane są odrzucane.
+- Limity punktów i świec ograniczają zużycie pamięci.
+- Moduł nie zawiera renderera ani zależności GUI.
+- Następny etap: Etap 6 — audyt i rozwój regresji kroczącej oraz rzeczywistych interwałów HTF, z zachowaniem profili DGT i LonesomeTheBlue.

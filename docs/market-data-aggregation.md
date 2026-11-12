@@ -4,6 +4,8 @@
 
 Moduł `monitor::market::aggregate_ohlc` agreguje dokładnie jeden szereg zdefiniowany przez instrument, dostawcę, rodzaj ceny i częstotliwość źródłową. Zwraca uporządkowane świece oraz jawne luki pomiędzy pierwszym i ostatnim okresem zawierającym dane.
 
+Świeca jest pochodną próbek punktowych, a nie źródłową świecą giełdową OHLC. Model jawnie oznacza tę semantykę przez `OhlcSemantics::SampledObservations`. Pole `has_intraperiod_range` jest prawdziwe dopiero przy co najmniej dwóch obserwacjach w okresie. Dla pojedynczej próbki wartości OHLC są równe, ale nie oznaczają rzeczywistego zakresu wahań.
+
 Świeca zawiera:
 - OHLC: pierwszą, najwyższą, najniższą i ostatnią zaobserwowaną wartość;
 - granice okresu UTC, przy czym koniec jest wyłączny;
@@ -24,6 +26,7 @@ Moduł `monitor::market::aggregate_ohlc` agreguje dokładnie jeden szereg zdefin
 
 ## Ograniczenia wersji 1
 
+- Brak natywnego wejściowego rekordu OHLC od dostawcy; obecne świece są wyłącznie agregatem obserwacji punktowych.
 - Brak kalendarzy sesji giełdowych; luka oznacza brak obserwacji w okresie kalendarzowym, nie dowód braku sesji.
 - Brak interpolacji, forward-fill, estymacji wolumenu i konwersji jednostek.
 - Tick i Irregular nie są obecnie agregowane.

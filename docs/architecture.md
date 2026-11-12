@@ -116,3 +116,8 @@ Wymagane przygotowanie:
 Android App, TUI, Linux GUI i WebUI mają wyświetlać wspólny, zatwierdzony zestaw danych i prognoz. Mogą korzystać bezpośrednio z API Monitora oraz z kontrolowanej synchronizacji plików Nextcloud. Tryb lokalny/offline musi rozróżniać dane zsynchronizowane od oczekujących na synchronizację oraz obsługiwać wersjonowanie i konflikty.
 
 Szczegółowy audyt, priorytety, model danych i kryteria akceptacji znajdują się w [audytcie i planie realizacji](market-monitor-audit-and-roadmap.md).
+
+
+## Agregacja i model wykresów
+
+Etap 4 dostarcza deterministyczną agregację obserwacji punktowych do świec próbkowanych OHLC, z zachowaniem częstotliwości źródłowej, granic UTC, pochodzenia i luk. Świece są jawnie oznaczane jako `SampledObservations`; nie są przedstawiane jako natywne świece OHLC dostawcy. Etap 5 dostarcza wspólny model danych wykresów liniowych, obszarowych i świecowych niezależny od GUI. Renderery, osie, zoom i interakcje pozostają częścią przyszłych klientów.
