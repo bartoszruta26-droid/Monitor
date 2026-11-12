@@ -579,3 +579,19 @@ Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na ma
 
 ### Następny etap
 Po zielonym CI 17B przejść do 17C: wyliczanie efektywnego dnia kalendarza przez zastosowanie najnowszych aktywnych rewizji komunikatów, anulowań i konfliktów, bez modyfikowania bazowego kalendarza.
+
+## 53. Etap 17C — efektywny dzień sesyjny (w toku)
+
+- Dodano `resolve_effective_venue_calendar_day(snapshot, calendar_id, date)`, wybierający najnowszą rewizję kalendarza i zwracający kopię dnia bazowego z nałożonymi komunikatami.
+- Resolver wybiera najnowszą rewizję każdego `notice_id`, pomija rewizje anulowane przez aktywne komunikaty Cancellation i pozostawia komunikaty informacyjne bez wpływu na godziny.
+- Jedno aktywne nadpisanie może zmienić status dnia i listę sesji; kilka aktywnych nadpisań dla tego samego dnia powoduje jawny konflikt.
+- Flaga `requires_official_notice_unresolved` pozostaje aktywna, dopóki jawne nadpisanie nie rozstrzygnie dnia; anulowanie przywraca bazowy harmonogram i nierozstrzygnięty status.
+- Testy dodane dla komunikatu informacyjnego, aktywnego skrócenia sesji, anulowania i konfliktu dwóch nadpisań.
+- Commity: `f8e59cd05273d58a86b8955b624098c81051a5bc` (API), `85deadb9dfebc22a5c74bbfa66325069e71ac655` / `c131f7ff6b9877036d7244fa1cab98994d0e6b87` (resolver), `4eb666e92f3002775c5b2ffde1b4cc0f6d6194fa` (testy), `a68475f865755ad38f3b7fecf2d1bff2c7cc0517` (nagłówek string_view).
+- CI aktualnego kodu 17C: w toku; Etapu 17B/17C nie zamykać przed zielonym Configure/Build/Test dla aktualnego SHA.
+
+### Kolejne czynności
+1. Potwierdzić CI dla resolvera i testów; poprawić ewentualne błędy.
+2. Dodać testy dla anulowania starszej rewizji, pozostawienia nowszej rewizji aktywnej oraz konfliktu kilku anulowań.
+3. Dodać raport nierozstrzygniętych `requires_official_notice` dla całego zakresu kalendarza.
+4. Zamknąć Etap 17C dopiero po zielonym CI; następnie zakończyć Etap 17D testami regresji i fixture.
