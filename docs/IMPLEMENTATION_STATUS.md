@@ -497,3 +497,29 @@ Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na ma
 2. Dodać negatywne przypadki: brak roku w dacie tabeli, data z innym rokiem niż wybrany nagłówek oraz brak godzin sesji.
 3. Zweryfikować obsługę roku przestępnego i pełnego zakresu 366 dni.
 4. Dopiero po tych testach oznaczyć Etap 16 jako zakończony; potem przejść do Etapu 17 dla osobnych komunikatów nadzwyczajnych.
+
+## 49. Etap 16 zamknięty; Etap 17 — komunikaty nadzwyczajnych sesji
+
+### Etap 16 — wynik końcowy
+- Parser Xetra wyprowadza rok z pełnego zakresu `valid_from`–`valid_to_exclusive`; odrzuca zakresy nieobejmujące dokładnie jednego roku kalendarzowego.
+- Parsowanie dat działa dla wybranej kolumny roku, w obu kolejnościach zapisu; niejednoznaczne komórki, brak jawnego roku i data z innego roku są odrzucane.
+- Wspólny parser obsługuje lata 2026, 2027 i przestępny 2028. Fixture jest syntetyczny i jawnie tak oznaczony; nie przedstawia się go jako pobranej strony giełdy.
+- Daty świąt z handlem i daty komunikatów o odmiennych godzinach są filtrowane według roku wybranego kalendarza, a nie stałych dat 2026.
+- Regularne godziny i godziny wydłużonych sesji świątecznych są odczytywane z treści dokumentu; brak wymaganych danych godzinowych blokuje parsowanie.
+- Parser odrzuca brakujące i sprzeczne daty oraz niejednoznaczne kolumny roku.
+- CI [43322572803](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43322572803) dla SHA `1b9d44eded1c26d89dc01f9964efa06f6312b961`: Configure/Build/Test — success; wszystkie 9 grup testowych przeszło.
+- Wcześniejsze niepowodzenia w trakcie prac: `43322035265`/`43322077386` (brak porównania `CivilDate`), `43322271989` (parser traktował komunikaty innych lat jako błąd wybranego roku). Poprawki: jawne porównanie pól daty, filtrowanie komunikatów według roku i usunięcie ostatnich stałych dat 2026. Końcowy SHA przeszedł.
+- Status Etapu 16: zakończony.
+
+### Etap 17 — zakres i zasady
+- Nadzwyczajne komunikaty o skróconych lub zmienionych godzinach muszą być osobnymi, wersjonowanymi dokumentami źródłowymi, a nie dopisywanymi na stałe wyjątkami do bazowego kalendarza.
+- Każdy komunikat musi być archiwizowany jako niezmienny obiekt SHA-256; rewizja komunikatu jest oddzielna od rewizji kalendarza.
+- Zmiana sesji może zostać opublikowana wyłącznie po jednoznacznym odczytaniu daty, rynku, grup produktów i godzin z oficjalnego komunikatu. Brak godzin oznacza brak nadpisania sesji, nie domyślną godzinę.
+- Bazowy kalendarz pozostaje niezmienny. Komunikaty są nakładane jako osobna warstwa i mają własne testy konfliktów, anulowania oraz idempotencji.
+- Nie wykonywano pobrania aktualnego komunikatu ani nie potwierdzono godzin dla 30 grudnia. Nie wolno ich wyprowadzać z samej flagi `requires_official_notice`.
+
+### Następne czynności
+1. Zaprojektować `VenueSessionNotice` i kolekcję `venue_session_notices` z referencją do archiwizowanego obiektu źródłowego.
+2. Dodać walidację: rynek, kalendarz, data w zakresie, wersjonowanie, referencja SHA-256, kompletność i niezmienność.
+3. Dodać parser komunikatu dla jawnych godzin oraz oddzielny stan informacyjny, gdy komunikat nie zawiera danych pozwalających zmienić sesję.
+4. Dodać funkcję obliczającą efektywny dzień sesyjny z bazowego kalendarza i zatwierdzonych komunikatów; bez mutowania kalendarza bazowego.
