@@ -206,6 +206,59 @@ std::uint64_t import_xetra_calendar(
     return repository.upsert_batch(batch);
 }
 }
+std::string read_source_object_bytes(const JsonMarketDataRepository& repository,
+                                     const SourceArchiveObject& object) {
+    const std::filesystem::path relative(object.archive_relative_path);
+    if(relative.empty() || relative.is_absolute() || relative.has_root_name() ||
+       relative.has_root_directory() || object.content_length_bytes>4U*1024U*1024U)
+        throw std::invalid_argument("Ścieżka lub rozmiar archiwum źródłowego jest nieprawidłowy.");
+    for(const auto& component:relative)
+        if(component.empty() || component=="." || component=="..")
+            throw std::invalid_argument("Ścieżka archiwum źródłowego zawiera niedozwolony komponent.");
+    auto root=repository.file_path().parent_path();
+    if(root.empty()) root=".";
+    int current_fd=::open(root.c_str(),O_RDONLY|O_DIRECTORY|O_CLOEXEC|O_NOFOLLOW);
+    if(current_fd<0) throw std::runtime_error("Nie można bezpiecznie otworzyć katalogu repozytorium.");
+    for(auto it=relative.begin();it!=relative.end();++it) {
+        auto next=it;
+        ++next;
+        const bool final_component=next==relative.end();
+        const int flags=O_RDONLY|O_CLOEXEC|O_NOFOLLOW|(final_component?0:O_DIRECTORY);
+        const auto name=it->string();
+        const int next_fd=::openat(current_fd,name.c_str(),flags);
+        const int open_error=errno;
+        ::close(current_fd);
+        if(next_fd<0) {
+            errno=open_error;
+            throw std::runtime_error("Nie można bezpiecznie otworzyć komponentu archiwum źródłowego.");
+        }
+        current_fd=next_fd;
+    }
+    struct stat st{};
+    if(::fstat(current_fd,&st)!=0 || !S_ISREG(st.st_mode) || st.st_size<0 ||
+       static_cast<std::uint64_t>(st.st_size)!=object.content_length_bytes) {
+        ::close(current_fd);
+        throw std::runtime_error("Plik archiwum źródłowego ma nieprawidłowy typ lub długość.");
+    }
+    std::string bytes;
+    bytes.reserve(static_cast<std::size_t>(st.st_size));
+    std::array<char,65536> buffer{};
+    while(true) {
+        const auto count=::read(current_fd,buffer.data(),buffer.size());
+        if(count==0) break;
+        if(count<0) {
+            if(errno==EINTR) continue;
+            ::close(current_fd);
+            throw std::runtime_error("Błąd odczytu archiwum źródłowego.");
+        }
+        bytes.append(buffer.data(),static_cast<std::size_t>(count));
+    }
+    ::close(current_fd);
+    if(sha256_hex(bytes)!=object.content_sha256)
+        throw std::runtime_error("SHA-256 archiwum źródłowego nie zgadza się z obiektem.");
+    return bytes;
+}
+}
 std::uint64_t XetraCalendarSourceAdapter::import(
     JsonMarketDataRepository& repository,SourceCalendarDocument source) const {
     const auto legacy_calendar_id=source.document_id;
@@ -218,5 +271,47 @@ std::uint64_t XetraCalendarSourceAdapter::import(
     std::string calendar_id,std::uint32_t calendar_revision) const {
     return import_xetra_calendar(transport_,repository,std::move(source),
                                  std::move(calendar_id),calendar_revision,false);
+}
+std::uint64_t XetraCalendarSourceAdapter::publish_revision_from_archive(
+    JsonMarketDataRepository& repository,SourceCalendarDocument source,
+    std::string calendar_id,std::uint32_t calendar_revision,
+    std::string source_object_id) const {
+    if(calendar_id.empty() || calendar_revision==0U || source_object_id.empty())
+        throw std::invalid_argument("Publikacja rewizji wymaga identyfikatora kalendarza, rewizji i obiektu źródłowego.");
+    const auto snapshot=repository.load();
+    const auto object=std::find_if(snapshot.source_objects.begin(),snapshot.source_objects.end(),
+        [&](const SourceArchiveObject& item){return item.source_object_id==source_object_id;});
+    if(object==snapshot.source_objects.end())
+        throw std::invalid_argument("Nie znaleziono obiektu źródłowego do ponownej interpretacji.");
+    if((source.content_sha256 && *source.content_sha256!=object->content_sha256) ||
+       (source.source_object_id && *source.source_object_id!=source_object_id))
+        throw std::invalid_argument("Metadane źródła nie odpowiadają wskazanemu obiektowi.");
+    const auto existing=std::find_if(snapshot.venue_calendars.begin(),snapshot.venue_calendars.end(),
+        [&](const VenueSessionCalendar& item) {
+            return item.calendar_id==calendar_id && item.revision==calendar_revision;
+        });
+    if(existing!=snapshot.venue_calendars.end()) {
+        if(existing->source.source_object_id!=source_object_id)
+            throw std::invalid_argument("Rewizja kalendarza jest już opublikowana dla innego obiektu źródłowego.");
+        return snapshot.revision;
+    }
+    if(!source.retrieved_at) {
+        const auto provenance=std::find_if(snapshot.venue_calendars.begin(),snapshot.venue_calendars.end(),
+            [&](const VenueSessionCalendar& item) {
+                return item.source.source_object_id==source_object_id;
+            });
+        if(provenance!=snapshot.venue_calendars.end())
+            source.retrieved_at=provenance->source.retrieved_at;
+    }
+    source.content_sha256=object->content_sha256;
+    source.source_object_id=source_object_id;
+    source.archive_relative_path.reset();
+    source.content_length_bytes.reset();
+    source.content_type.reset();
+    const auto bytes=read_source_object_bytes(repository,*object);
+    auto calendar=parse_xetra_html_calendar(bytes,source);
+    calendar.calendar_id=std::move(calendar_id);
+    calendar.revision=calendar_revision;
+    return repository.upsert_venue_calendar(calendar);
 }
 } // namespace monitor::market
