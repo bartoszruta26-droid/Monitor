@@ -53,10 +53,30 @@ struct VenueProductSession {
     LocalTimeOfDay closes_at;
 };
 
+enum class VenueSessionPhaseEventKind {
+    PreTradingStart,
+    RetailEarlyStart,
+    OpeningAuctionCall,
+    IntradayAuctionCall,
+    ClosingAuctionCall,
+    ClosingAuctionPriceDeterminationNotBefore,
+    TradeAtCloseEnd,
+    PostTradingEnd,
+    OffBookServicesEnd
+};
+
+struct VenueSessionPhaseEvent {
+    VenueSessionPhaseEventKind kind{VenueSessionPhaseEventKind::PreTradingStart};
+    LocalTimeOfDay at;
+    // Optional product or service scope, e.g. "DAX, MDAX, SDAX".
+    std::string scope;
+};
+
 struct VenueCalendarDay {
     CivilDate date;
     VenueDayStatus status{VenueDayStatus::Closed};
     std::vector<VenueProductSession> product_sessions;
+    std::vector<VenueSessionPhaseEvent> phase_events;
     bool requires_official_notice{};
 };
 
@@ -119,6 +139,7 @@ struct VenueSessionNotice {
     VenueSessionNoticeKind kind{VenueSessionNoticeKind::Informational};
     std::optional<VenueDayStatus> day_status;
     std::vector<VenueProductSession> product_sessions;
+    std::vector<VenueSessionPhaseEvent> phase_events;
     std::string cancels_notice_id;
     std::uint32_t cancels_revision{};
 };
