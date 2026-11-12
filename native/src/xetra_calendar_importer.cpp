@@ -71,13 +71,13 @@ unsigned month_number(const std::string& name) {
 
 CivilDate date_from_cell(const std::string& text) {
     static const std::regex date_pattern(
-        R"((January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+([0-9]{1,2})[,]?\s+2026)",
+        R"(((January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+([0-9]{1,2})[,]?\s+2026)|([0-9]{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+2026)",
         std::regex::icase);
     std::smatch match;
     if (!std::regex_search(text, match, date_pattern))
         throw std::invalid_argument("Brak poprawnej daty 2026 w komórce tabeli Xetra.");
-    const auto month = month_number(match[1].str());
-    const auto day = static_cast<unsigned>(std::stoul(match[2].str()));
+    const auto month = month_number(match[2].matched ? match[2].str() : match[5].str());
+    const auto day = static_cast<unsigned>(std::stoul(match[2].matched ? match[3].str() : match[4].str()));
     const auto date = CivilDate{2026, month, day};
     if (!is_valid_date(date)) throw std::invalid_argument("Niepoprawna data w tabeli Xetra.");
     return date;
@@ -85,12 +85,12 @@ CivilDate date_from_cell(const std::string& text) {
 
 std::vector<CivilDate> dates_in_text(const std::string& text) {
     static const std::regex date_pattern(
-        R"((January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+([0-9]{1,2})[,]?\s+2026)",
+        R"(((January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+([0-9]{1,2})[,]?\s+2026)|([0-9]{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+2026)",
         std::regex::icase);
     std::vector<CivilDate> result;
     for (std::sregex_iterator it(text.begin(), text.end(), date_pattern), end; it != end; ++it) {
-        const auto month = month_number((*it)[1].str());
-        const auto day = static_cast<unsigned>(std::stoul((*it)[2].str()));
+        const auto month = month_number((*it)[2].matched ? (*it)[2].str() : (*it)[5].str());
+        const auto day = static_cast<unsigned>(std::stoul((*it)[2].matched ? (*it)[3].str() : (*it)[4].str()));
         const CivilDate date{2026, month, day};
         if (!is_valid_date(date)) throw std::invalid_argument("Niepoprawna data wyjątku handlowego Xetra.");
         result.push_back(date);
