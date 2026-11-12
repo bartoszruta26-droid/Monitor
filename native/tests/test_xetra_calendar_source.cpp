@@ -66,17 +66,17 @@ int main() {
     require(parsed_2027.days.size()==365U &&
             parsed_2027.parser_version=="xetra-html-2027-v1",
             "same parser supports the next calendar year from the requested range");
-    require(parsed_2027.days.at(84).date==parse_date("2027-03-26") &&
+    require(parsed_2027.days.at(84).date.year==2027 && .date.month==3U && .date.day==26U &&
             parsed_2027.days.at(84).status==VenueDayStatus::Closed,
             "dynamic year parser reads 2027 Good Friday from the selected year column");
-    require(parsed_2027.days.at(125).date==parse_date("2027-05-06") &&
+    require(parsed_2027.days.at(125).date.year==2027 && .date.month==5U && .date.day==6U &&
             parsed_2027.days.at(125).product_sessions.size()==2U &&
             parsed_2027.days.at(125).product_sessions.front().closes_at.hour==20U,
             "dynamic year parser reads 2027 holiday trading dates");
-    require(parsed_2027.days.at(136).date==parse_date("2027-05-17") &&
-            parsed_2027.days.at(146).date==parse_date("2027-05-27"),
+    require(parsed_2027.days.at(136).date.year==2027 && .date.month==5U && .date.day==17U &&
+            parsed_2027.days.at(146).date.year==2027 && .date.month==5U && .date.day==27U,
             "all named 2027 holiday trading dates are parsed without 2026 constants");
-    require(parsed_2027.days.at(363).date==parse_date("2027-12-30") &&
+    require(parsed_2027.days.at(363).date.year==2027 && .date.month==12U && .date.day==30U &&
             parsed_2027.days.at(363).requires_official_notice,
             "extraordinary-hours marker is derived from an explicit year-specific notice");
     auto source_2028=source_2027;
@@ -85,7 +85,7 @@ int main() {
     source_2028.valid_to_exclusive=parse_date("2029-01-01");
     const auto parsed_2028=parse_xetra_html_calendar(html,source_2028);
     require(parsed_2028.days.size()==366U &&
-            parsed_2028.days.at(59).date==parse_date("2028-02-29") &&
+            parsed_2028.days.at(59).date.year==2028 && .date.month==2U && .date.day==29U &&
             parsed_2028.parser_version=="xetra-html-2028-v1",
             "dynamic year parser handles leap-year ranges and February 29");
     auto wrong_year_html=html;
