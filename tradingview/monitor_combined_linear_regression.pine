@@ -1,0 +1,259 @@
+//@version=6
+// Monitor Rynków — połączony wskaźnik regresji
+// Profile metodologiczne: DGT oraz LonesomeTheBlue.
+// Opracowanie integracyjne na podstawie audytów i opisanych algorytmów.
+// Oryginalne nazwy i prawa autorów: DGT (dgtrd) oraz LonesomeTheBlue.
+// To nie jest oficjalna publikacja ani rekomendacja inwestycyjna.
+//@description Połączone kanały regresji DGT i LonesomeTheBlue z niezależnymi ustawieniami.
+indicator("Monitor Rynków — DGT + LonesomeTheBlue", shorttitle="Monitor LinReg", overlay=true, max_bars_back=5000)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WSPÓLNA FUNKCJA REGRESJI
+// Midline jest końcową wartością regresji kroczącej. SSE wyznaczamy z tożsamości
+// OLS: SST = Slope²·Sxx + SSE. Dzięki temu unikamy kosztownej pętli po oknie.
+// DGT: sqrt(SSE/(n-1)); LonesomeTheBlue: sqrt(SSE/n).
+// ─────────────────────────────────────────────────────────────────────────────
+f_channel(float src, int length, bool sampleDenominator) =>
+    float mid = ta.linreg(src, length, 0)
+    float slope = mid - ta.linreg(src, length, 1)
+    float sumY = math.sum(src, length)
+    float sumY2 = math.sum(src * src, length)
+    float n = length
+    float sxx = n * (n * n - 1.0) / 12.0
+    float sseRaw = sumY2 - (sumY * sumY) / n - slope * slope * sxx
+    float sse = math.max(sseRaw, 0.0)
+    float divisor = sampleDenominator ? n - 1.0 : n
+    float width = math.sqrt(sse / divisor)
+    bool ready = bar_index >= length - 1
+    [ready ? mid : na, ready ? width : na, ready ? slope : na]
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GRUPY USTAWIEŃ
+// ─────────────────────────────────────────────────────────────────────────────
+string G_VIEW = "00 · Widoczność"
+string G_DGT1 = "10 · DGT — kanał 1"
+string G_DGT2 = "11 · DGT — kanał 2"
+string G_DGT_EXTRA = "12 · DGT — krzywa, pasma i nachylenie"
+string G_DGT_VOL = "13 · DGT — wolumen i zmienność"
+string G_LTB1 = "20 · LonesomeTheBlue — kanał 1"
+string G_LTB2 = "21 · LonesomeTheBlue — kanał 2"
+string G_LTB3 = "22 · LonesomeTheBlue — kanał 3"
+string G_LTB_EXTRA = "23 · LonesomeTheBlue — wybicia i Fibo"
+string G_ALERT = "30 · Alerty i potwierdzanie"
+
+bool showDGT = input.bool(true, "Pokaż profil DGT", group=G_VIEW)
+bool showLTB = input.bool(true, "Pokaż profil LonesomeTheBlue", group=G_VIEW)
+bool showStatus = input.bool(true, "Pokaż tabelę nachylenia", group=G_VIEW)
+bool confirmedOnly = input.bool(true, "Sygnały dopiero po zamknięciu świecy", group=G_ALERT)
+bool intrabar = not confirmedOnly
+
+// DGT — pierwszy kanał
+bool dgt1On = input.bool(true, "Włącz kanał 1", group=G_DGT1)
+int dgt1Len = input.int(200, "Długość", minval=2, maxval=5000, group=G_DGT1)
+float dgtSource = input.source(close, "Źródło ceny", group=G_DGT1)
+bool dgt1Bands = input.bool(true, "Pokaż poziomy ±1/±2/±3 SD", group=G_DGT1)
+color dgt1Color = input.color(color.rgb(35, 155, 220), "Kolor linii środkowej", group=G_DGT1)
+int dgt1Width = input.int(2, "Grubość linii", minval=1, maxval=4, group=G_DGT1)
+
+// DGT — drugi kanał
+bool dgt2On = input.bool(true, "Włącz kanał 2", group=G_DGT2)
+int dgt2Len = input.int(50, "Długość bazowa", minval=2, maxval=5000, group=G_DGT2)
+bool dgt2Scale = input.bool(false, "Przeskaluj długość do interwału docelowego", group=G_DGT2)
+string dgt2Tf = input.timeframe("D", "Interwał docelowy dla przeskalowania", group=G_DGT2)
+bool dgt2Bands = input.bool(true, "Pokaż poziomy ±1/±2/±3 SD", group=G_DGT2)
+color dgt2Color = input.color(color.rgb(220, 145, 40), "Kolor linii środkowej", group=G_DGT2)
+int dgt2Width = input.int(2, "Grubość linii", minval=1, maxval=4, group=G_DGT2)
+
+// DGT — dodatki
+bool showCurveBands = input.bool(false, "Pokaż pasma krzywej", group=G_DGT_EXTRA)
+string curveBandMode = input.string("Odchylenie ceny", "Metoda pasm", options=["Odchylenie ceny", "ATR"], group=G_DGT_EXTRA)
+float curveBandMult = input.float(1.0, "Mnożnik pasm", minval=0.1, maxval=10, step=0.1, group=G_DGT_EXTRA)
+int curveAtrLen = input.int(13, "Długość ATR", minval=1, maxval=500, group=G_DGT_EXTRA)
+bool showSlopeTable = input.bool(true, "Pokaż wartości nachylenia w tabeli", group=G_DGT_EXTRA)
+
+// DGT — wolumen i zmienność
+bool showVolumeSignals = input.bool(true, "Włącz sygnały wolumenu", group=G_DGT_VOL)
+int volumeSmaLen = input.int(89, "Średnia wolumenu", minval=1, maxval=1000, group=G_DGT_VOL)
+float volumeSpike = input.float(4.669, "Próg skoku wolumenu", minval=1.0, maxval=20.0, step=0.001, group=G_DGT_VOL)
+bool colorVolumeBars = input.bool(false, "Koloruj świece według relacji wolumenu", group=G_DGT_VOL)
+float volumeHighRatio = input.float(1.618, "Próg wysokiego wolumenu", minval=1.0, maxval=10.0, step=0.001, group=G_DGT_VOL)
+float volumeLowRatio = input.float(0.618, "Próg niskiego wolumenu", minval=0.05, maxval=1.0, step=0.001, group=G_DGT_VOL)
+bool showVolatilitySignals = input.bool(true, "Włącz sygnały wysokiej zmienności", group=G_DGT_VOL)
+float atrVolatilityMult = input.float(2.718, "Zakres świecy / ATR", minval=1.0, maxval=10.0, step=0.001, group=G_DGT_VOL)
+
+// LonesomeTheBlue — trzy niezależne kanały
+bool ltb1On = input.bool(true, "Włącz kanał 1", group=G_LTB1)
+int ltb1Len = input.int(377, "Długość", minval=2, maxval=5000, group=G_LTB1)
+color ltb1Color = input.color(color.rgb(30, 170, 100), "Kolor", group=G_LTB1)
+int ltb1Width = input.int(2, "Grubość", minval=1, maxval=4, group=G_LTB1)
+
+bool ltb2On = input.bool(true, "Włącz kanał 2", group=G_LTB2)
+int ltb2Len = input.int(233, "Długość", minval=2, maxval=5000, group=G_LTB2)
+color ltb2Color = input.color(color.rgb(170, 100, 220), "Kolor", group=G_LTB2)
+int ltb2Width = input.int(2, "Grubość", minval=1, maxval=4, group=G_LTB2)
+
+bool ltb3On = input.bool(true, "Włącz kanał 3", group=G_LTB3)
+int ltb3Len = input.int(144, "Długość", minval=2, maxval=5000, group=G_LTB3)
+color ltb3Color = input.color(color.rgb(210, 80, 100), "Kolor", group=G_LTB3)
+int ltb3Width = input.int(2, "Grubość", minval=1, maxval=4, group=G_LTB3)
+
+float ltbMult = input.float(2.41, "Mnożnik szerokości kanału", minval=0.1, maxval=10, step=0.01, group=G_LTB_EXTRA)
+bool showFibo = input.bool(true, "Pokaż poziomy Fibo 0,236 / 0,382 / 0,618 / 0,786", group=G_LTB_EXTRA)
+bool showBreakouts = input.bool(true, "Wykrywaj wybicia", group=G_LTB_EXTRA)
+string breakoutMode = input.string("Przeciw trendowi (oryginał)", "Reguła wybicia", options=["Przeciw trendowi (oryginał)", "Każde wybicie z kanału"], group=G_LTB_EXTRA)
+bool showBrokenMarks = input.bool(true, "Oznaczaj wybicia na wykresie", group=G_LTB_EXTRA)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DGT: mianownik n-1 (zachowanie definicji oryginału)
+// ─────────────────────────────────────────────────────────────────────────────
+[dgt1Mid, dgt1Dev, dgt1Slope] = f_channel(dgtSource, dgt1Len, true)
+
+float chartSeconds = timeframe.in_seconds()
+float targetSeconds = timeframe.in_seconds(dgt2Tf)
+int scaledDgt2Len = dgt2Len
+if dgt2Scale and not na(chartSeconds) and not na(targetSeconds) and chartSeconds > 0 and targetSeconds > 0
+    scaledDgt2Len := int(math.min(5000, math.max(2, math.round(dgt2Len * targetSeconds / chartSeconds))))
+[dgt2Mid, dgt2Dev, dgt2Slope] = f_channel(dgtSource, scaledDgt2Len, true)
+
+float dgt1Upper1 = dgt1Mid + dgt1Dev
+float dgt1Lower1 = dgt1Mid - dgt1Dev
+float dgt1Upper2 = dgt1Mid + dgt1Dev * 2.0
+float dgt1Lower2 = dgt1Mid - dgt1Dev * 2.0
+float dgt1Upper3 = dgt1Mid + dgt1Dev * 3.0
+float dgt1Lower3 = dgt1Mid - dgt1Dev * 3.0
+float dgt2Upper1 = dgt2Mid + dgt2Dev
+float dgt2Lower1 = dgt2Mid - dgt2Dev
+float dgt2Upper2 = dgt2Mid + dgt2Dev * 2.0
+float dgt2Lower2 = dgt2Mid - dgt2Dev * 2.0
+float dgt2Upper3 = dgt2Mid + dgt2Dev * 3.0
+float dgt2Lower3 = dgt2Mid - dgt2Dev * 3.0
+
+plot(showDGT and dgt1On ? dgt1Mid : na, "DGT 1 · regresja", color=dgt1Color, linewidth=dgt1Width)
+plot(showDGT and dgt1On and dgt1Bands ? dgt1Upper1 : na, "DGT 1 · +1 SD", color=color.new(dgt1Color, 35))
+plot(showDGT and dgt1On and dgt1Bands ? dgt1Lower1 : na, "DGT 1 · -1 SD", color=color.new(dgt1Color, 35))
+plot(showDGT and dgt1On and dgt1Bands ? dgt1Upper2 : na, "DGT 1 · +2 SD", color=color.new(dgt1Color, 55))
+plot(showDGT and dgt1On and dgt1Bands ? dgt1Lower2 : na, "DGT 1 · -2 SD", color=color.new(dgt1Color, 55))
+plot(showDGT and dgt1On and dgt1Bands ? dgt1Upper3 : na, "DGT 1 · +3 SD", color=color.new(dgt1Color, 70))
+plot(showDGT and dgt1On and dgt1Bands ? dgt1Lower3 : na, "DGT 1 · -3 SD", color=color.new(dgt1Color, 70))
+
+plot(showDGT and dgt2On ? dgt2Mid : na, "DGT 2 · regresja", color=dgt2Color, linewidth=dgt2Width)
+plot(showDGT and dgt2On and dgt2Bands ? dgt2Upper1 : na, "DGT 2 · +1 SD", color=color.new(dgt2Color, 35))
+plot(showDGT and dgt2On and dgt2Bands ? dgt2Lower1 : na, "DGT 2 · -1 SD", color=color.new(dgt2Color, 35))
+plot(showDGT and dgt2On and dgt2Bands ? dgt2Upper2 : na, "DGT 2 · +2 SD", color=color.new(dgt2Color, 55))
+plot(showDGT and dgt2On and dgt2Bands ? dgt2Lower2 : na, "DGT 2 · -2 SD", color=color.new(dgt2Color, 55))
+plot(showDGT and dgt2On and dgt2Bands ? dgt2Upper3 : na, "DGT 2 · +3 SD", color=color.new(dgt2Color, 70))
+plot(showDGT and dgt2On and dgt2Bands ? dgt2Lower3 : na, "DGT 2 · -3 SD", color=color.new(dgt2Color, 70))
+
+// DGT: pasma krzywej są odrębną miarą odchylenia ceny lub ATR, a nie SD reszt.
+float curveWidth = curveBandMode == "ATR" ? ta.atr(curveAtrLen) : ta.stdev(dgtSource, dgt1Len)
+plot(showDGT and dgt1On and showCurveBands ? dgt1Mid + curveWidth * curveBandMult : na, "DGT · pasmo krzywej górne", color=color.new(color.gray, 30), linewidth=1)
+plot(showDGT and dgt1On and showCurveBands ? dgt1Mid - curveWidth * curveBandMult : na, "DGT · pasmo krzywej dolne", color=color.new(color.gray, 30), linewidth=1)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LONESOMETHEBLUE: mianownik n, trzy niezależne długości i mnożnik 2,41
+// ─────────────────────────────────────────────────────────────────────────────
+[ltb1Mid, ltb1Dev, ltb1Slope] = f_channel(close, ltb1Len, false)
+[ltb2Mid, ltb2Dev, ltb2Slope] = f_channel(close, ltb2Len, false)
+[ltb3Mid, ltb3Dev, ltb3Slope] = f_channel(close, ltb3Len, false)
+
+float ltb1Upper = ltb1Mid + ltb1Dev * ltbMult
+float ltb1Lower = ltb1Mid - ltb1Dev * ltbMult
+float ltb2Upper = ltb2Mid + ltb2Dev * ltbMult
+float ltb2Lower = ltb2Mid - ltb2Dev * ltbMult
+float ltb3Upper = ltb3Mid + ltb3Dev * ltbMult
+float ltb3Lower = ltb3Mid - ltb3Dev * ltbMult
+
+plot(showLTB and ltb1On ? ltb1Mid : na, "LTB 377 · środek", color=ltb1Color, linewidth=ltb1Width)
+plot(showLTB and ltb1On ? ltb1Upper : na, "LTB 377 · góra", color=color.new(ltb1Color, 15))
+plot(showLTB and ltb1On ? ltb1Lower : na, "LTB 377 · dół", color=color.new(ltb1Color, 15))
+plot(showLTB and ltb2On ? ltb2Mid : na, "LTB 233 · środek", color=ltb2Color, linewidth=ltb2Width)
+plot(showLTB and ltb2On ? ltb2Upper : na, "LTB 233 · góra", color=color.new(ltb2Color, 15))
+plot(showLTB and ltb2On ? ltb2Lower : na, "LTB 233 · dół", color=color.new(ltb2Color, 15))
+plot(showLTB and ltb3On ? ltb3Mid : na, "LTB 144 · środek", color=ltb3Color, linewidth=ltb3Width)
+plot(showLTB and ltb3On ? ltb3Upper : na, "LTB 144 · góra", color=color.new(ltb3Color, 15))
+plot(showLTB and ltb3On ? ltb3Lower : na, "LTB 144 · dół", color=color.new(ltb3Color, 15))
+
+// Poziomy Fibo są proporcjami szerokości kanału, nie klasycznymi zniesieniami ruchu.
+f_fibo(float lower, float upper, float ratio) =>
+    lower + (upper - lower) * ratio
+plot(showLTB and showFibo and ltb1On ? f_fibo(ltb1Lower, ltb1Upper, 0.236) : na, "LTB 377 · Fibo 0,236", color=color.new(ltb1Color, 65), style=plot.style_line)
+plot(showLTB and showFibo and ltb1On ? f_fibo(ltb1Lower, ltb1Upper, 0.382) : na, "LTB 377 · Fibo 0,382", color=color.new(ltb1Color, 65), style=plot.style_line)
+plot(showLTB and showFibo and ltb1On ? f_fibo(ltb1Lower, ltb1Upper, 0.618) : na, "LTB 377 · Fibo 0,618", color=color.new(ltb1Color, 65), style=plot.style_line)
+plot(showLTB and showFibo and ltb1On ? f_fibo(ltb1Lower, ltb1Upper, 0.786) : na, "LTB 377 · Fibo 0,786", color=color.new(ltb1Color, 65), style=plot.style_line)
+plot(showLTB and showFibo and ltb2On ? f_fibo(ltb2Lower, ltb2Upper, 0.236) : na, "LTB 233 · Fibo 0,236", color=color.new(ltb2Color, 65))
+plot(showLTB and showFibo and ltb2On ? f_fibo(ltb2Lower, ltb2Upper, 0.382) : na, "LTB 233 · Fibo 0,382", color=color.new(ltb2Color, 65))
+plot(showLTB and showFibo and ltb2On ? f_fibo(ltb2Lower, ltb2Upper, 0.618) : na, "LTB 233 · Fibo 0,618", color=color.new(ltb2Color, 65))
+plot(showLTB and showFibo and ltb2On ? f_fibo(ltb2Lower, ltb2Upper, 0.786) : na, "LTB 233 · Fibo 0,786", color=color.new(ltb2Color, 65))
+plot(showLTB and showFibo and ltb3On ? f_fibo(ltb3Lower, ltb3Upper, 0.236) : na, "LTB 144 · Fibo 0,236", color=color.new(ltb3Color, 65))
+plot(showLTB and showFibo and ltb3On ? f_fibo(ltb3Lower, ltb3Upper, 0.382) : na, "LTB 144 · Fibo 0,382", color=color.new(ltb3Color, 65))
+plot(showLTB and showFibo and ltb3On ? f_fibo(ltb3Lower, ltb3Upper, 0.618) : na, "LTB 144 · Fibo 0,618", color=color.new(ltb3Color, 65))
+plot(showLTB and showFibo and ltb3On ? f_fibo(ltb3Lower, ltb3Upper, 0.786) : na, "LTB 144 · Fibo 0,786", color=color.new(ltb3Color, 65))
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WYKRYWANIE WYBIĆ LTB — zgodność z trybem autora lub wariant symetryczny
+// ─────────────────────────────────────────────────────────────────────────────
+f_break_low(float lower, float slope) =>
+    breakoutMode == "Każde wybicie z kanału" ? close < lower : (slope > 0 and close < lower)
+f_break_high(float upper, float slope) =>
+    breakoutMode == "Każde wybicie z kanału" ? close > upper : (slope < 0 and close > upper)
+
+bool ltb1Low = showLTB and ltb1On and showBreakouts and f_break_low(ltb1Lower, ltb1Slope)
+bool ltb1High = showLTB and ltb1On and showBreakouts and f_break_high(ltb1Upper, ltb1Slope)
+bool ltb2Low = showLTB and ltb2On and showBreakouts and f_break_low(ltb2Lower, ltb2Slope)
+bool ltb2High = showLTB and ltb2On and showBreakouts and f_break_high(ltb2Upper, ltb2Slope)
+bool ltb3Low = showLTB and ltb3On and showBreakouts and f_break_low(ltb3Lower, ltb3Slope)
+bool ltb3High = showLTB and ltb3On and showBreakouts and f_break_high(ltb3Upper, ltb3Slope)
+bool signalAllowed = intrabar or barstate.isconfirmed
+
+plotshape(showBrokenMarks and signalAllowed and ltb1Low, "LTB 377 · wybicie dołem", shape.triangledown, location.belowbar, color=color.new(ltb1Color, 0), size=size.tiny, text="377")
+plotshape(showBrokenMarks and signalAllowed and ltb1High, "LTB 377 · wybicie górą", shape.triangleup, location.abovebar, color=color.new(ltb1Color, 0), size=size.tiny, text="377")
+plotshape(showBrokenMarks and signalAllowed and ltb2Low, "LTB 233 · wybicie dołem", shape.triangledown, location.belowbar, color=color.new(ltb2Color, 0), size=size.tiny, text="233")
+plotshape(showBrokenMarks and signalAllowed and ltb2High, "LTB 233 · wybicie górą", shape.triangleup, location.abovebar, color=color.new(ltb2Color, 0), size=size.tiny, text="233")
+plotshape(showBrokenMarks and signalAllowed and ltb3Low, "LTB 144 · wybicie dołem", shape.triangledown, location.belowbar, color=color.new(ltb3Color, 0), size=size.tiny, text="144")
+plotshape(showBrokenMarks and signalAllowed and ltb3High, "LTB 144 · wybicie górą", shape.triangleup, location.abovebar, color=color.new(ltb3Color, 0), size=size.tiny, text="144")
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WOLUMEN, ATR I ALERTY DGT
+// ─────────────────────────────────────────────────────────────────────────────
+float volumeAverage = ta.sma(volume, volumeSmaLen)
+float volumeRatio = not na(volumeAverage) and volumeAverage > 0 ? volume / volumeAverage : na
+bool volumeAvailable = not na(volume) and not na(volumeAverage)
+bool volumeSpikeSignal = showDGT and showVolumeSignals and volumeAvailable and volumeRatio >= volumeSpike
+bool volumeHighSignal = showDGT and showVolumeSignals and volumeAvailable and volumeRatio >= volumeHighRatio
+bool highVolatilitySignal = showDGT and showVolatilitySignals and (high - low) > ta.atr(curveAtrLen) * atrVolatilityMult
+
+barcolor(colorVolumeBars and showDGT and volumeAvailable ? (volumeRatio >= volumeHighRatio ? color.lime : volumeRatio <= volumeLowRatio ? color.gray : na) : na)
+plotshape(volumeSpikeSignal and signalAllowed, "DGT · skok wolumenu", shape.circle, location.bottom, color=color.fuchsia, size=size.tiny, text="VOL")
+plotshape(highVolatilitySignal and signalAllowed, "DGT · wysoka zmienność", shape.diamond, location.abovebar, color=color.orange, size=size.tiny, text="ATR")
+
+bool dgt1CrossUp = showDGT and dgt1On and ta.crossover(close, dgt1Mid)
+bool dgt1CrossDown = showDGT and dgt1On and ta.crossunder(close, dgt1Mid)
+bool dgt1UpperCross = showDGT and dgt1On and ta.crossover(close, dgt1Upper1)
+bool dgt1LowerCross = showDGT and dgt1On and ta.crossunder(close, dgt1Lower1)
+
+alertcondition(signalAllowed and dgt1CrossUp, "DGT 1 · przecięcie regresji w górę", "Cena przecięła linię regresji DGT 1 w górę.")
+alertcondition(signalAllowed and dgt1CrossDown, "DGT 1 · przecięcie regresji w dół", "Cena przecięła linię regresji DGT 1 w dół.")
+alertcondition(signalAllowed and dgt1UpperCross, "DGT 1 · wybicie +1 SD", "Cena przecięła górną granicę +1 SD kanału DGT 1.")
+alertcondition(signalAllowed and dgt1LowerCross, "DGT 1 · wybicie -1 SD", "Cena przecięła dolną granicę -1 SD kanału DGT 1.")
+alertcondition(signalAllowed and volumeSpikeSignal, "DGT · skok wolumenu", "Wolumen przekroczył skonfigurowany próg względem średniej.")
+alertcondition(signalAllowed and highVolatilitySignal, "DGT · wysoka zmienność", "Zakres świecy przekroczył skonfigurowany mnożnik ATR.")
+
+alertcondition(signalAllowed and ltb1Low, "LTB 377 · wybicie dołem", "Kanał LTB 377: wybicie dołem.")
+alertcondition(signalAllowed and ltb1High, "LTB 377 · wybicie górą", "Kanał LTB 377: wybicie górą.")
+alertcondition(signalAllowed and ltb2Low, "LTB 233 · wybicie dołem", "Kanał LTB 233: wybicie dołem.")
+alertcondition(signalAllowed and ltb2High, "LTB 233 · wybicie górą", "Kanał LTB 233: wybicie górą.")
+alertcondition(signalAllowed and ltb3Low, "LTB 144 · wybicie dołem", "Kanał LTB 144: wybicie dołem.")
+alertcondition(signalAllowed and ltb3High, "LTB 144 · wybicie górą", "Kanał LTB 144: wybicie górą.")
+
+// Tabela nachylenia: jednostka ceny na jedną świecę bieżącego interwału.
+var table slopeTable = table.new(position.top_right, 2, 3, border_width=1)
+if barstate.islast
+    if showStatus and showDGT and showSlopeTable
+        table.cell(slopeTable, 0, 0, "Profil", text_color=color.white, bgcolor=color.rgb(45, 50, 60))
+        table.cell(slopeTable, 1, 0, "Nachylenie / świecę", text_color=color.white, bgcolor=color.rgb(45, 50, 60))
+        table.cell(slopeTable, 0, 1, "DGT 1", text_color=dgt1Color)
+        table.cell(slopeTable, 1, 1, str.tostring(dgt1Slope, format.mintick), text_color=dgt1Color)
+        table.cell(slopeTable, 0, 2, "DGT 2 (" + str.tostring(scaledDgt2Len) + ")", text_color=dgt2Color)
+        table.cell(slopeTable, 1, 2, str.tostring(dgt2Slope, format.mintick), text_color=dgt2Color)
+    else
+        table.clear(slopeTable, 0, 0, 1, 2)
