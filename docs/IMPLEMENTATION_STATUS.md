@@ -640,10 +640,18 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 - Dodano syntetyczny fixture tekstowy z harmonogramem 30 grudnia 2026 i testy daty, MIC, kompletności faz, godzin i zakresów.
 - Commity: `84fdcb3bbaa5d71839f1acdbf9b39c64c1756900` (model), `c8c1ff8d6cef9e41916f126b2ea2be4e4cdc8bdc` (enum/serializacja faz), `5a4a2e4133a5cd28a7c2581dae5be90bbbf3556f` (JSON), `82c63d6c2e32af6ef5a157a03215577bc834c6f5` (walidacja i resolver), `885a41182f27546970d109384d4874314922396f` (API tekstowego parsera), `e9a5b767f56ad24be54c0035a133aaf24b9a9af5` / `5886bd697c573cde3ff8c0120722fc183b431062` / `f4dace7581630a6fa8f5af873ddf43de0c0e97c4` (parser), `39edb7ae8736a2313d03702743fae3035d0b3f60` (fixture), `67d241c053031fc998f64ed3f59ab4547f123890` (test), `5e92d67df8551322ae10ed4d15aaa04245835b14` (porównywanie faz przy replay), `767f4b74c84c6749969588418939b743f05b8887` (test JSON i resolvera), `07248ae304307d1328a79e09d1693acf24629130` (lokalna walidacja faz w parserze).
 - Wczesne CI ujawniły dwa problemy integracyjne: parser nie może wywoływać prywatnej walidacji repozytorium, a funkcja normalizacji czasu musi używać lokalnego helpera `normalized`. Poprawiono oba; CI dla końcowego SHA jest w toku.
-- Ograniczenie: parser przyjmuje tekst wydobyty z PDF. Pobieranie i bezpieczne wydobywanie tekstu z surowych bajtów PDF jest następnym podetapem 18B. Fixture jest syntetyczny, nie jest oryginalnym plikiem PDF.
+- CI [43327239674](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43327239674) — success; potwierdzono model faz, parser tekstu, `pdftotext` i import PDF na syntetycznym pliku. Etapy 18A i 18B są zakończone w zakresie testów offline. Fixture PDF jest syntetyczny, nie jest oryginalnym plikiem giełdy.
 
 ### Następne czynności
 1. Potwierdzić CI dla modelu faz i parsera tekstowego; poprawić błędy testów.
-2. Etap 18B: dodać bezpieczne wydobywanie tekstu z PDF i metodę `import_pdf_notice`, zachowując surowe bajty PDF jako obiekt SHA-256.
-3. Dodać test end-to-end z małym syntetycznym PDF oraz sprawdzić, że źródło PDF i komunikat zapisują się atomowo.
-4. Dopiero po zielonym CI oznaczyć Etap 18A/18B jako zakończony.
+2. Etap 18C: ponownie interpretować zarchiwizowany PDF do nowej rewizji komunikatu bez kolejnego żądania HTTP; zapisywać wersję parsera.
+3. Następnie potwierdzić parser na rzeczywistym, oficjalnym PDF, zachowując jego dokładne bajty i źródło.
+
+## 60. Etap 18C — ponowna interpretacja archiwalnego PDF (w toku)
+
+- Dodano `parser_version` w `VenueSessionNotice`; nowe parsery zapisują `xetra-html-notice-v1` lub `xetra-pdf-text-notice-v1`, a starsze rekordy bez pola otrzymują wartość kompatybilności `legacy-unversioned`.
+- `same_notice_payload` uwzględnia wersję parsera i fazy sesji; niezmienność rewizji obejmuje teraz również zastosowaną wersję interpretatora.
+- Dodano `publish_notice_revision_from_archive`: odczytuje i weryfikuje istniejący obiekt PDF, ponownie wydobywa tekst, tworzy nową rewizję komunikatu bez HTTP i ponownie wykorzystuje ten sam obiekt SHA-256.
+- Testy sprawdzają brak dodatkowego żądania HTTP, współdzielenie jednego PDF przez rewizje 1 i 2 oraz idempotentny replay nowej rewizji.
+- Commity: `parser_version` model i parser, serializacja/walidacja JSON, metoda offline reparse i testy są zapisane w historii `main`.
+- CI dla Etapu 18C jest w toku; nie zamykać przed zielonym Configure/Build/Test.
