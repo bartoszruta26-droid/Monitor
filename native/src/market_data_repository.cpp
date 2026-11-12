@@ -395,10 +395,12 @@ void validate_source_object(const SourceArchiveObject& x) {
         });
     };
     const std::filesystem::path path(x.archive_relative_path);
+    const auto filename=path.filename().string();
     if(!valid_hash(x.content_sha256) || x.source_object_id!="sha256:"+x.content_sha256 ||
        x.archive_relative_path.empty() || path.is_absolute() || path.has_root_name() ||
-       path.has_root_directory() || x.content_length_bytes==0U || x.content_type.empty())
-        throw std::invalid_argument("Obiekt źródłowy wymaga identyfikatora SHA-256, względnego archiwum i metadanych bajtów.");
+       path.has_root_directory() || filename.rfind(x.content_sha256+".",0)!=0U ||
+       x.content_length_bytes==0U || x.content_type.empty())
+        throw std::invalid_argument("Obiekt źródłowy wymaga identyfikatora SHA-256, ścieżki content-addressed i metadanych bajtów.");
     for(const auto& component:path)
         if(component.empty() || component=="." || component=="..")
             throw std::invalid_argument("Ścieżka obiektu źródłowego zawiera niedozwolony komponent.");
