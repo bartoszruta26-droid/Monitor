@@ -375,9 +375,7 @@ VenueSessionCalendar decode_venue_calendar(const json& j) {
 json encode(const SourceArchiveObject& x) {
     return {{"source_object_id",x.source_object_id},{"content_sha256",x.content_sha256},
         {"archive_relative_path",x.archive_relative_path},{"content_length_bytes",x.content_length_bytes},
-        {"content_type",x.content_type},{"source_uri",x.source_uri},
-        {"retrieved_at",x.retrieved_at ? json(format_utc_timestamp(*x.retrieved_at)) : json(nullptr)},
-        {"attribution",x.attribution},{"license_status",enum_name(x.license_status)}};
+        {"content_type",x.content_type}};
 }
 SourceArchiveObject decode_source_object(const json& j) {
     SourceArchiveObject x;
