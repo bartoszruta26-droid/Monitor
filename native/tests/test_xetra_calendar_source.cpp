@@ -90,8 +90,8 @@ int main() {
     require(saved.venue_calendars.size()==1U &&
             saved.venue_calendars.front().source.content_sha256==sha256_hex(html),
             "persist exact response SHA-256");
-    const auto archive_root=folder/"calendar.json.sources"/"xetra-2026-official-html";
-    const auto archive_v1=archive_root/("1-"+sha256_hex(html)+".html");
+    const auto archive_root=folder/"calendar.json.sources"/"objects";
+    const auto archive_v1=archive_root/(sha256_hex(html)+".html");
     require(std::filesystem::exists(archive_v1),"archive exact original HTML bytes");
     require(adapter.import(repository,source())==1U,"repeated import verifies existing archive and remains idempotent");
     {
