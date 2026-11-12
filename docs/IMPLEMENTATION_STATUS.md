@@ -2,7 +2,7 @@
 
 **Repozytorium:** `bartoszruta26-droid/Monitor`  
 **Gałąź:** `main`  
-**Ostatnia weryfikacja:** 2026-11-12 22:52 Europe/Warsaw
+**Ostatnia weryfikacja:** 2026-11-12 23:15 Europe/Warsaw
 **Zasada prowadzenia:** status etapu zmienia się na „zakończony” dopiero po sprawdzeniu kodu, testów i CI dla konkretnego SHA. Ten plik jest bieżącym rejestrem wykonania; szczegóły techniczne pozostają w dokumentach etapów.
 
 ## Stan repozytorium przy audycie
@@ -271,3 +271,15 @@ Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na ma
 - Podzakres NBP (93-dniowe fragmenty, 404, puste odpowiedzi i rzeczywisty czas odbioru per odpowiedź) przeszedł CI dla commitu dokumentacyjno-integracyjnego `ae9ccf21716e6cf5300ca5258c0d3f28998fb063`: [43311044110](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43311044110), Configure/Build/Test — success.
 - CI dla commitu dokumentacji Xetra `f24805a`: [43311190718](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43311190718) — w toku w chwili zapisu.
 - Kolejny etap implementacyjny: dodać model `SourceCalendarDocument` (venue, zakres roku, IANA zone, URL, retrieved_at, content SHA-256, atrybucja/licencja) i jawne wyjątki sesyjne; następnie parser HTML oficjalnej tabeli Xetra z fixture obejmującym zamknięcia i dni handlu w święta. Skrócone sesje wymagają dodatkowego oficjalnego komunikatu/aukcyjnego harmonogramu.
+
+
+## 36. Etap 11 — model dokumentu źródłowego i fixture Xetra 2026
+
+- Commit `4eecb9e37f6b0332a425262052e892c9c04bf41f`: dodano `SourceCalendarDocument`, status licencji, pochodzenie, wersję, zakres, strefę IANA, opcjonalny czas pobrania i SHA-256 dokładnych bajtów.
+- Commit `25caf23a71e34a3075fe33d2a5fa6579efd89fe7`: dodano walidację metadanych oraz fixture 365 dni Xetra 2026 z oddzielnymi statusami zamknięcia, handlu i rozliczenia.
+- Commit `1051dea04d47f8ab04fab157737b259963fdbcb2`: testy pokrywają 365 dat, zamknięcia, dni handlu w święta (14 maja, 25 maja, 4 czerwca), wydłużone godziny dla grup produktów, settlement-only (24 i 31 grudnia), obowiązek sprawdzenia okólnika 30 grudnia oraz odrzucenie niepoprawnego SHA, venue i strefy.
+- Commit `a063463480d71ccc60de858bb230182ccdfb3805`: dokumentacja opisuje model i ograniczenia źródła.
+- CI dla modelu: [43311507761](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43311507761); dla generatora fixture: [43311529064](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43311529064); dla testów: [43311572796](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43311572796). W chwili aktualizacji wpisu przebiegi były w toku — wynik Configure/Build/Test wymaga potwierdzenia.
+- Poprzedni HEAD `2ccca053e2f2018116018a0d0924f9ef3d3a21c1` przeszedł CI [43311241403](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43311241403) z sukcesem.
+- Ograniczenie: fixture jest transkrypcją oficjalnego kalendarza, nie automatycznym importerem HTML/PDF. `content_sha256` i `retrieved_at` pozostają puste, a status licencji `Unknown`, ponieważ nie pobrano i nie zweryfikowano dokładnych bajtów dokumentu ani warunków ponownego wykorzystania.
+- Następny zakres: parser semantycznej tabeli HTML oficjalnego kalendarza z fixture offline, wykrywanie zmian i tworzenie kolejnej wersji bez nadpisywania poprzedniej; osobno importer/obsługa okólników dla skróconych sesji.
