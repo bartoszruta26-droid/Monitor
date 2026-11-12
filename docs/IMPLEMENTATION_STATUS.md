@@ -588,7 +588,7 @@ Po zielonym CI 17B przejść do 17C: wyliczanie efektywnego dnia kalendarza prze
 - Flaga `requires_official_notice_unresolved` pozostaje aktywna, dopóki jawne nadpisanie nie rozstrzygnie dnia; anulowanie przywraca bazowy harmonogram i nierozstrzygnięty status.
 - Testy dodane dla komunikatu informacyjnego, aktywnego skrócenia sesji, anulowania i konfliktu dwóch nadpisań.
 - Commity: `f8e59cd05273d58a86b8955b624098c81051a5bc` (API), `85deadb9dfebc22a5c74bbfa66325069e71ac655` / `c131f7ff6b9877036d7244fa1cab98994d0e6b87` (resolver), `4eb666e92f3002775c5b2ffde1b4cc0f6d6194fa` (testy), `a68475f865755ad38f3b7fecf2d1bff2c7cc0517` (nagłówek string_view).
-- CI aktualnego kodu 17C: w toku; Etapu 17B/17C nie zamykać przed zielonym Configure/Build/Test dla aktualnego SHA.
+- CI resolvera [43324719408](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43324719408), raportu nierozstrzygniętych dat [43324853676](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43324853676) i walidacji diagnostyki [43325061044](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43325061044) — success. Etap 17C: zakończony.
 
 ### Kolejne czynności
 1. Potwierdzić CI dla resolvera i testów; poprawić ewentualne błędy.
@@ -603,3 +603,15 @@ Po zielonym CI 17B przejść do 17C: wyliczanie efektywnego dnia kalendarza prze
 - Dodano regresję dla obiektu źródłowego anulowania, którego jedyną referencją jest komunikat.
 - Commity: `a2e0fe988eea3c89fa83fb704ece92654f38b855` (implementacja), `ed2a6d45457f6fe95c2dcc2e24bce9ad64afd76a` (test).
 - CI dla korekty jest w toku; status pozostaje otwarty do zielonego przebiegu.
+
+
+## 56. Etap 17D — testy regresji i konfliktów komunikatów
+
+- Rozszerzono testy o przypadek, w którym anulowanie dotyczy starszej rewizji, ale nowsza rewizja tego samego komunikatu pozostaje aktywna.
+- Dodano test odrzucania dwóch aktywnych anulowań wskazujących tę samą rewizję.
+- Zestaw regresji obejmuje już także: informacyjny komunikat bez zmiany godzin, jawne nadpisanie, przywrócenie bazowego harmonogramu po anulowaniu, konflikt dwóch nadpisań, nierozstrzygnięte daty i referencje obiektów źródłowych.
+- Commit testów: `8bec0c0eab653bdfeeb40386b0774ee99b9014e9`.
+- CI dla najnowszego testu jest uruchomiony; Etap 17D pozostaje otwarty do zielonego przebiegu i ewentualnych poprawek.
+
+### Kryterium zamknięcia Etapu 17
+Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulowanie komunikatów oraz raportowanie nierozstrzygniętych dni. Nie wykonywano pobierania rzeczywistych komunikatów na żywo i nie zatwierdzono godzin skróconej sesji 30 grudnia.
