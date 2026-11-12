@@ -51,6 +51,25 @@ struct NbpPublicationWindow {
     LocalTimeOfDay ends_at;
 };
 
+
+// One publication occurrence derived only from provider metadata on returned
+// observations. publication_date is a civil date; received_at is the actual
+// retrieval time. Neither is interpreted as an exact provider publication
+// timestamp.
+struct ObservedPublication {
+    std::string provider_id;
+    CivilDate publication_date;
+    UtcTimestamp received_at;
+    std::optional<std::string> source_uri;
+    std::uint64_t observation_count{};
+};
+
+// Groups persisted/provider observations by provider, effective publication
+// date, retrieval time and source URI. Records without provider_published_on
+// are excluded rather than assigned a synthetic date or timestamp.
+[[nodiscard]] std::vector<ObservedPublication> build_observed_publications(
+    const std::vector<MarketObservation>& observations);
+
 // Statutory Polish public holidays (excluding ordinary Sundays, which are
 // already excluded by the weekday rule). Includes movable Easter holidays.
 [[nodiscard]] std::vector<CivilDate> polish_statutory_holidays(int year);
