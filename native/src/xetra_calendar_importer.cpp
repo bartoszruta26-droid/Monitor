@@ -135,7 +135,7 @@ VenueSessionCalendar parse_xetra_html_calendar(
     std::vector<xmlNode*> tables;
     collect_elements(xmlDocGetRootElement(parsed.get()), "table", tables);
     std::map<std::string, CivilDate> holidays;
-    bool found_2026_table = false;
+    bool found_year_table=false;
     const std::set<std::string> required{
         "new year's day", "good friday", "easter monday", "labor day",
         "christmas eve", "christmas day", "boxing day", "new year's eve"
@@ -150,7 +150,7 @@ VenueSessionCalendar parse_xetra_html_calendar(
                 if(normalized(node_text(cells[i]))==std::to_string(calendar_year)) year_column=i;
             }
             if (year_column == static_cast<std::size_t>(-1)) continue;
-            found_2026_table = true;
+            found_year_table=true;
             if (cells.size() <= year_column || cells.size() < 2U) continue;
             const std::string label = normalized(node_text(cells.front()));
             if (!required.contains(label)) continue;
@@ -158,20 +158,16 @@ VenueSessionCalendar parse_xetra_html_calendar(
             if (!holidays.emplace(label, date).second)
                 throw std::invalid_argument("Powtórzony wiersz święta w tabeli Xetra HTML.");
         }
-        if (found_2026_table && holidays.size() == required.size()) break;
+        if(found_year_table && holidays.size()==required.size()) break;
     }
-    if (!found_2026_table || holidays.size() != required.size())
-        throw std::invalid_argument("Tabela Xetra HTML nie zawiera kompletnego zestawu ośmiu wierszy dla 2026.");
+    if(!found_year_table || holidays.size()!=required.size())
+        throw std::invalid_argument("Tabela Xetra HTML nie zawiera kompletnego zestawu ośmiu wierszy dla wybranego roku.");
 
-    const std::map<std::string, std::string> expected{
-        {"new year's day","2026-01-01"},{"good friday","2026-04-03"},
-        {"easter monday","2026-04-06"},{"labor day","2026-05-01"},
-        {"christmas eve","2026-12-24"},{"christmas day","2026-12-25"},
-        {"boxing day","2026-12-26"},{"new year's eve","2026-12-31"}
-    };
-    for (const auto& [label, date] : holidays) {
-        if (format_date(date) != expected.at(label))
-            throw std::invalid_argument("Data święta Xetra 2026 nie zgadza się z oczekiwanym kalendarzem.");
+    std::set<std::string> holiday_dates;
+    for(const auto& [label,date]:holidays) {
+        (void)label;
+        if(!holiday_dates.insert(format_date(date)).second)
+            throw std::invalid_argument("Dwa święta Xetra wskazują tę samą datę.");
     }
 
     std::vector<xmlNode*> paragraphs;
@@ -211,7 +207,7 @@ VenueSessionCalendar parse_xetra_html_calendar(
         return normalized(node_text(node)).find(notice_marker) != std::string::npos;
     });
     if (!has_notice)
-        throw std::invalid_argument("Brak semantycznej informacji o handlu w święta 2026.");
+        throw std::invalid_argument("Brak semantycznej informacji o handlu w święta wybranego roku.");
     std::vector<xmlNode*> list_items;
     collect_elements(xmlDocGetRootElement(parsed.get()), "li", list_items);
     const std::set<std::string> named_trading{
