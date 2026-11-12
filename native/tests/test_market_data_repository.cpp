@@ -314,6 +314,11 @@ int main(){
                       effective_informational.applied_notice_ids.end(),
                       informational_notice.notice_id)!=effective_informational.applied_notice_ids.end(),
             "informational notice leaves the base schedule unchanged and unresolved");
+    const auto unresolved_after_info=find_unresolved_venue_notice_dates(
+        venue_repo.load(),"deutsche-boerse-xetra-2026");
+    require(unresolved_after_info.size()==1U &&
+            format_date(unresolved_after_info.front())=="2026-12-30",
+            "unresolved notice report includes the date that still requires an official circular");
     require(venue_repo.upsert_venue_session_notice(informational_notice)==9U &&
             venue_repo.load().venue_session_notices.size()==1U,
             "replaying the same notice does not duplicate its revision");
@@ -335,6 +340,9 @@ int main(){
             effective_override.day.product_sessions.front().closes_at.hour==13U &&
             !effective_override.requires_official_notice_unresolved,
             "active session override is applied to a copy of the base calendar day");
+    require(find_unresolved_venue_notice_dates(
+        venue_repo.load(),"deutsche-boerse-xetra-2026").empty(),
+        "an active explicit session override resolves the official-notice requirement");
     auto incomplete_override=override_notice;
     incomplete_override.revision=3U;
     incomplete_override.product_sessions.clear();
@@ -379,6 +387,11 @@ int main(){
                       effective_cancelled.applied_notice_ids.end(),
                       override_notice.notice_id)==effective_cancelled.applied_notice_ids.end(),
             "cancellation removes the override and restores the unresolved base schedule");
+    const auto unresolved_after_cancellation=find_unresolved_venue_notice_dates(
+        venue_repo.load(),"deutsche-boerse-xetra-2026");
+    require(unresolved_after_cancellation.size()==1U &&
+            format_date(unresolved_after_cancellation.front())=="2026-12-30",
+            "unresolved notice report restores the date after cancellation");
     auto newer_revision_snapshot=venue_repo.load();
     auto newer_override=override_notice;
     newer_override.revision=3U;
