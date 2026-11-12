@@ -32,6 +32,11 @@ int main(){
  bad=o;bad.received_at=UtcTimestamp{t.unix_seconds-1};throws([&]{validate_observation(fx,nbp,bad);},"chronologia");
  bad=o;bad.value=-1;throws([&]{validate_observation(fx,nbp,bad);},"ujemna cena FX");
  bad=o;bad.schema=schema_version+1U;throws([&]{validate_observation(fx,nbp,bad);},"wersja schematu");
+ bad=o;bad.price_kind=static_cast<PriceKind>(255);throws([&]{validate_observation(fx,nbp,bad);},"nieznany rodzaj ceny");
+ bad=o;bad.frequency=static_cast<Frequency>(255);throws([&]{validate_observation(fx,nbp,bad);},"nieznana częstotliwość");
+ bad=o;bad.quality=static_cast<QualityStatus>(255);throws([&]{validate_observation(fx,nbp,bad);},"nieznany status jakości");
+ auto invalid_asset=fx;invalid_asset.asset_class=static_cast<AssetClass>(255);throws([&]{validate_instrument(invalid_asset);},"nieznana klasa aktywa");
+ auto negative_market=fx;negative_market.allow_negative_prices=true;bad=o;bad.value=-0.5;validate_observation(negative_market,nbp,bad);
  auto bad_fx=fx;bad_fx.quote_currency="PL";throws([&]{validate_instrument(bad_fx);},"kod waluty");
  bad_fx=fx;bad_fx.quote_currency="EUR";throws([&]{validate_instrument(bad_fx);},"waluty pary");
  require(near(convert_quantity(1,Unit::TroyOunce,Unit::Gram),31.1034768),"uncja na gram");
@@ -41,5 +46,6 @@ int main(){
  SeriesMetadata series{fx.id,nbp.id,Frequency::Daily,UtcTimestamp{100},UtcTimestamp{200},10,10,SeriesCompleteness::Complete};
  validate_series_metadata(series);series.completeness=SeriesCompleteness::Partial;series.observed_count=9;validate_series_metadata(series);
  series.observed_count=10;throws([&]{validate_series_metadata(series);},"sprzeczna kompletność");
+ series.completeness=static_cast<SeriesCompleteness>(255);throws([&]{validate_series_metadata(series);},"nieznany status szeregu");
  std::cout<<"Wszystkie testy modelu danych rynkowych zakończone powodzeniem.\n";
 }

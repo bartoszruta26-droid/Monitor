@@ -28,7 +28,47 @@ bool valid_currency(std::string_view s) noexcept {
  for(char c:s)if(c<'A'||c>'Z')return false;
  return true;
 }
-bool https(std::string_view s) noexcept{return s.size()>8&&s.substr(0,8)=="https://";}
+bool https(std::string_view s) noexcept {
+ if(s.size()<=8||s.substr(0,8)!="https://")return false;
+ const auto host_end=s.find_first_of("/?#",8);
+ const auto host=s.substr(8,host_end==std::string_view::npos?s.size()-8:host_end-8);
+ if(host.empty())return false;
+ for(unsigned char c:s)if(c<=0x20U)return false;
+ return true;
+}
+bool valid_asset_class(AssetClass v) noexcept {
+ switch(v){case AssetClass::Currency:case AssetClass::PreciousMetal:case AssetClass::Commodity:return true;}
+ return false;
+}
+bool valid_unit(Unit v) noexcept {
+ switch(v){case Unit::CurrencyUnit:case Unit::Gram:case Unit::Kilogram:case Unit::TroyOunce:
+ case Unit::MetricTon:case Unit::Barrel:case Unit::MegawattHour:return true;}
+ return false;
+}
+bool valid_frequency(Frequency v) noexcept {
+ switch(v){case Frequency::Tick:case Frequency::Minute:case Frequency::Hour:case Frequency::Daily:
+ case Frequency::Weekly:case Frequency::Monthly:case Frequency::Quarterly:case Frequency::SemiAnnual:
+ case Frequency::Annual:case Frequency::Irregular:return true;}
+ return false;
+}
+bool valid_price_kind(PriceKind v) noexcept {
+ switch(v){case PriceKind::Reference:case PriceKind::Average:case PriceKind::Bid:case PriceKind::Ask:
+ case PriceKind::Mid:case PriceKind::Spot:case PriceKind::Transaction:return true;}
+ return false;
+}
+bool valid_period_status(PeriodStatus v) noexcept {
+ switch(v){case PeriodStatus::Complete:case PeriodStatus::Partial:case PeriodStatus::Provisional:return true;}
+ return false;
+}
+bool valid_quality_status(QualityStatus v) noexcept {
+ switch(v){case QualityStatus::Unreviewed:case QualityStatus::Validated:case QualityStatus::Suspect:return true;}
+ return false;
+}
+bool valid_series_completeness(SeriesCompleteness v) noexcept {
+ switch(v){case SeriesCompleteness::Complete:case SeriesCompleteness::Partial:
+ case SeriesCompleteness::Sparse:case SeriesCompleteness::Unknown:return true;}
+ return false;
+}
 bool mass(Unit u) noexcept{return u==Unit::Gram||u==Unit::Kilogram||u==Unit::TroyOunce;}
 long double grams(double v,Unit u) {
  if(u==Unit::Gram)return static_cast<long double>(v);
@@ -83,6 +123,7 @@ std::string format_utc_timestamp(UtcTimestamp t) {
 }
 void validate_instrument(const Instrument& x) {
  if(!valid_id(x.id)||!valid_id(x.symbol)||x.name.empty())throw std::invalid_argument("Niepoprawny identyfikator, symbol lub nazwa instrumentu.");
+ if(!valid_asset_class(x.asset_class)||!valid_unit(x.quantity_unit))throw std::invalid_argument("Nieznana klasa aktywa lub jednostka.");
  if(!valid_currency(x.quote_currency))throw std::invalid_argument("Waluta wyceny musi być trzyliterowym kodem wielkimi literami.");
  if(x.asset_class==AssetClass::Currency){
   if(!x.base_currency||!valid_currency(*x.base_currency)||*x.base_currency==x.quote_currency||x.quantity_unit!=Unit::CurrencyUnit)
@@ -98,6 +139,9 @@ void validate_provider(const Provider& x) {
 void validate_observation(const Instrument& i,const Provider& p,const MarketObservation& o) {
  validate_instrument(i);validate_provider(p);
  if(o.schema!=schema_version)throw std::invalid_argument("Nieobsługiwana wersja schematu.");
+ if(!valid_frequency(o.frequency)||!valid_period_status(o.period_status)||
+    !valid_price_kind(o.price_kind)||!valid_quality_status(o.quality))
+  throw std::invalid_argument("Nieznana częstotliwość, rodzaj ceny, status okresu lub jakość.");
  if(!valid_id(o.id)||o.instrument_id!=i.id||o.provider_id!=p.id)throw std::invalid_argument("Niepoprawne identyfikatory notowania.");
  if(o.received_at.unix_seconds<o.observed_at.unix_seconds)throw std::invalid_argument("Czas pobrania poprzedza czas obserwacji.");
  if(!std::isfinite(o.value))throw std::invalid_argument("Cena musi być skończona.");
@@ -108,6 +152,8 @@ void validate_observation(const Instrument& i,const Provider& p,const MarketObse
 }
 void validate_series_metadata(const SeriesMetadata& x) {
  if(!valid_id(x.instrument_id)||!valid_id(x.provider_id))throw std::invalid_argument("Brak identyfikatora szeregu.");
+ if(!valid_frequency(x.frequency)||!valid_series_completeness(x.completeness))
+  throw std::invalid_argument("Nieznana częstotliwość lub kompletność szeregu.");
  if(x.last_observed_at.unix_seconds<x.first_observed_at.unix_seconds)throw std::invalid_argument("Koniec szeregu poprzedza początek.");
  if(x.expected_count!=0U&&x.observed_count>x.expected_count)throw std::invalid_argument("Liczba obserwacji przekracza oczekiwaną.");
  if(x.completeness==SeriesCompleteness::Complete&&(x.expected_count==0U||x.observed_count!=x.expected_count))
