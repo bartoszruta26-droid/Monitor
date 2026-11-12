@@ -68,3 +68,20 @@ Rewizja jest niezmienna. Zmiana bajtów źródła nie musi automatycznie zmienia
 - Każda referencja jest walidowana; błędny SHA, brak pliku, niezgodny rozmiar, traversal i symlink są odrzucane.
 - Stare rekordy JSON v1 nadal są czytelne.
 - Pełny CI przechodzi dla konkretnego SHA.
+## Status implementacji
+
+### Etap 15A — zakończony
+
+- Dodano `SourceArchiveObject`, którego tożsamość ma postać `sha256:<64 lowercase hex>`. Obiekt przechowuje wyłącznie niezmienne metadane bajtów: skrót, długość, typ treści i względną ścieżkę archiwum. URI, czas pobrania, atrybucja i licencja pozostają w `SourceCalendarDocument`, ponieważ opisują pochodzenie konkretnego pobrania.
+- Dodano opcjonalną kolekcję `source_objects` w `MarketDataSnapshot` i `MarketDataBatch` oraz operację `upsert_source_object`. Nowa kolekcja jest opcjonalna przy odczycie JSON v1, więc starsze dokumenty pozostają czytelne.
+- `SourceCalendarDocument.source_object_id` jest opcjonalnym odwołaniem do istniejącego obiektu; walidacja wymaga zgodności identyfikatora i SHA-256.
+- Obiekty są niezmienne, deduplikowane po SHA-256 i sprawdzane przy zapisie/odczycie. Ten sam hash z innymi metadanymi bajtów jest konfliktem. Nazwa pliku archiwum musi zaczynać się od pełnego SHA-256.
+- Testy obejmują round-trip, dwie rewizje kalendarza współdzielące jeden obiekt, konflikt metadanych, brakującą referencję, próbę usunięcia obiektu, błędną nazwę ścieżki oraz brak/uszkodzenie pliku.
+- CI dla SHA `ede4b0f29cec1db11b89e20394254dfd4780e52b`: [43318104387](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43318104387) — Configure, Build i Test: success; CTest **9/9**.
+
+### Etap 15B — następny
+
+- Przenieść zapis archiwum Xetra na ścieżkę content-addressed `*.sources/objects/<sha256>.<ext>` i podłączyć importer do `SourceArchiveObject`.
+- Dla tego samego SHA ponowne pobranie nie może tworzyć kopii pliku. Różne rewizje kalendarza mogą wskazywać ten sam obiekt.
+- Zapisywać obiekt przed publikacją kalendarza; awaria importu nie może pozostawić referencji do nieistniejących bajtów.
+- Zachować obsługę dotychczasowych archiwów `document_id/version/hash` jako legacy do czasu jawnej migracji.
