@@ -1,25 +1,22 @@
 name: Native C++ checks
-
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
   native-linux:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Install native build tools
+      - name: Install native build tools and provider dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build g++
+          sudo apt-get install -y cmake ninja-build g++ libcurl4-openssl-dev nlohmann-json3-dev libarchive-dev libxml2-dev
       - name: Configure
         run: cmake -S native -B build/native -G Ninja -DCMAKE_BUILD_TYPE=Release -DMONITOR_BUILD_TESTS=ON
       - name: Build

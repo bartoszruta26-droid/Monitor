@@ -14,10 +14,13 @@ Rdzeń nie zależy od Qt, Android SDK, serwera HTTP, JSON-owego magazynu ani Mar
 - suma kwadratów reszt (SSE);
 - szerokość DGT: sqrt(SSE / (n - 1));
 - szerokość LonesomeTheBlue: sqrt(SSE / n);
+- wspólny interfejs adapterów dostawców i transport HTTP libcurl;
+- adaptery NBP A/B/C, Frankfurter v2, World Bank Pink Sheet i XAUS spot;
+- testy adapterów z atrapami HTTP, bez połączeń sieciowych;
 - CLI, testy jednostkowe i CTest.
 
 ## Budowanie i testowanie
-Wymagania: CMake 3.20+, kompilator C++20 i Bash.
+Wymagania: CMake 3.20+, kompilator C++20, Bash, libcurl, nlohmann-json, libarchive i libxml2.
 Z katalogu głównego:
 bash scripts/build-native.sh
 bash scripts/test-native.sh

@@ -511,3 +511,37 @@ Przebieg historyczny 43237592885 zakończył się niepowodzeniem na wcześniejsz
 - Commit implementacji i walidacji: e31c62b50840202264374bc1a590f71a9454146f.
 - CI: sukces; konfiguracja, budowanie i CTest zakończone powodzeniem; 2/2 testy.
 - Etap 1 zamknięty. Następny etap to Etap 2 — adaptery dostawców C++20, zgodne z modelem danych v1. Magazyn JSON pozostaje późniejszym Etapem 3.
+
+
+## 11. Etap 2 — adaptery dostawców C++20 (realizacja)
+
+### Zakres implementacji
+- Wspólny kontrakt ProviderAdapter oraz AdapterResult.
+- Abstrakcja HttpTransport i produkcyjny transport CurlHttpTransport.
+- HttpClient z listą dozwolonych hostów HTTPS, limitami rozmiaru, timeoutami, minimalnym odstępem żądań i ponawianiem błędów przejściowych.
+- Adapter NBP: tabele A/B/C i złoto PLN/g.
+- Adapter Frankfurter v2 z możliwością przypięcia dostawcy lub użycia blendu.
+- Adapter World Bank Pink Sheet: dynamiczne odnajdywanie miesięcznego XLSX i parser arkusza Monthly Prices.
+- Adapter XAUS dla orientacyjnych cen spot XAU/XAG.
+- Deduplikacja notowań oraz walidacja wyników wspólnym modelem.
+- Testy z atrapami HTTP i wzorcowymi odpowiedziami, bez dostępu do Internetu.
+
+### Pliki
+- native/include/monitor/market_data_adapters.hpp
+- native/src/market_data_adapters.cpp
+- native/tests/test_market_data_adapters.cpp
+- docs/cpp-provider-adapters.md
+
+### Zależności
+libcurl, nlohmann-json, libarchive i libxml2; zależności instalowane w workflow Linux. Aktywny proces pozostaje C++20/CMake/CTest, bez Pythona.
+
+### Semantyka i ograniczenia
+- NBP A/B są Average; NBP C emituje osobne Bid i Ask, bez sztucznego midpointu.
+- Tabela C zachowuje tradingDate i effectiveDate oddzielnie.
+- Frankfurter jest Mid z flagą źródła zbiorczego lub przypiętego.
+- Pink Sheet zachowuje częstotliwość miesięczną i USD/uncję trojańską.
+- XAUS jest orientacyjnym mid-market spot, nie ceną transakcyjną; stan stale oznaczany jako podejrzany.
+- Brak zapisu JSON — ten pozostaje Etapem 3.
+
+### Kryteria ukończenia
+Etap 2 można zamknąć dopiero po kompilacji w CI, przejściu testów adapterów i dotychczasowych testów rdzenia oraz kontroli dokumentacji. Rzeczywiste testy sieciowe są osobne i nie są warunkiem testów jednostkowych.
