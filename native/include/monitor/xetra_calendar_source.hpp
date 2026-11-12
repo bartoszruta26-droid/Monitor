@@ -13,6 +13,12 @@ public:
     [[nodiscard]] VenueSessionCalendar fetch(SourceCalendarDocument source) const;
     [[nodiscard]] std::uint64_t import(JsonMarketDataRepository& repository,
                                         SourceCalendarDocument source) const;
+    // New API: source.version identifies the source document; calendar_id
+    // and calendar_revision independently identify the semantic calendar revision.
+    [[nodiscard]] std::uint64_t import(JsonMarketDataRepository& repository,
+                                        SourceCalendarDocument source,
+                                        std::string calendar_id,
+                                        std::uint32_t calendar_revision) const;
 private:
     HttpTransport& transport_;
 };
