@@ -235,6 +235,17 @@ void verify_source_archives(const MarketDataSnapshot& snapshot,const std::filesy
         if(!source.content_sha256 || sha256_hex(bytes)!=*source.content_sha256)
             throw std::runtime_error("SHA-256 archiwum źródła nie zgadza się z manifestem.");
     }
+    for(const auto& object:snapshot.source_objects) {
+        SourceCalendarDocument manifest;
+        manifest.archive_relative_path=object.archive_relative_path;
+        manifest.content_length_bytes=object.content_length_bytes;
+        manifest.content_sha256=object.content_sha256;
+        VenueSessionCalendar archive_record;
+        archive_record.source=std::move(manifest);
+        MarketDataSnapshot archive_snapshot;
+        archive_snapshot.venue_calendars.push_back(std::move(archive_record));
+        verify_source_archives(archive_snapshot,repository_file);
+    }
 }
 std::string observation_key(const MarketObservation& x) {
     return x.instrument_id+"\x1f"+x.provider_id+"\x1f"+std::to_string(x.observed_at.unix_seconds)+"\x1f"+
