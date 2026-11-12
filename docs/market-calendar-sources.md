@@ -206,3 +206,14 @@ Importer:
 Fixture `native/tests/fixtures/xetra_2026_calendar.html` jest lokalnym, syntetycznym odwzorowaniem struktury semantycznej źródła. Testy nie wykonują żądań sieciowych. Nie jest to zrzut bajtów pobrany z Deutsche Börse, dlatego hash fixture służy wyłącznie testowi kontraktu parsera, a nie jako hash oficjalnego dokumentu.
 
 **Ograniczenie zakresu:** pierwsza implementacja obsługuje schemat strony i rok 2026. Nie pobiera HTML, nie archiwizuje automatycznie kolejnych wersji i nie rozstrzyga licencji. Zmiana układu tabeli lub etykiet ma zakończyć import błędem, a nie wygenerować pozornie poprawny kalendarz. Importer nie odczytuje skróconych sesji z okólnika końcoworocznego; pozostają one osobnym źródłem i wymagają jawnej wersji dokumentu.
+
+
+## Archiwum surowych źródeł Xetra
+
+Importer zapisuje oryginalne bajty HTML przed publikacją metadanych kalendarza. Dla repozytorium `calendar.json` archiwum znajduje się w katalogu `calendar.json.sources/<document_id>/<version>-<sha256>.html`. Identyfikator dokumentu jest normalizowany do bezpiecznego składnika ścieżki, a nazwa pliku zawiera skrót SHA-256 obliczony przed dekodowaniem HTML.
+
+Zapis pliku źródłowego odbywa się przez plik tymczasowy i zmianę nazwy w obrębie tego samego katalogu. W przypadku przerwania między archiwizacją a aktualizacją JSON może pozostać osierocony plik źródłowy; nie powstaje natomiast rekord kalendarza wskazujący na nieistniejące bajty. Archiwum jest treścią dowodową, nie jest automatycznie usuwane ani nadpisywane.
+
+Powtórne pobranie z tym samym `document_id` i SHA-256 jest deduplikowane i nie tworzy nowej wersji kalendarza. Różnica choćby jednego bajtu daje inny hash i może utworzyć kolejną, niezmienną wersję. Samo przesunięcie numeru żądanej wersji bez zmiany bajtów nie publikuje nowej wersji. Weryfikacja skrótu i zgodności bajtów odbywa się również przy ponownym użyciu istniejącej ścieżki archiwum.
+
+Testy używają lokalnego fixture HTML i sztucznego transportu; nie wykonują pobrania sieciowego. Licencja źródła pozostaje `Unknown`, dopóki warunki ponownego wykorzystania nie zostaną niezależnie potwierdzone.
