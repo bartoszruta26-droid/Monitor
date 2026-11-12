@@ -180,6 +180,50 @@ MarketObservationRevision decode_revision(const json& j) {
     return MarketObservationRevision{decode_observation(j.at("previous")),
         parse_utc_timestamp(j.at("superseded_at").get<std::string>()),j.at("superseded_by_id").get<std::string>()};
 }
+
+void verify_source_archives(const MarketDataSnapshot& snapshot,const std::filesystem::path& repository_file) {
+    auto root=repository_file.parent_path();
+    if(root.empty()) root=".";
+    for(const auto& calendar:snapshot.venue_calendars) {
+        const auto& source=calendar.source;
+        if(!source.archive_relative_path) continue; // Legacy schema-v1 record.
+        const std::filesystem::path relative(*source.archive_relative_path);
+        if(relative.empty() || relative.is_absolute() || relative.has_root_name() || relative.has_root_directory())
+            throw std::runtime_error("Niebezpieczna ścieżka archiwum źródła.");
+        for(const auto& component:relative) {
+            if(component==".." || component=="." || component.empty())
+                throw std::runtime_error("Ścieżka archiwum źródła wychodzi poza katalog repozytorium.");
+        }
+        auto current=root;
+        for(const auto& component:relative) {
+            current/=component;
+            std::error_code ec;
+            const auto status=std::filesystem::symlink_status(current,ec);
+            if(ec || std::filesystem::is_symlink(status))
+                throw std::runtime_error("Archiwum źródła zawiera brakujący element lub dowiązanie symboliczne.");
+        }
+        const int fd=::open(current.c_str(),O_RDONLY|O_CLOEXEC|O_NOFOLLOW);
+        if(fd<0) throw std::runtime_error("Brak pliku archiwum wskazanego przez manifest źródła.");
+        struct stat st{};
+        if(::fstat(fd,&st)!=0 || !S_ISREG(st.st_mode) || st.st_size<0) {
+            ::close(fd);
+            throw std::runtime_error("Plik archiwum źródła nie jest prawidłowym plikiem regularnym.");
+        }
+        std::string bytes;
+        std::array<char,65536> buffer{};
+        while(true) {
+            const auto n=::read(fd,buffer.data(),buffer.size());
+            if(n==0) break;
+            if(n<0) { if(errno==EINTR) continue; ::close(fd); throw std::runtime_error("Błąd odczytu archiwum źródła."); }
+            bytes.append(buffer.data(),static_cast<std::size_t>(n));
+        }
+        ::close(fd);
+        if(source.content_length_bytes && bytes.size()!=*source.content_length_bytes)
+            throw std::runtime_error("Długość archiwum źródła nie zgadza się z manifestem.");
+        if(!source.content_sha256 || sha256_hex(bytes)!=*source.content_sha256)
+            throw std::runtime_error("SHA-256 archiwum źródła nie zgadza się z manifestem.");
+    }
+}
 std::string observation_key(const MarketObservation& x) {
     return x.instrument_id+"\x1f"+x.provider_id+"\x1f"+std::to_string(x.observed_at.unix_seconds)+"\x1f"+
         enum_name(x.price_kind)+"\x1f"+enum_name(x.frequency);
@@ -243,6 +287,9 @@ json encode(const VenueSessionCalendar& x) {
         {"timezone",source.timezone},{"source_uri",source.source_uri},
         {"retrieved_at",source.retrieved_at ? json(format_utc_timestamp(*source.retrieved_at)) : json(nullptr)},
         {"content_sha256",source.content_sha256 ? json(*source.content_sha256) : json(nullptr)},
+        {"archive_relative_path",source.archive_relative_path ? json(*source.archive_relative_path) : json(nullptr)},
+        {"content_length_bytes",source.content_length_bytes ? json(*source.content_length_bytes) : json(nullptr)},
+        {"content_type",source.content_type ? json(*source.content_type) : json(nullptr)},
         {"attribution",source.attribution},{"license_status",enum_name(source.license_status)}
     };
     json days = json::array();
@@ -274,6 +321,12 @@ VenueSessionCalendar decode_venue_calendar(const json& j) {
         result.source.retrieved_at=parse_utc_timestamp(s.at("retrieved_at").get<std::string>());
     if (!s.at("content_sha256").is_null())
         result.source.content_sha256=s.at("content_sha256").get<std::string>();
+    if (s.contains("archive_relative_path") && !s.at("archive_relative_path").is_null())
+        result.source.archive_relative_path=s.at("archive_relative_path").get<std::string>();
+    if (s.contains("content_length_bytes") && !s.at("content_length_bytes").is_null())
+        result.source.content_length_bytes=s.at("content_length_bytes").get<std::uint64_t>();
+    if (s.contains("content_type") && !s.at("content_type").is_null())
+        result.source.content_type=s.at("content_type").get<std::string>();
     result.source.attribution=s.at("attribution").get<std::string>();
     result.source.license_status=parse_venue_license_status(s.at("license_status").get<std::string>());
     for (const auto& value : j.at("days")) {
@@ -560,8 +613,8 @@ MarketDataSnapshot JsonMarketDataRepository::load_unlocked() const {
     if(!std::filesystem::exists(file_path_))return MarketDataSnapshot{};
     const auto raw=read_file(file_path_,config_.max_document_bytes,false);
     if(raw.empty())throw std::runtime_error("Dokument magazynu JSON jest pusty.");
-    try{return decode_snapshot(json::parse(raw));}
-    catch(const std::exception& e){throw std::runtime_error("Magazyn JSON jest uszkodzony lub niezgodny ze schematem: "+std::string(e.what()));}
+    try{auto snapshot=decode_snapshot(json::parse(raw));verify_source_archives(snapshot,file_path_);return snapshot;}
+    catch(const std::exception& e){throw std::runtime_error("Magazyn JSON jest uszkodzony lub niezgodny ze schematem albo archiwum źródła narusza integralność: "+std::string(e.what()));}
 }
 MarketDataSnapshot JsonMarketDataRepository::load() const {
     auto lock_path=file_path_.string()+".lock";FileLock lock(lock_path);return load_unlocked();
