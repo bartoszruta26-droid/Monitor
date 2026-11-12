@@ -88,3 +88,8 @@ Importer `import_pdf_notice` pobiera PDF z zatwierdzonego hosta, wydobywa tekst 
 ## Wynik Etapu 18C
 
 `VenueSessionNotice` przechowuje teraz `parser_version`. `publish_notice_revision_from_archive` odczytuje archiwalny PDF, weryfikuje SHA-256 i długość, wydobywa tekst ponownie i publikuje nową rewizję bez HTTP. Kolejne rewizje współdzielą ten sam niezmienny obiekt źródłowy. Testy sprawdzają również idempotentny replay. CI [43327718619](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43327718619) — success. Etapy 18A–18C są zakończone w zakresie offline. Oryginalny PDF giełdy nie został jeszcze zapisany jako fixture; jego weryfikacja to Etap 19.
+
+
+## Parser v2 — oryginalny układ PDF
+
+Oryginalne ogłoszenie z 30 grudnia 2026 r. umieszcza godziny aukcji i Trade-at-Close w sekcji 2 (rynek Xetra), natomiast koniec usług TES OTC/LIS i Xetra EnLight w osobnej sekcji 3, podsekcji b) Xetra. Trade-at-Close jest rozdzielony między dwa wiersze tekstu. Parser `xetra-pdf-text-notice-v2` rozdziela te sekcje, łączy kontynuację wierszy tylko dla właściwego zdarzenia i wymaga MIC XETR w obu miejscach. Oficjalny PDF: https://cashmarket.deutsche-boerse.com/resource/blob/5673886/22764993c4b1617c5f465186066344e6/data/Final%20trading%20session%202026.pdf. Testowy fixture jest transkrypcją tekstu, a nie oryginalnymi bajtami PDF.
