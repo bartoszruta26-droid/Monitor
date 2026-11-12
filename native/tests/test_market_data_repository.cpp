@@ -105,7 +105,7 @@ int main(){
     {std::ofstream out(file,std::ios::binary|std::ios::trunc);out<<"{broken";}
     throws([&]{(void)repo.load();},"corrupt primary is not silently hidden");
     auto recovered=repo.restore_backup();
-    require(recovered.revision==4,"backup restores previous committed revision");
+    require(recovered.revision==5,"backup recovery advances the document revision");
     require(recovered.observations.front().value==4.25,"backup content is previous valid state");
 
     const auto concurrent_file=(dir/"concurrent.json").string();

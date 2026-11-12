@@ -403,9 +403,17 @@ std::uint64_t JsonMarketDataRepository::upsert_series_metadata(const SeriesMetad
 MarketDataSnapshot JsonMarketDataRepository::restore_backup() {
     FileLock lock(file_path_.string()+".lock");
     const auto raw=read_file(backup_path(),config_.max_document_bytes,false);
-    const auto recovered=decode_snapshot(json::parse(raw));
-    (void)recovered;
-    durable_write(file_path_,raw);
+    auto recovered=decode_snapshot(json::parse(raw));
+    if(recovered.revision==std::numeric_limits<std::uint64_t>::max())
+        throw std::overflow_error("Przekroczono licznik rewizji podczas odtwarzania kopii.");
+    ++recovered.revision;
+    const auto now=std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    recovered.updated_at=UtcTimestamp{now};
+    const auto restored=encode_snapshot(recovered).dump(2)+'\\n';
+    if(restored.size()>config_.max_document_bytes)
+        throw std::runtime_error("Odtworzony dokument przekracza skonfigurowany limit.");
+    durable_write(file_path_,restored);
     auto parent=file_path_.parent_path();if(parent.empty())parent=".";sync_directory(parent);
     return load_unlocked();
 }
