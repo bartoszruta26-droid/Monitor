@@ -2,79 +2,171 @@
 
 # MONITOR RYNKÓW
 
-### Natywna platforma analizy danych rynkowych, regresji i portfela aktywów
+### Wieloplatformowa platforma danych rynkowych, analizy i zarządzania portfelem
 
-**C++20 · Bash · Linux Desktop · Android · TradingView Pine Script**
+**C++20 · Bash · Linux GUI · WebUI · TUI · Android · JSON · MariaDB**
 
 </div>
 
 ---
 
-## 1. Cel projektu
+## 1. Cel i zakres systemu
 
-Monitor Rynków ma być wieloplatformowym systemem do gromadzenia, porządkowania, wizualizacji i analizy danych finansowych. Obejmuje waluty, złoto, srebro, inne metale i aktywa wyceniane indywidualnie. Projekt łączy:
+Monitor Rynków jest jedną platformą, która gromadzi, wymienia, przechowuje, analizuje i prezentuje dane rynkowe oraz dane portfela. Obsługuje waluty, złoto, srebro, inne metale i aktywa wyceniane indywidualnie.
 
-1. kontrolowane źródła danych i zachowanie ich pochodzenia;
-2. analizę techniczną, regresję liniową i kanały odchyleń;
-3. ewidencję portfela, wycenę, ekspozycję i ryzyko;
-4. wykresy, alerty, raporty i narzędzia decyzyjne.
+System ma cztery równorzędne interfejsy użytkownika:
 
-Podstawową zasadą jest rozdzielenie danych źródłowych, danych przeliczonych, estymacji i prognoz. Każda wartość powinna mieć określone źródło, datę, jednostkę, walutę i metodę obliczenia.
+1. **Linux GUI** — pełna aplikacja graficzna dla systemów Linux;
+2. **WebUI** — interfejs dostępny przez przeglądarkę;
+3. **TUI** — interfejs terminalowy;
+4. **Android App** — aplikacja mobilna.
 
-## 2. Kierunek technologiczny — bez Pythona
+Wszystkie interfejsy korzystają z tego samego modelu danych, reguł biznesowych i silnika analitycznego. Wymianę danych pomiędzy usługami, adapterami źródeł i klientami zapewnia odrębny **serwer wymiany danych**.
 
-Aktywny rozwój odbywa się w **C++20** oraz **Bash**. Python nie jest wymagany do budowania, testowania ani uruchamiania aktywnego rdzenia projektu. Historyczny prototyp backendu w katalogu `backend/` jest zamrożony i nie jest częścią bieżącego procesu CI.
+## 2. Architektura docelowa
 
-### Docelowa architektura
+System składa się z sześciu logicznych warstw:
 
-| Warstwa | Technologia | Rola |
+| Warstwa | Odpowiedzialność | Docelowa technologia |
 |---|---|---|
-| Rdzeń obliczeniowy | C++20 | regresja, kanały, statystyki, portfel |
-| Linux Desktop | Qt 6 / C++ | pełny interfejs graficzny |
-| Android | C++20 + JNI lub Qt 6 | współdzielenie rdzenia i interfejs mobilny |
-| Usługa danych | C++20 | API, adaptery dostawców i harmonogram |
-| Magazyn lokalny | SQLite | praca offline i lokalna baza |
-| Magazyn serwerowy | PostgreSQL | synchronizacja i praca wieloużytkownikowa |
-| Komunikacja HTTP | libcurl | pobieranie danych z dostawców |
-| Format danych | JSON | konfiguracja, wymiana danych i API |
-| Budowanie i automatyzacja | CMake + Bash | kompilacja, testy, pakowanie i administracja |
-| Wskaźnik TradingView | Pine Script v6 | niezależna integracja z wykresami TradingView |
+| Wspólny rdzeń | modele danych, walidacja, obliczenia, reguły biznesowe | C++20 |
+| Serwer wymiany danych | komunikacja między backendami i klientami, API, synchronizacja, autoryzacja | C++20, HTTP/REST, JSON, WebSocket |
+| Adaptery backendów | pobieranie i wysyłanie danych do dostawców oraz usług zewnętrznych | C++20, libcurl |
+| Magazyn trwały | zapis danych i konfiguracji | JSON jako tryb domyślny; MariaDB jako opcja |
+| Interfejsy | prezentacja, sterowanie i obsługa użytkownika | Qt 6/C++, WebUI, C++ TUI, Android |
+| Narzędzia rozwojowe | konfiguracja kompilacji, testy, pakowanie i administracja | CMake, Bash, GitHub Actions |
 
-Celem jest jeden wspólny rdzeń C++ używany przez różne interfejsy. Nie należy powielać matematyki regresji osobno w aplikacji desktopowej i mobilnej.
+### 2.1. Serwer wymiany danych — centralny element komunikacji
 
-### Zasady architektoniczne
+Serwer wymiany danych jest niezależną usługą. Nie jest tym samym co magazyn danych i nie może być utożsamiany z jednym z adapterów dostawców.
 
-- Rdzeń analityczny nie może zależeć od Qt, Android SDK, bazy danych ani interfejsu.
-- Interfejs komunikuje się z rdzeniem przez stabilne nagłówki C++ i — w razie potrzeby — cienką warstwę JNI.
-- Adaptery dostawców, magazyn danych, API i interfejs użytkownika pozostają osobnymi modułami.
-- Aplikacja mobilna powinna móc wykonywać podstawowe obliczenia i odczytywać lokalne dane bez połączenia z serwerem.
-- Synchronizacja z usługą serwerową nie może blokować interfejsu.
-- Sekrety i tokeny nigdy nie mogą być zapisane w repozytorium ani w plikach konfiguracyjnych użytkownika w postaci jawnej.
+Jego zadania:
 
-## 3. Aktualny stan implementacji
+- udostępnianie wspólnego API dla Linux GUI, WebUI, TUI i Android App;
+- wymiana danych pomiędzy wieloma backendami i adapterami;
+- normalizacja komunikatów do wspólnego modelu danych;
+- obsługa importu, eksportu, synchronizacji i kontroli wersji danych;
+- przekazywanie zdarzeń i aktualizacji klientom;
+- uwierzytelnianie klientów i backendów oraz kontrola uprawnień;
+- rejestrowanie operacji, błędów i pochodzenia danych;
+- kontrola konfliktów przy równoczesnej modyfikacji danych.
+
+Podstawowym interfejsem komunikacji będzie HTTP/REST z komunikatami JSON. WebSocket będzie używany tam, gdzie potrzebne są aktualizacje w czasie rzeczywistym. Kontrakt API powinien być wersjonowany i opisany w OpenAPI.
+
+Serwer ma obsługiwać wielu dostawców i wiele instancji backendów. Każdy backend komunikuje się przez jawnie zdefiniowany adapter i nie zapisuje bezpośrednio do magazynu należącego do innego modułu. Zapis przechodzi przez warstwę usług i repozytoriów serwera.
+
+### 2.2. Magazyn danych — JSON domyślnie, MariaDB opcjonalnie
+
+Aplikacja ma obsługiwać dwa wymienne warianty trwałego zapisu:
+
+**Tryb domyślny: pliki JSON**
+- działa bez instalowania i konfigurowania serwera bazy danych;
+- przechowuje dane w katalogu wskazanym w konfiguracji;
+- wykorzystuje wersjonowany format dokumentów;
+- powinien zapewniać zapis atomowy, kopie bezpieczeństwa, walidację i odzyskiwanie po przerwanym zapisie;
+- powinien obsługiwać blokady lub kontrolę wersji przy równoczesnym dostępie.
+
+**Tryb opcjonalny: MariaDB**
+- wybierany przez konfigurację;
+- przeznaczony do większej liczby użytkowników, backendów i równoległych zapisów;
+- korzysta z migracji schematu i transakcji;
+- połączenia i dane dostępowe są przechowywane poza repozytorium, najlepiej w zmiennych środowiskowych lub bezpiecznym magazynie sekretów.
+
+Oba warianty muszą implementować ten sam interfejs repozytorium i zapewniać równoważne operacje domenowe. Zmiana magazynu nie może wymagać modyfikacji kodu interfejsów ani silnika analitycznego.
+
+Nie zakłada się SQLite ani PostgreSQL jako domyślnych magazynów. Mogą zostać dodane w przyszłości jako osobne adaptery, jeśli pojawi się uzasadniona potrzeba.
+
+### 2.3. Wspólny rdzeń C++
+
+Rdzeń C++20 jest niezależny od interfejsu, serwera i konkretnego magazynu. Obejmuje:
+- modele instrumentów, notowań, świec, portfeli i transakcji;
+- walidację jednostek, walut, dat i jakości danych;
+- regresję, kanały, statystyki i modele ryzyka;
+- reguły wyceny oraz obliczenia portfelowe;
+- wspólne typy błędów i wyników.
+
+Nie wolno implementować tej samej logiki analitycznej odrębnie w Linux GUI, WebUI, TUI i Androidzie.
+
+## 3. Cztery interfejsy użytkownika
+
+### 3.1. Linux GUI
+
+Pełna aplikacja graficzna na Linux. Zalecany Qt 6 i C++. Interfejs powinien obsługiwać wykresy, tabele, konfigurację źródeł, instrumenty, portfel, alerty, raporty i ustawienia serwera. Może pracować z lokalnym serwerem albo łączyć się ze zdalną instancją.
+
+### 3.2. WebUI
+
+Interfejs przeglądarkowy udostępniany przez serwer. Zalecany HTML, CSS i TypeScript. WebUI korzysta z tego samego wersjonowanego API co pozostałe klienty. Nie może zawierać niezależnej implementacji obliczeń finansowych.
+
+### 3.3. TUI
+
+Interfejs terminalowy do administracji, diagnostyki, monitorowania danych i podstawowej obsługi portfela. Zalecany C++ z biblioteką terminalową, np. FTXUI lub ncurses. TUI korzysta z API serwera albo z lokalnej usługi — nie omija warstwy uprawnień i walidacji.
+
+### 3.4. Android App
+
+Aplikacja mobilna z dostępem do tych samych funkcji domenowych. Możliwe warianty:
+- Qt 6 i C++;
+- natywny interfejs Android w Kotlinie z biblioteką C++ udostępnioną przez JNI.
+
+Wybór wariantu nie może prowadzić do duplikowania logiki rdzenia. Aplikacja ma obsługiwać bezpieczne logowanie, konfigurację serwera, synchronizację, wykresy, alerty i lokalną pamięć podręczną. Tryb offline powinien jasno rozróżniać dane zsynchronizowane od oczekujących na wysłanie.
+
+## 4. Zasady komunikacji i synchronizacji
+
+- Serwer wymiany danych jest punktem komunikacji między klientami i backendami.
+- Wszystkie komunikaty mają wersjonowany schemat JSON.
+- Każdy rekord powinien mieć stabilny identyfikator, źródło, czas utworzenia i aktualizacji oraz informację o wersji.
+- Dane rynkowe zachowują czas obserwacji, czas pobrania, dostawcę, symbol, jednostkę, walutę i częstotliwość.
+- Import musi być idempotentny: ponowne przesłanie tego samego rekordu nie może tworzyć niekontrolowanych duplikatów.
+- Konflikty synchronizacji wymagają jawnej reguły rozstrzygania; nie wolno bezwarunkowo nadpisywać nowszych danych starszymi.
+- Operacje zapisu powinny być rejestrowane i możliwe do audytu.
+- Klienci nie łączą się bezpośrednio z MariaDB. Dostęp do magazynu zapewnia wyłącznie serwer.
+- W trybie JSON serwer zarządza zapisem plików; wiele procesów nie może równolegle modyfikować tych samych dokumentów bez blokad lub kontroli wersji.
+- Komunikacja zdalna wymaga TLS. Sekrety nie mogą trafiać do repozytorium.
+
+## 5. Kierunek technologiczny — bez Pythona
+
+Aktywny rozwój odbywa się w C++20, Bash oraz językach niezbędnych dla interfejsów (TypeScript/JavaScript dla WebUI, Kotlin wyłącznie jeśli zostanie wybrany natywny Android). Python nie jest wymagany i nie może być wprowadzany do aktywnego procesu budowania, testowania ani uruchamiania.
+
+| Obszar | Technologia |
+|---|---|
+| Rdzeń, serwer i adaptery | C++20 |
+| Budowanie | CMake |
+| Automatyzacja | Bash |
+| Linux GUI | Qt 6 / C++ |
+| WebUI | HTML, CSS, TypeScript |
+| TUI | C++ / FTXUI lub ncurses |
+| Android | Qt 6/C++ albo Kotlin + JNI |
+| API | HTTP/REST, JSON, WebSocket |
+| Magazyn domyślny | pliki JSON |
+| Magazyn opcjonalny | MariaDB |
+| HTTP i integracje | libcurl |
+| Testy | CTest oraz testy C++ |
+| CI | GitHub Actions |
+
+## 6. Aktualny stan implementacji
 
 **Dostępne w repozytorium:**
+- biblioteka C++20 `monitor_core`;
+- regresja liniowa, SSE i kanały DGT/LonesomeTheBlue;
+- program konsolowy `monitor-regression`;
+- testy jednostkowe rdzenia;
+- skrypty Bash do budowania i testowania;
+- GitHub Actions budujące i testujące rdzeń C++ na Linux;
+- wskaźnik Pine Script v6 dla TradingView.
 
-- Natywna biblioteka C++20 `monitor_core`.
-- Regresja liniowa metodą najmniejszych kwadratów.
-- Obliczanie sumy kwadratów reszt (SSE).
-- Dwie odrębne definicje szerokości kanału: DGT i LonesomeTheBlue.
-- Kanał regresji z niezależnym mnożnikiem.
-- Program konsolowy `monitor-regression`.
-- Testy jednostkowe rdzenia bez zewnętrznego frameworka.
-- Skrypty Bash do kompilacji i testów.
-- CI GitHub Actions budujące i testujące kod C++ na Linux.
+**Kierunek architektoniczny opisany, ale jeszcze niezaimplementowany:**
+- serwer wymiany danych i jego API;
+- komunikacja pomiędzy wieloma backendami;
+- magazyn JSON jako domyślny adapter trwałego zapisu;
+- adapter MariaDB;
+- autoryzacja, synchronizacja i kontrola konfliktów;
+- Linux GUI, WebUI, TUI i Android App;
+- adaptery dostawców danych w C++.
 
-**Jeszcze nieukończone:** natywne adaptery danych NBP/Frankfurter/World Bank, magazyn SQLite/PostgreSQL w C++, usługa HTTP C++, interfejs Qt Desktop, aplikacja Android, synchronizacja i moduł portfela. Nie należy przedstawiać tych elementów jako gotowych.
+Nie należy przedstawiać tych elementów jako działających, dopóki nie zostaną zaimplementowane i przetestowane.
 
-## 4. Budowanie i testowanie
+## 7. Budowanie i testowanie obecnego rdzenia
 
-### Wymagania
-
-- Linux;
-- CMake 3.20 lub nowszy;
-- kompilator C++20, np. GCC 10+ albo Clang 12+;
-- Bash.
+Wymagania: Linux, CMake 3.20+, kompilator C++20 i Bash.
 
 Na Debianie/Ubuntu:
 
@@ -83,9 +175,7 @@ sudo apt-get update
 sudo apt-get install -y build-essential cmake ninja-build
 ```
 
-### Kompilacja i testy
-
-Z katalogu głównego repozytorium:
+Kompilacja i testy:
 
 ```bash
 git clone https://github.com/bartoszruta26-droid/Monitor.git
@@ -93,13 +183,13 @@ cd Monitor
 bash scripts/build-native.sh
 ```
 
-Tryb testowy:
+Osobny przebieg testów:
 
 ```bash
 bash scripts/test-native.sh
 ```
 
-Ręcznie przez CMake:
+Ręcznie:
 
 ```bash
 cmake -S native -B build/native -DCMAKE_BUILD_TYPE=Release
@@ -107,81 +197,51 @@ cmake --build build/native --parallel
 ctest --test-dir build/native --output-on-failure
 ```
 
-Uruchomienie przykładowego obliczenia:
+Przykładowe obliczenie:
 
 ```bash
 ./build/native/monitor-regression 10 11 12 13 15 14 16
 ```
 
-Program wypisuje nachylenie, wartość regresji na końcu okna, SSE, szerokość DGT oraz szerokość RMS LonesomeTheBlue.
+## 8. Silnik regresji i kanałów
 
-## 5. Silnik regresji i kanałów
-
-Implementacja znajduje się w:
-
+Kod znajduje się w:
 - `native/include/monitor/regression.hpp`;
 - `native/src/regression.cpp`;
 - `native/tests/test_regression.cpp`.
 
-Dane wejściowe są przekazywane chronologicznie — od najstarszej do najnowszej obserwacji. Wartość regresji zwracana jako `fitted_last` odpowiada końcowi analizowanego okna.
+Dane wejściowe są uporządkowane chronologicznie od najstarszej do najnowszej obserwacji. Wartość dopasowana `fitted_last` odpowiada końcowi analizowanego okna.
 
-### Wspólna regresja
-
-Dla obserwacji `y[i]`, gdzie indeks czasu wynosi od 0 do n−1, silnik wyznacza współczynnik kierunkowy, wyraz wolny, wartości dopasowane i sumę kwadratów reszt:
+Suma kwadratów reszt:
 
 `SSE = Σ(y[i] − (intercept + slope · i))²`
 
-Obliczenia SSE są wykonywane przez bezpośrednie sumowanie reszt, aby ograniczyć utratę dokładności przy odejmowaniu dużych, zbliżonych wartości.
-
-### Profil DGT
+DGT zachowuje szerokość:
 
 `SD_DGT = sqrt(SSE / (n − 1))`
 
-Mianownik `n−1` jest zachowany zgodnie z audytowaną metodologią DGT.
-
-### Profil LonesomeTheBlue
+LonesomeTheBlue zachowuje:
 
 `RMS_LTB = sqrt(SSE / n)`
 
-Mianownik `n` jest zachowany zgodnie z audytowaną metodologią LonesomeTheBlue. Nie należy ujednolicać tych mianowników — zmieniłoby to szerokość kanałów.
+Mianowniki nie mogą być ujednolicone, ponieważ zmieniłoby to szerokość kanałów. Testy rdzenia nie zastępują porównania z oryginalnymi wskaźnikami na wykresach TradingView.
 
-### Walidacja danych
+## 9. Źródła danych i adaptery backendów
 
-Rdzeń odrzuca:
-- mniej niż dwie obserwacje;
-- wartości NaN i nieskończone;
-- ujemny lub nieskończony mnożnik kanału.
-
-Dalsze testy powinny obejmować porównania z oryginalnymi skryptami na tych samych instrumentach, interwałach, źródłach ceny i oknach danych.
-
-## 6. Wskaźnik TradingView
-
-Połączony wskaźnik Pine Script v6 znajduje się w:
-
-[`tradingview/monitor_combined_linear_regression.pine`](tradingview/monitor_combined_linear_regression.pine)
-
-Dokumentacja: [`tradingview/README.md`](tradingview/README.md).
-
-Wskaźnik zachowuje odrębne profile DGT i LonesomeTheBlue. Pine Script jest przeznaczony do uruchamiania wewnątrz TradingView. Nie jest częścią natywnej biblioteki C++ i nie zastępuje jej.
-
-**Status weryfikacji TradingView:** statyczny przegląd kodu i testy matematyczne na danych syntetycznych nie zastępują kompilacji w Pine Editor ani porównania wartości na rzeczywistych wykresach. Integrację należy uznać za zweryfikowaną dopiero po wykonaniu obu testów.
-
-## 7. Źródła danych i model obserwacji
-
-Planowane adaptery:
+Planowane adaptery C++:
 
 ### NBP
-- kursy tabel A i B jako oficjalne kursy średnie;
-- tabela C jako kurs kupna i sprzedaży;
-- środek bid/ask z tabeli C musi być oznaczony jako wartość pochodna;
-- cena referencyjna złota za gram w PLN.
+- tabele A i B — kursy średnie;
+- tabela C — kurs kupna i sprzedaży;
+- wyliczony środek bid/ask musi być oznaczony jako wartość pochodna;
+- referencyjna cena złota za gram w PLN.
 
 API: https://api.nbp.pl/
 
 ### Frankfurter
-- kursy referencyjne rynku;
+- kursy referencyjne;
 - jawna waluta bazowa i kwotowana;
-- możliwość wyboru dostawcy, jeśli API udostępnia taki parametr.
+- zachowanie daty i źródła obserwacji.
 
 API: https://api.frankfurter.dev/
 
@@ -192,88 +252,127 @@ API: https://api.frankfurter.dev/
 
 Źródło: https://www.worldbank.org/en/research/commodity-markets
 
-### Wymagane metadane
+Każdy adapter normalizuje odpowiedź dostawcy do wspólnego modelu. Dane źródłowe i przeliczone pozostają rozróżnialne. Dane miesięczne nie mogą być prezentowane jako dzienne OHLC.
 
-Każda obserwacja powinna zachować dostawcę, symbol, datę, walutę, jednostkę, częstotliwość, rodzaj ceny, czas pobrania i status jakości. Dane miesięczne nie mogą być przedstawiane jako dzienne OHLC. Wartości pochodne muszą być oznaczone.
+## 10. Model danych i domeny
 
-## 8. Docelowy magazyn danych
+Docelowe obszary danych:
+- instrumenty i symbole;
+- kursy walut, ceny metali i inne wyceny;
+- rzeczywiste świece OHLCV;
+- źródła i konfiguracje adapterów;
+- historia pobrań, importów i synchronizacji;
+- portfele, pozycje i transakcje;
+- wyniki analiz, wersje algorytmów i parametry;
+- użytkownicy, role, uprawnienia i sesje;
+- zdarzenia audytowe i alerty.
 
-Dane będą rozdzielone według semantyki:
+Wspólny model danych musi zachowywać jednostki, waluty, strefy czasowe, częstotliwości, pochodzenie i jakość obserwacji.
 
-- `fx_rates` — kursy walut, bid/ask i rodzaj kursu;
-- `metal_prices` — ceny metali wraz z jednostką i częstotliwością;
-- `candles` — rzeczywiste dane OHLCV;
-- `valuation_observations` — wyceny punktowe aktywów, np. bursztynu i kamieni;
-- `sources` — konfiguracja dostawców i historia importów;
-- `portfolio_positions` oraz `portfolio_transactions` — stan portfela i historia transakcji;
-- `analysis_runs` — wersja algorytmu, parametry i wyniki obliczeń.
+## 11. Konfiguracja magazynu
 
-SQLite będzie obsługiwać lokalny tryb pracy. PostgreSQL będzie przeznaczony dla usługi serwerowej i synchronizacji.
+Przykładowy plik konfiguracyjny będzie wskazywał wybrany adapter:
 
-## 9. Plan rozwoju
+```json
+{
+  "storage": {
+    "driver": "json",
+    "json": {
+      "directory": "./data",
+      "atomic_writes": true
+    },
+    "mariadb": {
+      "host": "127.0.0.1",
+      "port": 3306,
+      "database": "monitor",
+      "username": "monitor",
+      "password_env": "MONITOR_DB_PASSWORD"
+    }
+  },
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8080,
+    "api_prefix": "/api/v1"
+  }
+}
+```
 
-### Etap A — natywny rdzeń C++
-- regresja, SSE i kanały;
-- testy numeryczne;
-- profile DGT i LonesomeTheBlue;
-- wersjonowanie algorytmów.
+To jest docelowy przykład konfiguracji, a nie deklaracja, że oba adaptery są już zaimplementowane. Hasło nie jest wpisywane do pliku JSON — aplikacja odczytuje je ze zmiennej środowiskowej. Wdrożenie produkcyjne musi dodatkowo ograniczać dostęp do pliku konfiguracyjnego i katalogu danych.
 
-### Etap B — dane i trwały zapis
-- adaptery NBP, Frankfurter i World Bank w C++;
-- libcurl dla HTTPS;
-- parser JSON i XLSX;
-- SQLite;
-- walidacja, deduplikacja i historia importu.
+## 12. Plan realizacji
 
-### Etap C — API i synchronizacja
-- usługa HTTP w C++;
-- uwierzytelnianie i uprawnienia;
-- PostgreSQL;
-- harmonogram pobierania i ponawianie błędów;
-- synchronizacja klient–serwer.
+### Etap A — wspólny rdzeń C++
+- modele domenowe i typy danych;
+- regresja, kanały i statystyka;
+- walidacja i testy numeryczne.
 
-### Etap D — Linux Desktop
-- Qt 6;
-- wykresy interaktywne;
-- ustawienia instrumentów i źródeł;
-- portfel, raporty i alerty.
+### Etap B — magazyn i konfiguracja
+- interfejs repozytorium;
+- JSON jako domyślny magazyn;
+- atomowy zapis, blokady, kopie bezpieczeństwa i migracje formatu;
+- MariaDB jako opcjonalny adapter;
+- testy zgodności obu magazynów.
 
-### Etap E — Android
-- współdzielenie `monitor_core`;
-- warstwa JNI lub Qt 6;
-- lokalna baza SQLite;
-- wykresy dotykowe i powiadomienia;
-- bezpieczna synchronizacja z usługą.
+### Etap C — serwer wymiany danych
+- serwer HTTP C++;
+- wersjonowane API REST/JSON;
+- WebSocket dla aktualizacji;
+- rejestracja backendów i klientów;
+- uwierzytelnianie, role i uprawnienia;
+- synchronizacja, idempotencja, konflikty i audyt.
 
-### Etap F — model statystyczny i portfel
+### Etap D — adaptery backendów
+- NBP, Frankfurter i World Bank;
+- wspólny kontrakt adaptera;
+- harmonogram, ponawianie błędów, limity i monitoring;
+- testy z odpowiedziami wzorcowymi.
+
+### Etap E — Linux GUI i TUI
+- Qt 6 dla aplikacji graficznej;
+- C++ i FTXUI/ncurses dla terminala;
+- wspólny klient API i wspólny rdzeń.
+
+### Etap F — WebUI
+- responsywny interfejs przeglądarkowy;
+- wersjonowany klient API;
+- wykresy, tabele, konfiguracja, portfel i alerty.
+
+### Etap G — Android
+- współdzielenie rdzenia C++;
+- JNI lub Qt 6;
+- bezpieczna konfiguracja serwera i synchronizacja;
+- tryb offline i powiadomienia.
+
+### Etap H — portfel i analityka
+- wycena pozycji;
+- ekspozycja walutowa i ryzyko;
 - centyle rozkładu reszt;
 - scenariusze i horyzonty;
-- testy kroczące poza próbą;
-- kalibracja prawdopodobieństw;
-- wycena faktycznego portfela i analiza ryzyka.
+- testy kroczące poza próbą i kalibracja prawdopodobieństw.
 
-Każdy etap wymaga testów oraz aktualizacji dokumentacji. Funkcje planowane nie mogą być oznaczane jako ukończone.
+Każdy etap wymaga testów i aktualizacji dokumentacji. Status „ukończony” można nadać dopiero po implementacji, testach i udokumentowaniu ograniczeń.
 
-## 10. Odpowiedzialne przedstawianie wyników
+## 13. Odpowiedzialne przedstawianie wyników
 
-Regresja opisuje dopasowanie do danych z wybranego okna. Nie gwarantuje przyszłego kierunku ceny. Pozycja w centylu rozkładu reszt nie jest automatycznie prawdopodobieństwem zysku. Model przyszłych scenariuszy musi być walidowany poza próbą, a jego niepewność pokazywana użytkownikowi.
+Regresja opisuje dopasowanie do danych z wybranego okna, a nie gwarantowany kierunek przyszłej ceny. Pozycja w centylu rozkładu reszt nie jest automatycznie prawdopodobieństwem zysku. Prognozy muszą być walidowane poza próbą, a ich niepewność przedstawiana użytkownikowi.
 
-Monitor ma rozdzielać:
+System powinien odróżniać:
 1. pozycję bieżącej ceny w historycznym rozkładzie;
 2. prawdopodobieństwo scenariusza w określonym horyzoncie;
 3. potencjalny wynik kwotowy dla rzeczywistego portfela.
 
-Brak wystarczających danych powinien skutkować komunikatem o braku wiarygodnej estymacji, a nie pozornie precyzyjnym wynikiem.
+Brak wystarczających danych powinien skutkować komunikatem o braku wiarygodnej estymacji.
 
-## 11. Dokumentacja techniczna
+## 14. Dokumentacja
 
 - [Natywny rdzeń C++](native/README.md)
 - [Wskaźnik TradingView](tradingview/README.md)
 - [Audyt metodologii DGT](docs/dgt-linear-regression-audit.md)
 - [Audyt metodologii LonesomeTheBlue](docs/lonesometheblue-linear-regression-audit.md)
-- [Dostawcy danych — notatki i ograniczenia](docs/open-data-providers.md)
-- [Status migracji warstwy danych](backend/README.md)
+- [Dostawcy danych](docs/open-data-providers.md)
+- [Status historycznego backendu](backend/README.md)
+- [Założenia architektury i wymiany danych](docs/architecture.md)
 
-## 12. Licencja i warunki wykorzystania
+## 15. Licencja
 
-Repozytorium zawiera plik LICENSE. W przypadku integracji kodu lub danych dostawców zewnętrznych należy dodatkowo przestrzegać ich licencji, regulaminów, limitów i zasad atrybucji.
+Repozytorium zawiera plik LICENSE. Integracje z dostawcami zewnętrznymi muszą przestrzegać ich licencji, regulaminów, limitów i zasad atrybucji.
