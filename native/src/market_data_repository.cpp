@@ -403,6 +403,18 @@ void validate_snapshot(const MarketDataSnapshot& s) {
         if(x.version<=latest) throw std::invalid_argument("Wersje kalendarza muszą być rosnące.");
         latest=x.version;
     }
+    std::set<std::string> venue_keys;
+    std::map<std::string,std::uint32_t> latest_venue_versions;
+    for (const auto& calendar : s.venue_calendars) {
+        validate_venue_calendar(calendar);
+        const auto key=venue_calendar_key(calendar);
+        if (!venue_keys.insert(key).second)
+            throw std::invalid_argument("Powielona wersja kalendarza sesyjnego venue.");
+        auto& latest=latest_venue_versions[calendar.source.document_id];
+        if (calendar.source.version<=latest)
+            throw std::invalid_argument("Wersje dokumentu kalendarza venue muszą być rosnące.");
+        latest=calendar.source.version;
+    }
     std::set<std::string> series_keys;
     for(const auto& x:s.series_metadata) {
         if(!instruments.contains(x.instrument_id)||!providers.contains(x.provider_id))throw std::invalid_argument("Metadane szeregu wskazują nieznany instrument lub dostawcę.");
@@ -420,17 +432,18 @@ void validate_snapshot(const MarketDataSnapshot& s) {
     }
 }
 json encode_snapshot(const MarketDataSnapshot& s) {
-    json instruments=json::array(),providers=json::array(),observations=json::array(),series=json::array(),history=json::array(),calendars=json::array();
+    json instruments=json::array(),providers=json::array(),observations=json::array(),series=json::array(),history=json::array(),calendars=json::array(),venue_calendars=json::array();
     for(const auto& x:s.instruments)instruments.push_back(encode(x));
     for(const auto& x:s.providers)providers.push_back(encode(x));
     for(const auto& x:s.observations)observations.push_back(encode(x));
     for(const auto& x:s.series_metadata)series.push_back(encode(x));
     for(const auto& x:s.observation_history)history.push_back(encode(x));
     for(const auto& x:s.session_calendars)calendars.push_back(encode(x));
+    for(const auto& x:s.venue_calendars)venue_calendars.push_back(encode(x));
     return {{"document_type","monitor.market_data"},{"schema_version",s.schema_version},{"revision",s.revision},
         {"updated_at",format_utc_timestamp(s.updated_at)},{"instruments",std::move(instruments)},
         {"providers",std::move(providers)},{"observations",std::move(observations)},
-        {"series_metadata",std::move(series)},{"observation_history",std::move(history)},{"session_calendars",std::move(calendars)}};
+        {"series_metadata",std::move(series)},{"observation_history",std::move(history)},{"session_calendars",std::move(calendars)},{"venue_calendars",std::move(venue_calendars)}};
 }
 MarketDataSnapshot decode_snapshot(const json& j) {
     if(!j.is_object()||j.at("document_type").get<std::string>()!="monitor.market_data")
@@ -445,6 +458,7 @@ MarketDataSnapshot decode_snapshot(const json& j) {
     for(const auto& x:j.at("series_metadata"))s.series_metadata.push_back(decode_series(x));
     for(const auto& x:j.at("observation_history"))s.observation_history.push_back(decode_revision(x));
     if(j.contains("session_calendars")) for(const auto& x:j.at("session_calendars")) s.session_calendars.push_back(decode_session_calendar(x));
+    if(j.contains("venue_calendars")) for(const auto& x:j.at("venue_calendars")) s.venue_calendars.push_back(decode_venue_calendar(x));
     validate_snapshot(s);return s;
 }
 std::string read_file(const std::filesystem::path& path,std::size_t limit,bool missing_ok) {
