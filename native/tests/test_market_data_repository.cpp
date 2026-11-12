@@ -376,6 +376,12 @@ int main(){
     cancellation_batch.venue_session_notices.push_back(cancellation_notice);
     require(venue_repo.upsert_batch(cancellation_batch)==11U,
             "cancellation notice and its immutable source object commit atomically");
+    const auto orphaned_after_notice_import=find_orphaned_source_objects(venue_repo.load());
+    require(std::none_of(orphaned_after_notice_import.begin(),orphaned_after_notice_import.end(),
+                [&](const SourceArchiveObject& object) {
+                    return object.source_object_id==cancellation_object.source_object_id;
+                }),
+            "source object referenced only by a session notice is not reported as orphaned");
     const auto effective_cancelled=resolve_effective_venue_calendar_day(
         venue_repo.load(),"deutsche-boerse-xetra-2026",parse_date("2026-12-30"));
     require(effective_cancelled.day.product_sessions.front().closes_at.hour==17U &&
