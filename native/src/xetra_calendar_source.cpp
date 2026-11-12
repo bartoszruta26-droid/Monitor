@@ -148,17 +148,22 @@ void archive_exact_bytes(const std::filesystem::path& path,const std::string& by
 VenueSessionCalendar XetraCalendarSourceAdapter::fetch(SourceCalendarDocument source) const {
     return download(transport_,std::move(source)).calendar;
 }
-std::uint64_t XetraCalendarSourceAdapter::import(
-    JsonMarketDataRepository& repository,SourceCalendarDocument source) const {
-    auto downloaded=download(transport_,std::move(source));
+namespace {
+std::uint64_t import_xetra_calendar(
+    HttpTransport& transport,JsonMarketDataRepository& repository,
+    SourceCalendarDocument source,std::string calendar_id,
+    std::uint32_t calendar_revision,bool deduplicate_by_source_document) {
+    if(calendar_id.empty() || calendar_revision==0U)
+        throw std::invalid_argument("Import kalendarza wymaga identyfikatora i dodatniej rewizji.");
+    auto downloaded=download(transport,std::move(source));
     auto& metadata=downloaded.calendar.source;
     const auto hash=*metadata.content_sha256;
+    downloaded.calendar.calendar_id=std::move(calendar_id);
+    downloaded.calendar.revision=calendar_revision;
     const auto archive_root=repository.file_path().parent_path()/
         (repository.file_path().filename().string()+".sources")/"objects";
     const auto archive_path=archive_root/(hash+".html");
-    // Archive by content identity, independently of calendar revision. An
-    // interrupted import may leave an unreferenced object, never a dangling
-    // calendar reference.
+    // Persist exact source bytes before publishing any calendar reference.
     archive_exact_bytes(archive_path,downloaded.raw_html);
     const auto relative_archive=std::filesystem::relative(archive_path,
         repository.file_path().parent_path().empty() ? std::filesystem::path(".")
@@ -171,8 +176,6 @@ std::uint64_t XetraCalendarSourceAdapter::import(
     source_object.content_length_bytes=static_cast<std::uint64_t>(downloaded.raw_html.size());
     source_object.content_type=downloaded.content_type;
     metadata.source_object_id=source_object.source_object_id;
-    // New records store byte metadata only in SourceArchiveObject. The
-    // optional fields on SourceCalendarDocument remain for legacy records.
     metadata.archive_relative_path.reset();
     metadata.content_length_bytes.reset();
     metadata.content_type.reset();
@@ -180,10 +183,15 @@ std::uint64_t XetraCalendarSourceAdapter::import(
     auto snapshot=repository.load();
     const auto duplicate=std::find_if(snapshot.venue_calendars.begin(),
         snapshot.venue_calendars.end(),[&](const VenueSessionCalendar& item) {
-            return item.source.document_id==metadata.document_id &&
-                   item.source.content_sha256==metadata.content_sha256;
+            if(deduplicate_by_source_document)
+                return item.source.document_id==metadata.document_id &&
+                       item.source.content_sha256==metadata.content_sha256;
+            return item.calendar_id==downloaded.calendar.calendar_id &&
+                   item.revision==downloaded.calendar.revision;
         });
-    if (duplicate!=snapshot.venue_calendars.end()) {
+    if(duplicate!=snapshot.venue_calendars.end()) {
+        if(duplicate->source.content_sha256!=metadata.content_sha256)
+            throw std::invalid_argument("Opublikowana rewizja kalendarza wskazuje już inne bajty źródłowe.");
         const auto existing_object=std::find_if(snapshot.source_objects.begin(),
             snapshot.source_objects.end(),[&](const SourceArchiveObject& item) {
                 return item.source_object_id==source_object.source_object_id;
@@ -196,5 +204,19 @@ std::uint64_t XetraCalendarSourceAdapter::import(
     batch.source_objects.push_back(std::move(source_object));
     batch.venue_calendars.push_back(std::move(downloaded.calendar));
     return repository.upsert_batch(batch);
+}
+}
+std::uint64_t XetraCalendarSourceAdapter::import(
+    JsonMarketDataRepository& repository,SourceCalendarDocument source) const {
+    const auto legacy_calendar_id=source.document_id;
+    const auto legacy_revision=source.version;
+    return import_xetra_calendar(transport_,repository,std::move(source),
+                                 legacy_calendar_id,legacy_revision,true);
+}
+std::uint64_t XetraCalendarSourceAdapter::import(
+    JsonMarketDataRepository& repository,SourceCalendarDocument source,
+    std::string calendar_id,std::uint32_t calendar_revision) const {
+    return import_xetra_calendar(transport_,repository,std::move(source),
+                                 std::move(calendar_id),calendar_revision,false);
 }
 } // namespace monitor::market
