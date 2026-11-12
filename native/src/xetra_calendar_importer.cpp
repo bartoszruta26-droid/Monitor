@@ -192,6 +192,9 @@ VenueSessionCalendar parse_xetra_html_calendar(
 
     SourceCalendarDocument source = document;
     VenueSessionCalendar result;
+    result.calendar_id=document.document_id;
+    result.revision=document.version;
+    result.parser_version="xetra-html-2026-v1";
     result.source = std::move(source);
     using namespace std::chrono;
     const sys_days begin{year{2026}/January/1};
