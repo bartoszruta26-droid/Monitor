@@ -479,3 +479,21 @@ Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na ma
 2. Dodać fixture drugiego roku na podstawie jawnie przygotowanego, syntetycznego HTML w testach parsera; oznaczyć fixture jako syntetyczny, nie jako kopię oficjalnej strony.
 3. Rozdzielić parsowanie tabeli dni wolnych od interpretacji godzin sesji specjalnych; brak oficjalnego komunikatu godzin oznacza odrzucenie importu albo brak publikacji sesji, a nie zgadywanie.
 4. Uruchomić pełny CI i dopiero wtedy oznaczyć Etap 16 jako zakończony.
+
+## 48. Etap 16 — parser Xetra: dynamiczny rok i godziny sesji ze źródła
+
+### Zmiany w toku
+- Parser przestał ograniczać daty i zakres do 2026. Rok jest wyprowadzany z `valid_from`; zakres musi obejmować dokładnie pełny rok kalendarzowy.
+- Wspólne wyrażenie daty obsługuje zapis miesiąc-dzień-rok i dzień-miesiąc-rok, a każda data jest sprawdzana względem roku zakresu. Daty świąt handlowych nie są już porównywane z zestawem stałych dat 2026.
+- Wersja parsera jest stemplowana rokiem (`xetra-html-YYYY-v1`). Daty wyjątkowych komunikatów są odczytywane tylko z komunikatów jawnie obecnych w HTML.
+- Regularne i wydłużone godziny sesji są odczytywane z treści źródłowej; brak wymaganej informacji o godzinach powoduje odrzucenie parsera, zamiast użycia domyślnej godziny.
+- Fixture testowy zawiera tabelę dwóch lat i dodatkowe dane 2027. Jest jawnie oznaczony jako syntetyczny, a nie kopia oficjalnej strony.
+- Commity: `ce82488b01016dd819eb3913640bf836774ece7b` (dynamiczny rok), `163227e4c09abb9d79ea0a385b60a2be6633ad8b` (test 2027), `07caf3971f0dea7180be5c7222cdea06d8b8b4c4` i `e069e8e035f654747334901122e51db8b7dad871` (parsowanie godzin), `acc6a248a8f028daf85244b4227a86237cfd77a6` (fixture godzin), `e8052aa1efba9e5c66da3357ee96b97f28c0fe55` (testy godzin).
+- CI [43321994920](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43321994920) dla pierwszego podetapu dynamicznego roku: success. CI dla późniejszych zmian godzin i testów jest w toku.
+- Status Etapu 16: w trakcie; nie zamykać przed zielonym CI końcowego SHA i testami błędnego/brakującego roku oraz niekompletnych godzin.
+
+### Kolejne czynności
+1. Potwierdzić CI dla `e8052aa` i naprawić ewentualne błędy parsera/testów.
+2. Dodać negatywne przypadki: brak roku w dacie tabeli, data z innym rokiem niż wybrany nagłówek oraz brak godzin sesji.
+3. Zweryfikować obsługę roku przestępnego i pełnego zakresu 366 dni.
+4. Dopiero po tych testach oznaczyć Etap 16 jako zakończony; potem przejść do Etapu 17 dla osobnych komunikatów nadzwyczajnych.
