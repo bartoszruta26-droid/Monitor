@@ -733,3 +733,8 @@ Generator nie wbudowuje listy świąt i nie udaje rzeczywistego czasu publikacji
 ## 26. Etap 11 — korekta kompilacji testu NBP
 
 CI `43302839736` wykazało brak bezpośredniego include `<algorithm>` w teście korzystającym z `std::any_of`. `market_data_calendar.cpp` skompilował się poprawnie; błąd ograniczał się do translation unit testowego, a CTest został pominięty. Dodano jawny include; oczekuje na pełne ponowne CI.
+
+
+## 27. Etap 11 — polskie święta ustawowe
+
+Dodano `polish_statutory_holidays(year)`, opartą na art. 1 ustawy o dniach wolnych od pracy (tekst jednolity Dz.U. 2025 poz. 296). Lista zawiera 10 świąt stałych oraz cztery ruchome: Wielkanoc, Poniedziałek Wielkanocny, Zielone Świątki i Boże Ciało. Wielkanoc wyliczana jest algorytmem gregoriańskim Meeusa/Jonesa/Butchera; testy weryfikują 2025 i 2026, w tym Wigilię jako dzień wolny od 2025 r. Źródło pierwotne: https://api.sejm.gov.pl/eli/acts/DU/2025/296/text.pdf. Funkcja nie obejmuje nadzwyczajnych dni wolnych ustanowionych odrębnym rozporządzeniem; te pozostają jawnymi wyjątkami wejściowymi.

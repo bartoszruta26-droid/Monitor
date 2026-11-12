@@ -178,6 +178,48 @@ MarketSessionCalendar generate_session_calendar(const LocalSessionSchedule& s) {
     return result;
 }
 
+std::vector<CivilDate> polish_statutory_holidays(int year_value) {
+    using namespace std::chrono;
+    if(year_value<1||year_value>9999)
+        throw std::invalid_argument("Rok kalendarza świąt musi mieścić się w zakresie 1–9999.");
+
+    // Meeus/Jones/Butcher Gregorian computus.
+    const int a=year_value%19;
+    const int b=year_value/100;
+    const int c=year_value%100;
+    const int d=b/4;
+    const int e=b%4;
+    const int f=(b+8)/25;
+    const int g=(b-f+1)/3;
+    const int h=(19*a+b-d-g+15)%30;
+    const int i=c/4;
+    const int k=c%4;
+    const int l=(32+2*e+2*i-h-k)%7;
+    const int m=(a+11*h+22*l)/451;
+    const int easter_month=(h+l-7*m+114)/31;
+    const int easter_day=(h+l-7*m+114)%31+1;
+    const sys_days easter{year{year_value}/month{static_cast<unsigned>(easter_month)}/
+                          day{static_cast<unsigned>(easter_day)}};
+    const auto civil=[](sys_days date) {
+        const year_month_day ymd{date};
+        return CivilDate{static_cast<int>(ymd.year()),static_cast<unsigned>(ymd.month()),
+                         static_cast<unsigned>(ymd.day())};
+    };
+
+    std::vector<CivilDate> result{
+        {year_value,1U,1U},{year_value,1U,6U},
+        {year_value,5U,1U},{year_value,5U,3U},
+        {year_value,8U,15U},{year_value,11U,1U},{year_value,11U,11U},
+        {year_value,12U,24U},{year_value,12U,25U},{year_value,12U,26U},
+        civil(easter),civil(easter+days{1}),civil(easter+days{49}),civil(easter+days{60})
+    };
+    std::sort(result.begin(),result.end(),[](const auto& lhs,const auto& rhs) {
+        return year{lhs.year}/month{lhs.month}/day{lhs.day}<
+               year{rhs.year}/month{rhs.month}/day{rhs.day};
+    });
+    return result;
+}
+
 std::vector<NbpPublicationWindow> generate_nbp_publication_windows(
     const CivilDate& start_date, const CivilDate& end_date_exclusive,
     const std::vector<CivilDate>& public_holidays) {

@@ -107,3 +107,12 @@ Kod: `NbpPublicationWindow`, `NbpPublicationTable`, `generate_nbp_publication_wi
 ## 8. Weryfikacja pierwszego generatora NBP
 
 Pierwsze CI `43302839736` dla commitu `95c53dc2a6a8519119480836d45eab189e69b801` przeszło konfigurację i kompilację modułu produkcyjnego, ale zatrzymało się na kompilacji testu z powodu braku `#include <algorithm>` dla `std::any_of`. Dodano brakujący nagłówek; oczekuje na ponowne CI. Testy nie zostały uruchomione w nieudanym przebiegu.
+
+
+## 9. Polskie święta ustawowe — generator dat
+
+Dodano `polish_statutory_holidays(year)` w `market_data_calendar`. Funkcja zwraca 14 świąt ustawowych wymienionych w art. 1 pkt 1 ustawy: 10 dat stałych oraz 4 ruchome (Wielkanoc, Poniedziałek Wielkanocny, Zielone Świątki i Boże Ciało). Niedziele są wyłączane osobno przez regułę dni tygodnia generatora NBP. Wigilia 24 grudnia jest uwzględniana od 2025 r.
+
+Podstawa: tekst jednolity ustawy o dniach wolnych od pracy, Dz.U. 2025 poz. 296, art. 1: https://api.sejm.gov.pl/eli/acts/DU/2025/296/text.pdf. Zmiana wprowadzająca 24 grudnia weszła w życie 1 lutego 2025 r.: https://api.sejm.gov.pl/eli/acts/DU/2024/1965/text.html.
+
+Ograniczenie: generator obejmuje ustawowe dni wolne i zwykłe weekendy. Nie obejmuje dodatkowego dnia wolnego ustanowionego odrębnym rozporządzeniem w szczególnym stanie ani ewentualnych wyjątków operacyjnych NBP; takie wyjątki powinny być przekazywane jako dodatkowe daty wyłączenia.

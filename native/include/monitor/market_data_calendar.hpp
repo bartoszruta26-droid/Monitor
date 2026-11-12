@@ -51,6 +51,10 @@ struct NbpPublicationWindow {
     LocalTimeOfDay ends_at;
 };
 
+// Statutory Polish public holidays (excluding ordinary Sundays, which are
+// already excluded by the weekday rule). Includes movable Easter holidays.
+[[nodiscard]] std::vector<CivilDate> polish_statutory_holidays(int year);
+
 // The holiday list is explicit input from an authoritative, versioned source.
 [[nodiscard]] std::vector<NbpPublicationWindow> generate_nbp_publication_windows(
     const CivilDate& start_date, const CivilDate& end_date_exclusive,

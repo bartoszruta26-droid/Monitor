@@ -104,5 +104,23 @@ int main() {
         {parse_date("2026-11-11"),parse_date("2026-11-11")});},"duplicate holidays are rejected");
     throws([&]{(void)generate_nbp_publication_windows(
         parse_date("2026-11-13"),parse_date("2026-11-13"),{});},"empty NBP range is rejected");
+    const auto holidays_2026=polish_statutory_holidays(2026);
+    const auto contains_date=[&](const char* date) {
+        return std::any_of(holidays_2026.begin(),holidays_2026.end(),[&](const auto& d) {
+            return format_date(d)==date;
+        });
+    };
+    require(holidays_2026.size()==14,"Polish statutory holiday list contains 14 dates");
+    require(contains_date("2026-04-05")&&contains_date("2026-04-06"),
+            "Easter Sunday and Monday are calculated");
+    require(contains_date("2026-05-24")&&contains_date("2026-06-04"),
+            "Pentecost and Corpus Christi are calculated");
+    require(contains_date("2026-11-11")&&contains_date("2026-12-24"),
+            "fixed national holidays and Christmas Eve are included");
+    const auto holidays_2025=polish_statutory_holidays(2025);
+    require(std::any_of(holidays_2025.begin(),holidays_2025.end(),[](const auto& d) {
+        return format_date(d)=="2025-12-24";
+    }),"Christmas Eve is a public holiday from 2025");
+    throws([&]{(void)polish_statutory_holidays(0);},"year zero is rejected");
     std::cout<<"All IANA and NBP publication calendar tests passed.\n";
 }
