@@ -52,6 +52,33 @@ int main() {
     XetraCalendarSourceAdapter adapter(transport);
     const auto parsed=adapter.fetch(source());
     require(parsed.days.size()==365U,"all days imported");
+    require(parsed.parser_version=="xetra-html-2026-v1","parser ruleset is stamped with source calendar year");
+    auto source_2027=source();
+    source_2027.document_id="xetra-2027-synthetic-html";
+    source_2027.version=1U;
+    source_2027.valid_from=parse_date("2027-01-01");
+    source_2027.valid_to_exclusive=parse_date("2028-01-01");
+    const auto parsed_2027=parse_xetra_html_calendar(html,source_2027);
+    require(parsed_2027.days.size()==365U &&
+            parsed_2027.parser_version=="xetra-html-2027-v1",
+            "same parser supports the next calendar year from the requested range");
+    require(parsed_2027.days.at(84).date==parse_date("2027-03-26") &&
+            parsed_2027.days.at(84).status==VenueDayStatus::Closed,
+            "dynamic year parser reads 2027 Good Friday from the selected year column");
+    require(parsed_2027.days.at(125).date==parse_date("2027-05-06") &&
+            parsed_2027.days.at(125).product_sessions.size()==2U &&
+            parsed_2027.days.at(125).product_sessions.front().closes_at.hour==20U,
+            "dynamic year parser reads 2027 holiday trading dates");
+    require(parsed_2027.days.at(136).date==parse_date("2027-05-17") &&
+            parsed_2027.days.at(146).date==parse_date("2027-05-27"),
+            "all named 2027 holiday trading dates are parsed without 2026 constants");
+    require(parsed_2027.days.at(363).date==parse_date("2027-12-30") &&
+            parsed_2027.days.at(363).requires_official_notice,
+            "extraordinary-hours marker is derived from an explicit year-specific notice");
+    auto unsupported_year=source_2027;
+    unsupported_year.valid_to_exclusive=parse_date("2027-12-31");
+    throws([&]{(void)parse_xetra_html_calendar(html,unsupported_year);},
+           "reject a source range that is not exactly one calendar year");
     require(parsed.source.content_sha256==sha256_hex(html),"SHA-256 computed from exact response bytes");
     require(parsed.source.retrieved_at.has_value(),"retrieval time recorded");
     require(transport.calls==1U && transport.last_request.timeout.count()==15000 &&
