@@ -501,4 +501,13 @@ Przebieg historyczny 43237592885 zakończył się niepowodzeniem na wcześniejsz
 - Model nie implementuje jeszcze adapterów, magazynu, agregacji, świec, portfela ani API.
 
 ### Kryteria ukończenia
-Etap 1 można zamknąć po kompilacji C++20, przejściu obu zestawów CTest oraz powodzeniu GitHub Actions na aktualnym main. Do czasu potwierdzenia CI status pozostaje „implementacja przygotowana — weryfikacja w toku”.
+**Etap 1: ukończony.** Model C++20 został włączony do biblioteki monitor_core i CMake. GitHub Actions na commicie e31c62b50840202264374bc1a590f71a9454146f zakończył się powodzeniem: konfiguracja, kompilacja i oba zestawy CTest przeszły; 2/2 testy zaliczone. [Przebieg CI](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43248161715). Nie wykonano osobnej kompilacji lokalnej w tej sesji; potwierdzeniem jest czyste środowisko GitHub Actions.
+
+
+### 10.1. Wynik weryfikacji i zamknięcie Etapu 1
+- Pierwszy przebieg CI wykrył konflikt nazwy zmiennej z typem std::chrono::day. Błąd został poprawiony przed dalszym rozwojem.
+- Dodano walidację nieznanych wartości enum dla klasy aktywa, jednostki, częstotliwości, rodzaju ceny, statusu okresu, jakości i kompletności.
+- Dodano testy odrzucania nieznanych wartości enum oraz kontrolę dopuszczania ujemnej ceny wyłącznie dla instrumentu z odpowiednią flagą.
+- Commit implementacji i walidacji: e31c62b50840202264374bc1a590f71a9454146f.
+- CI: sukces; konfiguracja, budowanie i CTest zakończone powodzeniem; 2/2 testy.
+- Etap 1 zamknięty. Następny etap to Etap 2 — adaptery dostawców C++20, zgodne z modelem danych v1. Magazyn JSON pozostaje późniejszym Etapem 3.
