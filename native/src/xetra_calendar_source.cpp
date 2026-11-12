@@ -1,4 +1,5 @@
 #include "monitor/xetra_calendar_source.hpp"
+#include "monitor/xetra_calendar_importer.hpp"
 
 #include <algorithm>
 #include <array>
@@ -272,6 +273,56 @@ std::uint64_t XetraCalendarSourceAdapter::import(
     std::string calendar_id,std::uint32_t calendar_revision) const {
     return import_xetra_calendar(transport_,repository,std::move(source),
                                  std::move(calendar_id),calendar_revision,false);
+}
+std::uint64_t XetraCalendarSourceAdapter::import_notice(
+    JsonMarketDataRepository& repository,VenueSessionNotice notice,std::string source_uri) const {
+    if(!allowed_xetra_url(source_uri))
+        throw std::invalid_argument("Adres komunikatu Xetra musi używać zatwierdzonego hosta HTTPS.");
+    if(notice.source_object_id.size()!=0U || notice.retrieved_at || !notice.source_uri.empty())
+        throw std::invalid_argument("Metadane pobrania komunikatu ustala importer, nie wywołujący.");
+    HttpRequest request;
+    request.url=source_uri;
+    request.timeout=std::chrono::milliseconds{15000};
+    request.max_response_bytes=4U*1024U*1024U;
+    request.headers={{"Accept","text/html"},{"User-Agent","Monitor-Rynkow/0.2 C++20"}};
+    const auto response=transport_.get(request);
+    if(response.status_code!=200)
+        throw std::runtime_error("Oficjalne źródło komunikatu Xetra zwróciło HTTP "+std::to_string(response.status_code)+".");
+    if(response.body.empty() || response.body.size()>request.max_response_bytes)
+        throw std::runtime_error("Odpowiedź komunikatu Xetra jest pusta lub przekracza limit.");
+    const auto type_it=response.headers.find("content-type");
+    if(type_it==response.headers.end())
+        throw std::runtime_error("Odpowiedź komunikatu Xetra nie ma nagłówka Content-Type.");
+    const auto content_type=lower(type_it->second);
+    if(content_type!="text/html" && content_type.rfind("text/html;",0)!=0)
+        throw std::runtime_error("Źródło komunikatu Xetra zwróciło nieoczekiwany typ treści.");
+
+    const auto hash=sha256_hex(response.body);
+    notice.source_object_id="sha256:"+hash;
+    notice.source_uri=source_uri;
+    const auto now=std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    notice.retrieved_at=UtcTimestamp{now};
+    auto parsed_notice=parse_xetra_session_notice_html(response.body,std::move(notice));
+
+    const auto archive_root=repository.file_path().parent_path()/
+        (repository.file_path().filename().string()+".sources")/"objects";
+    const auto archive_path=archive_root/(hash+".html");
+    archive_exact_bytes(archive_path,response.body);
+    const auto relative_archive=std::filesystem::relative(archive_path,
+        repository.file_path().parent_path().empty() ? std::filesystem::path(".")
+                                                     : repository.file_path().parent_path());
+    SourceArchiveObject source_object;
+    source_object.source_object_id="sha256:"+hash;
+    source_object.content_sha256=hash;
+    source_object.archive_relative_path=relative_archive.generic_string();
+    source_object.content_length_bytes=static_cast<std::uint64_t>(response.body.size());
+    source_object.content_type=type_it->second;
+
+    MarketDataBatch batch;
+    batch.source_objects.push_back(std::move(source_object));
+    batch.venue_session_notices.push_back(std::move(parsed_notice));
+    return repository.upsert_batch(batch);
 }
 std::uint64_t XetraCalendarSourceAdapter::publish_revision_from_archive(
     JsonMarketDataRepository& repository,SourceCalendarDocument source,
