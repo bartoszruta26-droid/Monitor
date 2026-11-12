@@ -130,3 +130,21 @@ Fixture potwierdza wyłączenie 11 listopada 2026 r., przesunięcie tabeli B na 
 Commit `c76bf3dc697e93ad3f69bca82a5180e08c338feb` przeszedł [CI 43304025796](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43304025796): konfiguracja, kompilacja i CTest **8/8**. Generator bez jawnej listy świąt automatycznie stosuje polskie święta ustawowe, w tym 11 listopada oraz Wigilię od 2025 r. Wariant z dodatkową listą nadal pozwala przekazać nadzwyczajne dni wolne.
 
 Pozostałe prace etapu 11: wersjonowany rejestr źródłowych kalendarzy i wyjątków Xetra/Frankfurt oraz model kalendarza obserwowanych publikacji NBP.
+
+
+## 12. Pierwszy model kalendarza faktycznie zaobserwowanych publikacji
+
+Dodano `ObservedPublication` i `build_observed_publications()` w module kalendarza.
+Model grupuje rekordy po dostawcy, dacie publikacji zwróconej przez dostawcę,
+rzeczywistym czasie pobrania odpowiedzi i URI źródła. Wiele kursów z jednej
+odpowiedzi NBP tworzy jedno zdarzenie publikacji z licznikiem obserwacji.
+Tabele NBP A/B/C i złoto pozostają odrębnymi dostawcami.
+
+Ważne rozróżnienie semantyczne:
+- `publication_date` jest datą cywilną z `provider_published_on`;
+- `received_at` jest rzeczywistym czasem odebrania odpowiedzi przez adapter;
+- model nie tworzy godziny publikacji NBP z okna 11:45–12:15 lub 07:45–08:15;
+- obserwacje bez daty publikacji dostawcy są pomijane;
+- nie zmieniono JSON schema v1 ani znaczenia istniejącego `observed_at`.
+
+Testy offline obejmują grupowanie wielu walut w jedną publikację, rozdzielenie tabeli A i złota, pominięcie rekordów bez daty publikacji oraz odrzucenie braku identyfikatora dostawcy.
