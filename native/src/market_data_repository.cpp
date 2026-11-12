@@ -301,6 +301,20 @@ VenueCalendarLicenseStatus parse_venue_license_status(const std::string& value) 
     if (value == "restricted") return VenueCalendarLicenseStatus::Restricted;
     throw std::invalid_argument("Nieznany status licencji kalendarza venue w JSON.");
 }
+std::string enum_name(VenueSessionNoticeKind value) {
+    switch(value) {
+    case VenueSessionNoticeKind::Informational:return "informational";
+    case VenueSessionNoticeKind::SessionOverride:return "session_override";
+    case VenueSessionNoticeKind::Cancellation:return "cancellation";
+    }
+    throw std::invalid_argument("Nieznany rodzaj komunikatu sesyjnego.");
+}
+VenueSessionNoticeKind parse_venue_session_notice_kind(const std::string& value) {
+    if(value=="informational") return VenueSessionNoticeKind::Informational;
+    if(value=="session_override") return VenueSessionNoticeKind::SessionOverride;
+    if(value=="cancellation") return VenueSessionNoticeKind::Cancellation;
+    throw std::invalid_argument("Nieznany rodzaj komunikatu sesyjnego w JSON.");
+}
 json encode(const VenueSessionCalendar& x) {
     const auto& source = x.source;
     json source_json = {
@@ -596,6 +610,94 @@ void validate_snapshot(const MarketDataSnapshot& s) {
         if(x.superseded_by_id.empty()||x.superseded_at.unix_seconds<x.previous.received_at.unix_seconds)
             throw std::invalid_argument("Nieprawidłowa historia korekty notowania.");
     }
+}
+json encode(const VenueSessionNotice& x) {
+    json sessions=json::array();
+    for(const auto& session:x.product_sessions) {
+        sessions.push_back({{"product_group",session.product_group},
+            {"opens_at",{{"hour",session.opens_at.hour},{"minute",session.opens_at.minute},{"second",session.opens_at.second}}},
+            {"closes_at",{{"hour",session.closes_at.hour},{"minute",session.closes_at.minute},{"second",session.closes_at.second}}}});
+    }
+    return {{"notice_id",x.notice_id},{"revision",x.revision},{"calendar_id",x.calendar_id},
+        {"venue",x.venue},{"effective_date",format_date(x.effective_date)},
+        {"source_object_id",x.source_object_id},{"source_uri",x.source_uri},
+        {"retrieved_at",x.retrieved_at ? json(format_utc_timestamp(*x.retrieved_at)) : json(nullptr)},
+        {"attribution",x.attribution},{"license_status",enum_name(x.license_status)},
+        {"kind",enum_name(x.kind)},
+        {"day_status",x.day_status ? json(enum_name(*x.day_status)) : json(nullptr)},
+        {"product_sessions",std::move(sessions)},
+        {"cancels_notice_id",x.cancels_notice_id},{"cancels_revision",x.cancels_revision}};
+}
+VenueSessionNotice decode_venue_session_notice(const json& j) {
+    VenueSessionNotice x;
+    x.notice_id=j.at("notice_id").get<std::string>();
+    x.revision=j.at("revision").get<std::uint32_t>();
+    x.calendar_id=j.at("calendar_id").get<std::string>();
+    x.venue=j.at("venue").get<std::string>();
+    x.effective_date=parse_date(j.at("effective_date").get<std::string>());
+    x.source_object_id=j.at("source_object_id").get<std::string>();
+    x.source_uri=j.at("source_uri").get<std::string>();
+    if(!j.at("retrieved_at").is_null()) x.retrieved_at=parse_utc_timestamp(j.at("retrieved_at").get<std::string>());
+    x.attribution=j.at("attribution").get<std::string>();
+    x.license_status=parse_venue_license_status(j.at("license_status").get<std::string>());
+    x.kind=parse_venue_session_notice_kind(j.at("kind").get<std::string>());
+    if(!j.at("day_status").is_null()) x.day_status=parse_venue_day_status(j.at("day_status").get<std::string>());
+    for(const auto& item:j.at("product_sessions")) {
+        const auto read_time=[](const json& t) {
+            return LocalTimeOfDay{t.at("hour").get<unsigned>(),t.at("minute").get<unsigned>(),t.at("second").get<unsigned>()};
+        };
+        x.product_sessions.push_back({item.at("product_group").get<std::string>(),
+            read_time(item.at("opens_at")),read_time(item.at("closes_at"))});
+    }
+    x.cancels_notice_id=j.at("cancels_notice_id").get<std::string>();
+    x.cancels_revision=j.at("cancels_revision").get<std::uint32_t>();
+    return x;
+}
+std::string venue_session_notice_key(const VenueSessionNotice& x) {
+    return x.notice_id+"\\x1f"+std::to_string(x.revision);
+}
+bool same_venue_session_notice(const VenueSessionNotice& a,const VenueSessionNotice& b) {
+    return encode(a)==encode(b);
+}
+void validate_venue_session_notice(const VenueSessionNotice& x) {
+    if(x.notice_id.empty() || x.revision==0U || x.calendar_id.empty() || x.venue.empty() ||
+       !is_valid_date(x.effective_date) || x.source_object_id.rfind("sha256:",0)!=0 ||
+       x.source_object_id.size()!=71U || x.source_uri.rfind("https://",0)!=0 ||
+       x.attribution.empty())
+        throw std::invalid_argument("Komunikat sesyjny wymaga identyfikatora, daty, archiwum i pochodzenia HTTPS.");
+    (void)enum_name(x.license_status);
+    (void)enum_name(x.kind);
+    const auto valid_time=[](const LocalTimeOfDay& t) {
+        return t.hour<=23U && t.minute<=59U && t.second<=59U;
+    };
+    std::set<std::string> product_groups;
+    for(const auto& session:x.product_sessions) {
+        if(session.product_group.empty() || !product_groups.insert(session.product_group).second ||
+           !valid_time(session.opens_at) || !valid_time(session.closes_at) ||
+           std::tie(session.opens_at.hour,session.opens_at.minute,session.opens_at.second)>=
+           std::tie(session.closes_at.hour,session.closes_at.minute,session.closes_at.second))
+            throw std::invalid_argument("Komunikat zawiera nieprawidłową lub powtórzoną sesję produktową.");
+    }
+    switch(x.kind) {
+    case VenueSessionNoticeKind::Informational:
+        if(x.day_status || !x.product_sessions.empty() || !x.cancels_notice_id.empty() || x.cancels_revision!=0U)
+            throw std::invalid_argument("Komunikat informacyjny nie może zmieniać sesji ani anulować innego komunikatu.");
+        break;
+    case VenueSessionNoticeKind::SessionOverride:
+        if(!x.day_status || !x.cancels_notice_id.empty() || x.cancels_revision!=0U ||
+           (*x.day_status==VenueDayStatus::Trading && x.product_sessions.empty()) ||
+           (*x.day_status!=VenueDayStatus::Trading && !x.product_sessions.empty()))
+            throw std::invalid_argument("Nadpisanie sesji wymaga statusu dnia i zgodnych godzin produktów.");
+        break;
+    case VenueSessionNoticeKind::Cancellation:
+        if(x.cancels_notice_id.empty() || x.cancels_revision==0U || x.day_status ||
+           !x.product_sessions.empty() || x.cancels_notice_id==x.notice_id)
+            throw std::invalid_argument("Anulowanie musi wskazywać wcześniejszy komunikat i nie może zawierać godzin.");
+        break;
+    }
+}
+std::string notice_stable_identity(const VenueSessionNotice& x) {
+    return x.calendar_id+"\\x1f"+x.venue+"\\x1f"+format_date(x.effective_date);
 }
 json encode_snapshot(const MarketDataSnapshot& s) {
     json instruments=json::array(),providers=json::array(),observations=json::array(),series=json::array(),history=json::array(),calendars=json::array(),venue_calendars=json::array(),source_objects=json::array();
