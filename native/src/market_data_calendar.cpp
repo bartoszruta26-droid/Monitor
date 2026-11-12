@@ -286,4 +286,52 @@ std::vector<NbpPublicationWindow> generate_nbp_publication_windows(
     }
     return generate_nbp_publication_windows(start_date,end_date_exclusive,holidays);
 }
+
+std::vector<ObservedPublication> build_observed_publications(
+    const std::vector<MarketObservation>& observations) {
+    std::vector<ObservedPublication> result;
+    for (const auto& observation : observations) {
+        if (!observation.provider_published_on.has_value()) {
+            continue;
+        }
+        if (observation.provider_id.empty() ||
+            !is_valid_date(*observation.provider_published_on)) {
+            throw std::invalid_argument(
+                "Obserwowana publikacja wymaga dostawcy i poprawnej daty publikacji.");
+        }
+        const auto same_occurrence = [&](const ObservedPublication& item) {
+            return item.provider_id == observation.provider_id &&
+                   item.publication_date.year == observation.provider_published_on->year &&
+                   item.publication_date.month == observation.provider_published_on->month &&
+                   item.publication_date.day == observation.provider_published_on->day &&
+                   item.received_at.unix_seconds == observation.received_at.unix_seconds &&
+                   item.source_uri == observation.source_uri;
+        };
+        const auto found = std::find_if(result.begin(), result.end(), same_occurrence);
+        if (found == result.end()) {
+            result.push_back({observation.provider_id,
+                              *observation.provider_published_on,
+                              observation.received_at,
+                              observation.source_uri,
+                              1U});
+        } else {
+            ++found->observation_count;
+        }
+    }
+    std::sort(result.begin(), result.end(), [](const auto& lhs, const auto& rhs) {
+        if (lhs.publication_date.year != rhs.publication_date.year)
+            return lhs.publication_date.year < rhs.publication_date.year;
+        if (lhs.publication_date.month != rhs.publication_date.month)
+            return lhs.publication_date.month < rhs.publication_date.month;
+        if (lhs.publication_date.day != rhs.publication_date.day)
+            return lhs.publication_date.day < rhs.publication_date.day;
+        if (lhs.provider_id != rhs.provider_id)
+            return lhs.provider_id < rhs.provider_id;
+        if (lhs.received_at.unix_seconds != rhs.received_at.unix_seconds)
+            return lhs.received_at.unix_seconds < rhs.received_at.unix_seconds;
+        return lhs.source_uri < rhs.source_uri;
+    });
+    return result;
+}
+
 } // namespace monitor::market
