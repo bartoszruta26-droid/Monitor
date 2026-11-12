@@ -313,3 +313,18 @@ Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na ma
 - Testy parsują syntetyczny fixture offline i weryfikują 365 dni, święta zamknięte, trzy święta handlowe, godziny 20:00/22:00, settlement-only, wymóg okólnika 30 grudnia, surowy SHA-256 i odrzucanie niekompletnej listy wyjątków.
 - **Ograniczenia:** importer obsługuje wyłącznie schemat i zakres 2026; nie pobiera HTML, nie archiwizuje automatycznie kolejnych wersji, nie potwierdza licencji i nie parsuje okólników skróconych sesji. Fixture jest syntetyczny, a jego hash nie jest hashem oficjalnej strony.
 - Następny etap: pobieranie surowych bajtów przez adapter źródłowy z limitem, timeoutem i walidacją HTTPS; zapis niezmiennych wersji `SourceCalendarDocument` i `VenueSessionCalendar` w JSON repository z zachowaniem zgodności schematu v1; testy round-trip, konfliktu wersji, niezmienności oraz nieudanych pobrań. Dopiero później importer okólników i rozszerzenie kalendarza na kolejne lata.
+
+
+## 39. Etap 11 — trwały zapis wersjonowanych kalendarzy venue w JSON
+
+- Commit `e2a7b19a0748718bc00ea067cc4658245c5134d6`: rozszerzono kontrakt repozytorium o kolekcję `venue_calendars` i operację `upsert_venue_calendar`.
+- Commit `e461086078090e2336109527782a2e0aae74c5e9`: dodano kolekcję do migawki JSON.
+- Commit `45ff1abc0a1ba913fa3ff63676ea3f86320ab90e`: dodano serializację/deserializację źródła, statusów dnia, sesji produktowych i metadanych licencji oraz walidację pełnego zakresu i godzin.
+- Commit `7aaeede5a4ba9b963753c3ed9a02eac7215d1cff`: dołączono `venue_calendars` do dokumentu JSON; brak pola jest dozwolony przy odczycie starszych dokumentów v1.
+- Commit `969445741305ba7e9faf2cf88a197a6d4b3eaded`: dodano reguły niezmienności i rosnących wersji oraz metodę upsert.
+- Commit `8a21595feaa8225845c8a8b7028afc25e735dc34`: dodano testy round-trip, replay idempotentny, konflikt edycji, dopisanie v2, blokadę usuwania/zmiany przez `replace` i zgodność starego dokumentu v1.
+- CI dla kompletnego kodu i testów na SHA `8a21595feaa8225845c8a8b7028afc25e735dc34`: [43312807643](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43312807643) — Configure, Build i Test: success.
+- Wcześniejsze przebiegi po dodaniu samej deklaracji interfejsu lub części serializacji zakończyły się błędem linkowania z powodu niekompletnego etapu implementacji. Implementację metody i testy uzupełniono; pełny CI najnowszego SHA przeszedł.
+- Zachowano główny `schema_version=1`: pole `venue_calendars` jest opcjonalnym rozszerzeniem. Dokumenty v1 bez tego pola są odczytywane jako pusta kolekcja; dotychczasowa kolekcja `session_calendars` pozostaje bez zmian.
+- Wersja kalendarza jest kluczowana przez `document_id + version`; opublikowane rekordy są niezmienne. Zapis identycznej wersji jest idempotentny, zmiana lub usunięcie jest odrzucane, a korekta wymaga kolejnego numeru wersji.
+- Następny etap: adapter pobierania źródła HTML (HTTPS, timeout, limit bajtów, kontrola statusu i typu treści), zapis czasu pobrania i SHA-256 surowych bajtów oraz atomowy zapis nowej wersji kalendarza do JSON. Testy HTTP muszą korzystać z lokalnego serwera/transportu testowego i nie mogą zależeć od sieci zewnętrznej. Okólnik skróconej sesji pozostaje osobnym dokumentem źródłowym.
