@@ -328,3 +328,16 @@ Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na ma
 - Zachowano główny `schema_version=1`: pole `venue_calendars` jest opcjonalnym rozszerzeniem. Dokumenty v1 bez tego pola są odczytywane jako pusta kolekcja; dotychczasowa kolekcja `session_calendars` pozostaje bez zmian.
 - Wersja kalendarza jest kluczowana przez `document_id + version`; opublikowane rekordy są niezmienne. Zapis identycznej wersji jest idempotentny, zmiana lub usunięcie jest odrzucane, a korekta wymaga kolejnego numeru wersji.
 - Następny etap: adapter pobierania źródła HTML (HTTPS, timeout, limit bajtów, kontrola statusu i typu treści), zapis czasu pobrania i SHA-256 surowych bajtów oraz atomowy zapis nowej wersji kalendarza do JSON. Testy HTTP muszą korzystać z lokalnego serwera/transportu testowego i nie mogą zależeć od sieci zewnętrznej. Okólnik skróconej sesji pozostaje osobnym dokumentem źródłowym.
+
+ 
+## 40. Etap 12 — adapter HTTPS oficjalnego kalendarza Xetra
+
+- Poprzedni etap 39 i najnowszy wówczas HEAD `84d59481b5db0e1517620b851bc4e358a8acbfd9`: [CI 43312975623](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43312975623) — success.
+- `733c22885bd727813a45ba3166f09490a5e57392`: kontrakt `XetraCalendarSourceAdapter`, wykorzystujący istniejący interfejs `HttpTransport`.
+- `3aebe5f78d2f28c05fc01554283209fceccc04a0`: pobieranie HTML tylko z zatwierdzonych hostów HTTPS, 15 s timeout, limit 4 MiB, odrzucanie statusów innych niż HTTP 200, wymóg `Content-Type: text/html`, SHA-256 dokładnych bajtów, czas pobrania UTC i wywołanie parsera semantycznego. Warstwa `CurlHttpTransport` ma wyłączone przekierowania i włączoną weryfikację certyfikatu.
+- `5df0ec19dc15e1e4c15725c1c3aa2c7a3947e60a`: dołączono adapter do biblioteki.
+- `4363d190108070e95b6d790c33d9513cf7f8df3e`: testy na sztucznym transporcie: sukces, skrót, czas, limity, błędny host i schemat, podany z góry hash, 302, 503, niepoprawny/missing Content-Type, za duża odpowiedź, zmieniony HTML, atomowość nieudanego importu, dopisanie wersji 2.
+- `2312f0c4584684896161430322564f56538da290`: dołączono test adaptera do CTest.
+- **CI:** w trakcie weryfikacji nowego SHA; nie oznaczać etapu jako zaliczonego do czasu zakończenia Configure/Build/Test.
+- **Ograniczenia:** nie przeprowadzono pobrania żywej strony; fixture HTML jest syntetyczny. Nie potwierdzono licencji źródła. Obecny importer obsługuje tylko rok 2026, a komunikat o godzinach 30 grudnia wymaga osobnego źródła.
+- Następne prace: weryfikacja najnowszego CI i poprawa ewentualnych regresji; rzeczywista walidacja struktury oficjalnej strony w kontrolowanym teście integracyjnym; zachowanie dokładnych bajtów HTML w archiwum źródeł; polityka odświeżania i deduplikacji wersji według SHA-256.
