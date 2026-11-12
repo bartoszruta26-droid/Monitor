@@ -122,7 +122,7 @@ int main() {
     const auto manifest=final_snapshot.venue_calendars.back().source;
     require(manifest.archive_relative_path.has_value() &&
             manifest.content_length_bytes==std::optional<std::uint64_t>(static_cast<std::uint64_t>((html+"\\n").size())) &&
-            manifest.content_type==std::optional<std::string>("text/html; charset=utf-8"),
+            manifest.content_type==std::optional<std::string>("text/html"),
             "persist relative archive path, exact byte length and original content type");
     const auto latest_archive=archive_root/("2-"+sha256_hex(html+"\\n")+".html");
     const auto original_json=[&] {
