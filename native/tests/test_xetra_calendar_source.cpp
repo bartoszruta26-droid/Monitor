@@ -596,10 +596,27 @@ int main() {
         require(adapter.import_pdf_notice(pdf_repository,pdf_notice,notice_url)==pdf_revision_before_replay &&
                 pdf_repository.load().venue_session_notices.size()==1U,
                 "re-importing an identical PDF notice revision is idempotent");
+        VenueSessionNotice reparsed_notice;
+        reparsed_notice.notice_id=pdf_notice.notice_id;
+        reparsed_notice.revision=2U;
+        const auto transport_calls_before_reparse=transport.calls;
+        require(adapter.publish_notice_revision_from_archive(pdf_repository,reparsed_notice)==3U &&
+                transport.calls==transport_calls_before_reparse,
+                "new notice revision is reparsed from the archived PDF without another HTTP request");
+        auto reparsed_snapshot=pdf_repository.load();
+        require(reparsed_snapshot.venue_session_notices.size()==2U &&
+                reparsed_snapshot.venue_session_notices.back().source_object_id==pdf_notice.source_object_id &&
+                reparsed_snapshot.venue_session_notices.back().parser_version=="xetra-pdf-text-notice-v1" &&
+                reparsed_snapshot.source_objects.size()==2U,
+                "offline reparse reuses the immutable PDF object and records its parser version");
+        const auto revision_after_reparse=reparsed_snapshot.revision;
+        require(adapter.publish_notice_revision_from_archive(pdf_repository,reparsed_notice)==revision_after_reparse &&
+                pdf_repository.load().venue_session_notices.size()==2U,
+                "replaying an archived notice revision is idempotent");
         transport.response.body=pdf_bytes+"\n";
         throws([&]{(void)adapter.import_pdf_notice(pdf_repository,pdf_notice,notice_url);},
                "changed PDF bytes cannot replace an already published notice revision");
-        require(pdf_repository.load().revision==pdf_revision_before_replay &&
+        require(pdf_repository.load().revision==revision_after_reparse &&
                 pdf_repository.load().source_objects.size()==2U,
                 "conflicting PDF notice import does not publish a second source object");
         auto invalid_pdf_notice=pdf_notice;
@@ -607,7 +624,7 @@ int main() {
         transport.response.body="not a PDF document";
         throws([&]{(void)adapter.import_pdf_notice(pdf_repository,invalid_pdf_notice,notice_url);},
                "invalid PDF source is rejected before archive publication");
-        require(pdf_repository.load().revision==pdf_revision_before_replay,
+        require(pdf_repository.load().revision==revision_after_reparse,
                 "invalid PDF notice leaves the repository unchanged");
     }
 
