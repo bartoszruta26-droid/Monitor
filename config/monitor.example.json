@@ -1,0 +1,35 @@
+{
+  "storage": {
+    "driver": "json",
+    "json": {
+      "directory": "./data",
+      "atomic_writes": true,
+      "backup_on_write": true
+    },
+    "mariadb": {
+      "host": "127.0.0.1",
+      "port": 3306,
+      "database": "monitor",
+      "username": "monitor",
+      "password_env": "MONITOR_DB_PASSWORD",
+      "connection_pool_size": 5
+    }
+  },
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8080,
+    "api_prefix": "/api/v1",
+    "websocket_path": "/ws",
+    "tls": {
+      "enabled": false,
+      "certificate_file": "",
+      "private_key_file": ""
+    }
+  },
+  "sync": {
+    "enabled": true,
+    "interval_seconds": 60,
+    "max_batch_size": 500,
+    "conflict_policy": "reject_and_report"
+  }
+}
