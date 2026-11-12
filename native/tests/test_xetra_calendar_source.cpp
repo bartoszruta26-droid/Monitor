@@ -557,6 +557,8 @@ int main() {
     require(notice_repository.load().revision==revision_before_notice_replay,
             "invalid notice does not change repository revision");
 
+    if(std::getenv("CI")!=nullptr)
+        require(xetra_pdf_import_available(),"CI installs pdftotext and must exercise the PDF import path");
     if(xetra_pdf_import_available()) {
         const auto pdf_import_folder=folder/"pdf-import";
         std::filesystem::create_directories(pdf_import_folder);
