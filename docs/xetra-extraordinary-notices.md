@@ -78,3 +78,8 @@ Testy regresji potwierdzają dokładne anulowanie wskazanej rewizji, pozostawien
 ## Etap 18A — fazy sesji w ogłoszeniu PDF
 
 Wprowadzono `VenueSessionPhaseEventKind` i `VenueSessionPhaseEvent`, aby zachować kamienie milowe sesji, których nie da się opisać jednym przedziałem otwarcia/zamknięcia. Model obejmuje start pre-trading, retail early, aukcję otwarcia, aukcję śróddzienną, aukcję zamknięcia, najwcześniejszy moment ustalenia ceny, koniec Trade-at-Close, koniec usług off-book oraz koniec post-trading. `parse_xetra_session_notice_text` czyta tekst wydobyty z PDF, sprawdza MIC XETR, datę i kompletność dziewięciu faz oraz konwertuje AM/PM na lokalny czas 24-godzinny. Import i archiwizacja surowego PDF nie są jeszcze zaimplementowane — to Etap 18B.
+
+
+## Etap 18B–18C — PDF i wersjonowanie interpretacji
+
+Importer `import_pdf_notice` pobiera PDF z zatwierdzonego hosta, wydobywa tekst przez `pdftotext`, archiwizuje dokładne bajty jako obiekt SHA-256 i publikuje komunikat z fazami. CI [43327239674](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43327239674) potwierdził ścieżkę na syntetycznym PDF. Dodano też `parser_version` i `publish_notice_revision_from_archive`, które tworzy kolejną rewizję z już zarchiwizowanego PDF bez kolejnego HTTP. Testy tej ostatniej ścieżki oczekują na CI.
