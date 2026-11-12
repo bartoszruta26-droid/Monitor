@@ -2,7 +2,7 @@
 
 **Repozytorium:** `bartoszruta26-droid/Monitor`  
 **Gałąź:** `main`  
-**Ostatnia weryfikacja:** 2026-11-12 23:16 Europe/Warsaw
+**Ostatnia weryfikacja:** 2026-11-12 23:3x Europe/Warsaw
 **Zasada prowadzenia:** status etapu zmienia się na „zakończony” dopiero po sprawdzeniu kodu, testów i CI dla konkretnego SHA. Ten plik jest bieżącym rejestrem wykonania; szczegóły techniczne pozostają w dokumentach etapów.
 
 ## Stan repozytorium przy audycie
@@ -434,3 +434,28 @@ Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na ma
 - Oddzielić wersję semantycznej rewizji kalendarza od wersji dokumentu źródłowego; zachować zgodność legacy `document_id + version`.
 - Umożliwić ponowną interpretację istniejącego obiektu źródłowego bez ponownego pobrania bajtów.
 - Dodać testy: wiele rewizji do jednego obiektu, parser revision bez zmiany źródła, zmiana źródła bez niejawnego nadpisania kalendarza i migracja JSON v1.
+
+## 46. Etap 15C zakończony; Etap 15D — diagnostyka osieroconych obiektów
+
+### Etap 15C — niezależne wersjonowanie źródła i kalendarza
+- Model `VenueSessionCalendar` ma niezależne `calendar_id`, `revision` i `parser_version`; `SourceCalendarDocument.version` nadal oznacza wersję dokumentu źródłowego.
+- Stare rekordy JSON v1 są materializowane do jawnego klucza kalendarza na podstawie `source.document_id + source.version`, bez zmiany znaczenia ich historycznych danych.
+- Dodano publikowanie nowej rewizji z archiwum przez `publish_revision_from_archive`; ponowna interpretacja używa zapisanych bajtów, bez kolejnego żądania HTTP.
+- Walidacja wiąże parę `document_id + source.version` z jednym SHA-256, a `calendar_id` z jednym venue. Konflikt źródła lub próba zmiany już opublikowanej rewizji jest odrzucana.
+- Testy potwierdzają rewizje 10/11/12 na źródle 1/1/2, ponowne użycie tego samego obiektu, idempotencję, brak dodatkowego HTTP, konflikt bajtów i zachowanie starszego klucza.
+- CI [43321518426](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43321518426) dla SHA `eb24c7d24080a6edb2fa486af58d6bbe6d432f87`: Configure/Build/Test — success; CTest 9/9.
+- Wcześniejszy CI [43321093552](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43321093552) na przejściowym SHA `d9b05fc` miał 8/9 testów; awaria dotyczyła asercji tożsamości/wersji parsera. Poprawki modelu i parsera w `5ca65b2`, `342d5ec`, `87020fe`, `a8384e2`, `ae4a852` doprowadziły do zielonego CI końcowego SHA.
+- Status Etapu 15C: zakończony.
+
+### Etap 15D — raport osieroconych obiektów
+- Dodano API `find_orphaned_source_objects(snapshot)`, które wskazuje rekordy `source_objects` bez referencji z `venue_calendars`.
+- Raport jest wyłącznie diagnostyczny: nie usuwa obiektów, nie modyfikuje migawki i nie skanuje katalogu w poszukiwaniu nieindeksowanych plików.
+- Dodano test: obiekt nieużywany pojawia się w raporcie, a po przypisaniu go do nowej rewizji znika z raportu.
+- Commity: `c7eac6b11e34ffa70c2d1051f25de4f81fea68d7` (API), `ee0c2460541f7c2c87fff1e8d4e01060bace13cb` (implementacja), `15d5e2f606d030c01cff9d095e75bea45232feab` (test).
+- CI dla aktualnego podetapu 15D jest uruchomiony; status pozostaje otwarty do zielonego Configure/Build/Test dla końcowego SHA.
+
+### Następne czynności
+1. Potwierdzić CI dla testu raportu osieroconych obiektów; poprawić ewentualne błędy.
+2. Po zielonym CI zamknąć Etap 15D.
+3. Rozpocząć Etap 16: dynamiczne lata parsera Xetra; usunąć założenia zakodowane na stałe dla 2026 dopiero po przygotowaniu niezależnych fixture i walidacji dat/układów.
+4. Następnie Etap 17: osobny importer nadzwyczajnych komunikatów o skróconych sesjach. Godzin nie wolno wyprowadzać z samego kalendarza świąt ani zgadywać.
