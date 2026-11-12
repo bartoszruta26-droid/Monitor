@@ -7,6 +7,9 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
+#include <sstream>
+#include <vector>
 #include <iostream>
 #include <iterator>
 #include <stdexcept>
@@ -42,6 +45,60 @@ SourceCalendarDocument source() {
     s.source_uri="https://www.cashmarket.deutsche-boerse.com/cash-en/trading/trading-calendar-and-trading-hours";
     s.attribution="Deutsche Börse Cash Market";
     return s;
+}
+std::string make_pdf_notice_fixture() {
+    const std::vector<std::string> lines{
+        "Final trading session 2026",
+        "Effective date: 30 December 2026",
+        "Market Deutsche Boerse Xetra - electronic trading system T7 - MIC: XETR",
+        "from 7.00 a.m. Start of pre-trading",
+        "from 8.00 a.m. Start of retail early",
+        "from 8.55 a.m. Start of opening auction call",
+        "from 1.00 p.m. Start of intraday auction call",
+        "from 2.00 p.m. Start of closing auction call",
+        "Price determination in the closing auction will take place no earlier than 2.05 p.m.",
+        "Trade-at-Close period will end at 2.10 p.m. for DAX, MDAX and SDAX",
+        "TES OTC and TES LIS trades may be entered and Xetra EnLight may be used until 2.59 p.m.",
+        "End of post-trading at 3.00 p.m.",
+        "3. Availability"
+    };
+    std::string stream="BT\n/F1 10 Tf\n50 750 Td\n";
+    const auto escape=[](const std::string& value) {
+        std::string result;
+        for(char ch:value) {
+            if(ch=='(' || ch==')' || ch=='\\') result.push_back('\\');
+            result.push_back(ch);
+        }
+        return result;
+    };
+    for(std::size_t i=0;i<lines.size();++i) {
+        if(i>0U) stream+="0 -14 Td\n";
+        stream+="("+escape(lines[i])+") Tj\n";
+    }
+    stream+="ET\n";
+    const std::vector<std::string> objects{
+        "<< /Type /Catalog /Pages 2 0 R >>",
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        "<< /Length "+std::to_string(stream.size())+" >>\nstream\n"+stream+"endstream"
+    };
+    std::string pdf="%PDF-1.4\n";
+    std::vector<std::size_t> offsets(6U);
+    for(std::size_t i=0;i<objects.size();++i) {
+        offsets[i+1U]=pdf.size();
+        pdf+=std::to_string(i+1U)+" 0 obj\n"+objects[i]+"\nendobj\n";
+    }
+    const auto xref=pdf.size();
+    pdf+="xref\n0 6\n0000000000 65535 f \n";
+    for(std::size_t i=1;i<offsets.size();++i) {
+        std::ostringstream line;
+        line<<std::setw(10)<<std::setfill('0')<<offsets[i]<<" 00000 n \n";
+        pdf+=line.str();
+    }
+    pdf+="trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n"+
+        std::to_string(xref)+"\n%%EOF\n";
+    return pdf;
 }
 }
 int main() {
