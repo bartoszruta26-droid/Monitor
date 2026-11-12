@@ -29,3 +29,12 @@ SQLite i PostgreSQL nie są obecnie założonymi magazynami docelowymi.
 - Linux GUI, WebUI, TUI i Android App: planowane.
 
 Nie rozwijaj nowych funkcji w tym historycznym katalogu. Pliki prototypu można usunąć dopiero po przeniesieniu i zweryfikowaniu wszystkich potrzebnych funkcji w implementacji C++.
+
+
+## Potwierdzony status po audycie 2026-11-12
+
+- Kod `backend/market_data/` zawiera historyczny prototyp Python: adaptery REST/ NB P, import NBP/Frankfurter/World Bank, API FastAPI i testy pytest.
+- Prototyp można uruchomić niezależnie, ale nie jest częścią aktywnej aplikacji C++20 ani bieżącego workflow CI.
+- Prototyp używa SQLite jako domyślnego magazynu i ma opcjonalną obsługę PostgreSQL. Nie implementuje docelowego magazynu JSON ani MariaDB.
+- Testy Python pozostają w repozytorium jako materiał historyczny i nie są uruchamiane w aktywnym CI. Nie należy ich traktować jako kryterium ukończenia aktywnych modułów.
+- Opis adapterów w `docs/open-data-providers.md` dotyczy wyłącznie tego prototypu.
