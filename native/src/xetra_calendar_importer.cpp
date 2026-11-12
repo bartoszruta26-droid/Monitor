@@ -402,6 +402,7 @@ VenueSessionNotice parse_xetra_session_notice_text(
     validate_notice_phase_events(events);
     notice.kind=VenueSessionNoticeKind::SessionOverride;
     notice.day_status=VenueDayStatus::Trading;
+    notice.parser_version="xetra-pdf-text-notice-v1";
     notice.product_sessions.clear();
     notice.phase_events=std::move(events);
     notice.cancels_notice_id.clear();
@@ -534,6 +535,7 @@ VenueSessionNotice parse_xetra_session_notice_html(std::string_view html,VenueSe
     } else {
         throw std::invalid_argument("Nieznany rodzaj komunikatu Xetra.");
     }
+    notice.parser_version="xetra-html-notice-v1";
     return notice;
 }
 
