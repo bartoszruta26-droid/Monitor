@@ -3,6 +3,7 @@
 #include "monitor/market_data.hpp"
 
 #include <string_view>
+#include <string>
 #include <vector>
 
 namespace monitor::market {
@@ -89,6 +90,12 @@ void validate_source_calendar_document(const SourceCalendarDocument& document);
 // terms have been verified.
 [[nodiscard]] VenueSessionCalendar build_xetra_2026_calendar(
     const SourceCalendarDocument& document);
+
+// Parses the semantic non-trading-days table and holiday-trading notices from
+// the official Deutsche Börse HTML page. Input is the exact downloaded byte
+// sequence; the caller records sha256_hex(html) before decoding it.
+[[nodiscard]] VenueSessionCalendar parse_xetra_html_calendar(
+    std::string_view html, const SourceCalendarDocument& document);
 
 enum class NbpPublicationTable { A, B, C };
 
