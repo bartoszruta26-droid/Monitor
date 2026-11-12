@@ -53,7 +53,7 @@ Celem jest jeden wspólny rdzeń C++ używany przez różne interfejsy. Nie nale
 
 ## 3. Aktualny stan implementacji
 
-<badge color="success">Dostępne w repozytorium</badge>
+**Dostępne w repozytorium:**
 
 - Natywna biblioteka C++20 `monitor_core`.
 - Regresja liniowa metodą najmniejszych kwadratów.
