@@ -40,6 +40,22 @@ struct LocalSessionSchedule {
     NonexistentLocalTimePolicy nonexistent_time_policy{NonexistentLocalTimePolicy::Reject};
 };
 
+enum class NbpPublicationTable { A, B, C };
+
+// Local publication interval, never an inferred observation timestamp.
+struct NbpPublicationWindow {
+    NbpPublicationTable table{NbpPublicationTable::A};
+    CivilDate local_date;
+    std::string timezone{"Europe/Warsaw"};
+    LocalTimeOfDay starts_at;
+    LocalTimeOfDay ends_at;
+};
+
+// The holiday list is explicit input from an authoritative, versioned source.
+[[nodiscard]] std::vector<NbpPublicationWindow> generate_nbp_publication_windows(
+    const CivilDate& start_date, const CivilDate& end_date_exclusive,
+    const std::vector<CivilDate>& public_holidays);
+
 // Uses ICU's IANA time-zone database. The end date is exclusive.
 // A nonexistent local time is either rejected or moved to the first valid
 // local time after the DST gap. Repeated local times require an explicit

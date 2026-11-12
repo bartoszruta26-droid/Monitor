@@ -92,3 +92,13 @@ Obecny MarketSessionCalendar jest listą oczekiwanych znaczników UTC i nie prze
 - Rozstrzygnięcie czy MarketSessionCalendar zostaje rozszerzony, czy dodany zostaje odrębny ProviderPublicationCalendar.
 - Semantyka dziennych timestampów NBP w obecnym modelu: kotwica daty UTC kontra lokalna data publikacji; nie zmieniać bez testów migracyjnych.
 - Dla XAUS: brak oficjalnego harmonogramu godzin handlu w API; na razie modelować wyłącznie świeżość i obserwowaną częstotliwość, nie kalendarz sesyjny.
+
+## 7. Pierwsza implementacja NBP — okna publikacji
+
+Kod: `NbpPublicationWindow`, `NbpPublicationTable`, `generate_nbp_publication_windows()` w `native/include/monitor/market_data_calendar.hpp` i `native/src/market_data_calendar.cpp`.
+
+- Tabele A i C: dni robocze z wyłączeniem przekazanych świąt; A 11:45–12:15, C 07:45–08:15.
+- Tabela B: środy 11:45–12:15; gdy środa jest na liście dni wolnych, publikacja przypada poprzedniego dnia roboczego.
+- Wszystkie okna są lokalnymi przedziałami Europe/Warsaw. Nie są przeliczane na `observed_at`; dokładny czas publikacji pochodzi z rzeczywistej odpowiedzi NBP.
+- Generator nie zawiera własnej listy świąt. Wywołujący przekazuje listę z wiarygodnego, wersjonowanego źródła.
+- Fixture: 2026-11-11 jako środa wolna; B przesunięta na 2026-11-10, A/C pomijają 11 listopada.

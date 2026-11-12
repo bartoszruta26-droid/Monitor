@@ -177,4 +177,59 @@ MarketSessionCalendar generate_session_calendar(const LocalSessionSchedule& s) {
             throw std::invalid_argument("Reguły wygenerowały kolidujące znaczniki UTC.");
     return result;
 }
+
+std::vector<NbpPublicationWindow> generate_nbp_publication_windows(
+    const CivilDate& start_date, const CivilDate& end_date_exclusive,
+    const std::vector<CivilDate>& public_holidays) {
+    using namespace std::chrono;
+    if(!is_valid_date(start_date)||!is_valid_date(end_date_exclusive))
+        throw std::invalid_argument("Niepoprawna data zakresu kalendarza NBP.");
+    const sys_days begin{year{start_date.year}/month{start_date.month}/day{start_date.day}};
+    const sys_days end{year{end_date_exclusive.year}/month{end_date_exclusive.month}/day{end_date_exclusive.day}};
+    if(!(begin<end)||(end-begin).count()>36600)
+        throw std::invalid_argument("Zakres kalendarza NBP jest pusty lub przekracza 100 lat.");
+    std::set<std::int64_t> holidays;
+    for(const auto& date:public_holidays) {
+        if(!is_valid_date(date)) throw std::invalid_argument("Niepoprawna data święta NBP.");
+        const sys_days point{year{date.year}/month{date.month}/day{date.day}};
+        if(!holidays.insert(point.time_since_epoch().count()).second)
+            throw std::invalid_argument("Powtórzona data święta NBP.");
+    }
+    const auto business_day=[&](sys_days date) {
+        const unsigned wd=weekday{date}.iso_encoding();
+        return wd>=1U&&wd<=5U&&!holidays.contains(date.time_since_epoch().count());
+    };
+    const auto civil=[](sys_days date) {
+        const year_month_day ymd{date};
+        return CivilDate{static_cast<int>(ymd.year()),static_cast<unsigned>(ymd.month()),
+                         static_cast<unsigned>(ymd.day())};
+    };
+    std::vector<NbpPublicationWindow> result;
+    for(auto date=begin;date<end;date+=days{1}) {
+        if(business_day(date)) {
+            result.push_back({NbpPublicationTable::A,civil(date),"Europe/Warsaw",{11,45,0},{12,15,0}});
+            result.push_back({NbpPublicationTable::C,civil(date),"Europe/Warsaw",{7,45,0},{8,15,0}});
+        }
+        if(weekday{date}.iso_encoding()==3U) {
+            auto publication=date;
+            if(!business_day(publication)) {
+                do { publication-=days{1}; } while(!business_day(publication));
+            }
+            if(publication>=begin&&publication<end)
+                result.push_back({NbpPublicationTable::B,civil(publication),"Europe/Warsaw",{11,45,0},{12,15,0}});
+        }
+    }
+    const auto order=[](NbpPublicationTable t) {
+        switch(t) { case NbpPublicationTable::A:return 0; case NbpPublicationTable::B:return 1;
+                    case NbpPublicationTable::C:return 2; }
+        return 3;
+    };
+    std::sort(result.begin(),result.end(),[&](const auto& a,const auto& b) {
+        const auto da=year{a.local_date.year}/month{a.local_date.month}/day{a.local_date.day};
+        const auto db=year{b.local_date.year}/month{b.local_date.month}/day{b.local_date.day};
+        if(da!=db) return da<db;
+        return order(a.table)<order(b.table);
+    });
+    return result;
+}
 } // namespace monitor::market

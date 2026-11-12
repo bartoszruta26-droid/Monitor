@@ -7,8 +7,8 @@
 
 ## Stan repozytorium przy audycie
 
-- HEAD `main`: `da61302dc4de43308228e6f60e82e187bef566df`.
-- Ostatni workflow: [CI 43301335250](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43301335250), SHA zgodny z HEAD, zakończony sukcesem (konfiguracja, kompilacja, CTest 8/8).
+- HEAD `main`: `15dd26ca67ea297a81fc30eec42d1664ed8376d8` (przed implementacją etapu 11).
+- Ostatni workflow: [CI 43301713066](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43301713066), SHA zgodny z HEAD, zakończony sukcesem (konfiguracja, kompilacja, CTest 8/8).
 - Poprzednie przebiegi obejmują jeden nieudany CI dla wcześniejszego SHA `aa3b7eb`, po którym późniejszy commit przeszedł poprawnie. Nie traktować błędu jako aktualnego, ale zachować go w historii.
 - Gałęzie: wyłącznie `main`.
 - Otwarte pull requesty: 0.
@@ -29,7 +29,7 @@
 | 8 | Jawny kalendarz sesyjny dla kompletności HTF | Zakończony v1 jako funkcja obliczeniowa | `MarketSessionCalendar` i `session_aware_rolling_regression()`; terminy przekazuje wywołujący |
 | 9 | Trwały magazyn i wersjonowanie kalendarzy sesyjnych | Zakończony | Commit `df867c6efaa7f8cebad74db3291a3c0dde12f67e`; CI [43264555372](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43264555372) sukces, kompilacja i CTest 7/7. Pochodzenie regresji zawiera `calendar_id` i `calendar_version`. |
 | 10 | Generator harmonogramów z IANA TZ/DST i reguł sesji | Zakończony | Commit `da61302dc4de43308228e6f60e82e187bef566df`; CI [43301335250](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43301335250) sukces: konfiguracja, kompilacja i CTest 8/8. Testy obejmują DST wiosenny i jesienny, polityki czasu, weekendy, wyłączenia, błędne strefy i zakres dat. |
-| 11 | Kalendarze źródłowe i instrumentowe (NBP, metale, giełdy) | W toku — audyt źródeł i semantyki kalendarzy | Opracowano rejestr źródeł oficjalnych i rozdzielono kalendarz publikacji, kalendarz sesji oraz obserwowaną historię publikacji. Do implementacji po zatwierdzeniu modelu i fixture. |
+| 11 | Kalendarze źródłowe i instrumentowe (NBP, metale, giełdy) | W toku — generator okien publikacji NBP | Dodano lokalny model okna publikacji i reguły A/B/C z jawną listą świąt; fixture obejmuje święto w środę i przesunięcie tabeli B. Oczekuje na CI. |
 | 12 | Wspólne fixture i porównanie C++/Pine | Do wykonania | Pine Editor niezweryfikowany; brak potwierdzonej kompilacji TradingView |
 | 13 | Serwer API, autoryzacja, REST/JSON i WebSocket | Do wykonania | Brak aktywnego modułu serwera |
 | 14 | Klienci Linux GUI, WebUI, TUI i Android | Do wykonania | Brak aktywnych modułów klientów |
@@ -140,3 +140,13 @@ Przy każdym kolejnym poleceniu kontynuacji należy najpierw odczytać ten plik 
 - XAUS udostępnia orientacyjny spot z cache 60 s i serię intraday co 5 minut z ograniczoną retencją; nie jest to kalendarz giełdowy ani kwotowanie wykonywalne.
 - Dla giełd należy importować oficjalny kalendarz konkretnego operatora i rynku (np. Xetra), uwzględniając dni handlu w święta, skrócone sesje i wersje kalendarza.
 - Szczegóły, źródła i kryteria implementacji: `docs/market-calendar-sources.md`.
+
+
+## 25. Etap 11 — implementacja okien publikacji NBP
+
+- Dodano `NbpPublicationWindow` i `NbpPublicationTable`; okno przechowuje lokalną datę, strefę `Europe/Warsaw` i przedział godzin, nie timestamp obserwacji.
+- `generate_nbp_publication_windows()` tworzy A/C w dni robocze oraz B w środy. Gdy środa jest na jawnej liście dni wolnych, B jest przenoszona na poprzedni dzień roboczy.
+- Oficjalne przedziały: A/B 11:45–12:15, C 07:45–08:15. Źródło: https://nbp.pl/statystyka-i-sprawozdawczosc/kursy/informacja-o-terminach-publikacji-kursow-walut/.
+- Lista świąt jest parametrem wejściowym; nie zaszyto ani nie zgadnięto polskiego kalendarza świąt.
+- Fixture: 11 listopada 2026 r. jako środa wolna; B przesunięta na 10 listopada, A/C pomijają święto. Testy obejmują zwykłą środę, błędny zakres i duplikaty świąt.
+- Status pozostaje w toku do pełnego CI.

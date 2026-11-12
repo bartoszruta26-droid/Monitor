@@ -78,5 +78,30 @@ int main() {
     bad=base();
     bad.end_date_exclusive=bad.start_date;
     throws([&]{(void)generate_session_calendar(bad);},"pusty zakres dat jest odrzucany");
-    std::cout<<"All IANA session calendar tests passed.\n";
+    const auto nbp=generate_nbp_publication_windows(
+        parse_date("2026-11-10"),parse_date("2026-11-13"),{parse_date("2026-11-11")});
+    require(nbp.size()==5,"NBP A/B/C windows respect holiday and working days");
+    require(nbp[0].table==NbpPublicationTable::A&&format_date(nbp[0].local_date)=="2026-11-10"&&
+            nbp[0].starts_at.hour==11&&nbp[0].starts_at.minute==45&&
+            nbp[0].ends_at.hour==12&&nbp[0].ends_at.minute==15,
+            "NBP A window is a Warsaw local interval, not an observation instant");
+    require(nbp[1].table==NbpPublicationTable::B&&format_date(nbp[1].local_date)=="2026-11-10",
+            "holiday Wednesday table B moves to the preceding business day");
+    require(nbp[2].table==NbpPublicationTable::C&&nbp[2].starts_at.hour==7&&
+            nbp[2].starts_at.minute==45&&nbp[2].ends_at.hour==8&&nbp[2].ends_at.minute==15,
+            "NBP C uses its distinct morning publication window");
+    require(format_date(nbp[3].local_date)=="2026-11-12"&&
+            format_date(nbp[4].local_date)=="2026-11-12",
+            "NBP public holiday is excluded from daily A and C");
+    const auto ordinary=generate_nbp_publication_windows(
+        parse_date("2026-11-16"),parse_date("2026-11-20"),{});
+    require(std::any_of(ordinary.begin(),ordinary.end(),[](const auto& w) {
+        return w.table==NbpPublicationTable::B&&format_date(w.local_date)=="2026-11-18";
+    }),"NBP table B normally publishes on Wednesday");
+    throws([&]{(void)generate_nbp_publication_windows(
+        parse_date("2026-11-10"),parse_date("2026-11-13"),
+        {parse_date("2026-11-11"),parse_date("2026-11-11")});},"duplicate holidays are rejected");
+    throws([&]{(void)generate_nbp_publication_windows(
+        parse_date("2026-11-13"),parse_date("2026-11-13"),{});},"empty NBP range is rejected");
+    std::cout<<"All IANA and NBP publication calendar tests passed.\n";
 }
