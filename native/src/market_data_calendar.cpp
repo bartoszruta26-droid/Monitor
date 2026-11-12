@@ -427,6 +427,7 @@ VenueSessionCalendar build_xetra_2026_calendar(const SourceCalendarDocument& doc
     VenueSessionCalendar result;
     result.calendar_id=document.document_id;
     result.revision=document.version;
+    result.parser_version="xetra-html-2026-v1";
     result.source=document;
     using namespace std::chrono;
     const sys_days begin{year{2026}/January/1};
