@@ -117,6 +117,24 @@ LocalTimeOfDay parse_clock_time(const std::smatch& match,std::size_t hour_index,
     return {hour,minute,0U};
 }
 
+void validate_notice_phase_events(const std::vector<VenueSessionPhaseEvent>& events) {
+    if(events.empty()) throw std::invalid_argument("Ogłoszenie PDF nie zawiera zdarzeń faz sesji.");
+    std::set<std::string> keys;
+    std::optional<std::tuple<unsigned,unsigned,unsigned>> previous;
+    for(const auto& event:events) {
+        const auto key=std::to_string(static_cast<unsigned>(event.kind))+":"+event.scope;
+        if(!keys.insert(key).second || event.at.hour>23U || event.at.minute>59U ||
+           event.at.second>59U ||
+           ((event.kind==VenueSessionPhaseEventKind::TradeAtCloseEnd ||
+             event.kind==VenueSessionPhaseEventKind::OffBookServicesEnd) && event.scope.empty()))
+            throw std::invalid_argument("Ogłoszenie PDF zawiera powtórzone lub nieprawidłowe zdarzenie fazy.");
+        const auto current=std::tuple{event.at.hour,event.at.minute,event.at.second};
+        if(previous && current<*previous)
+            throw std::invalid_argument("Zdarzenia fazy w ogłoszeniu PDF nie są uporządkowane.");
+        previous=current;
+    }
+}
+
 } // namespace
 
 VenueSessionCalendar parse_xetra_html_calendar(
@@ -360,7 +378,7 @@ VenueSessionNotice parse_xetra_session_notice_text(
     std::sort(events.begin(),events.end(),[](const auto& a,const auto& b) {
         return std::tie(a.at.hour,a.at.minute,a.at.second)<std::tie(b.at.hour,b.at.minute,b.at.second);
     });
-    validate_phase_events(events);
+    validate_notice_phase_events(events);
     notice.kind=VenueSessionNoticeKind::SessionOverride;
     notice.day_status=VenueDayStatus::Trading;
     notice.product_sessions.clear();
