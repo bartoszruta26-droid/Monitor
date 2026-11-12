@@ -27,3 +27,8 @@ Pole `timezone` przechowuje identyfikator strefy użyty do przygotowania slotów
 ## Ważne ograniczenie
 
 Kalendarz musi definiować dokładne oczekiwane czasy obserwacji zgodne z czasami zwracanymi przez adapter źródłowy. Dla dziennych danych referencyjnych może to być jeden slot na dzień publikacji. Dla danych minutowych harmonogram powinien zawierać wszystkie oczekiwane sloty danej sesji. Rozwiązanie nie interpoluje brakujących wartości.
+
+
+## Generator IANA TZ/DST
+
+Moduł `market_data_calendar` generuje sloty z lokalnych reguł tygodniowych przy użyciu bazy stref ICU. Zakres dat jest półotwarty `[start_date, end_date_exclusive)`. Można wskazać ISO dni tygodnia, wiele godzin lokalnych i jawne daty wyłączeń. `AmbiguousLocalTimePolicy` rozstrzyga powtórzoną godzinę jesienną; `NonexistentLocalTimePolicy` obsługuje godzinę pominiętą wiosną. Domyślne ustawienia odrzucają oba przypadki, aby harmonogram nie był generowany z ukrytym założeniem. Wartości wynikowe są zapisywane jako UTC i mogą zostać przekazane do `upsert_session_calendar()`.

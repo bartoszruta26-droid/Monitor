@@ -27,8 +27,8 @@
 | 6 | Regresja krocząca DGT/LTB/n-2 | Zakończony jako silnik liczbowy | `regression.*`; zachowano różne mianowniki metod |
 | 7 | Regresja HTF z segmentacją po brakujących okresach | Zakończony v1 | `market_data_regression.*`; okresy kalendarzowe, bez reguł sesji |
 | 8 | Jawny kalendarz sesyjny dla kompletności HTF | Zakończony v1 jako funkcja obliczeniowa | `MarketSessionCalendar` i `session_aware_rolling_regression()`; terminy przekazuje wywołujący |
-| 9 | Trwały magazyn i wersjonowanie kalendarzy sesyjnych | W toku — kod zapisany na main, oczekuje na CI | Model domenowy, kolekcje snapshot/batch, serializacja JSON, walidacja, ochrona niezmienności wersji i testy zapisane w commicie `68377875`. Pochodzenie regresji sesyjnej dopinane osobno. |
-| 10 | Generator harmonogramów z IANA TZ/DST i reguł sesji | Do wykonania | Brak generatora i zależności/strefowych testów |
+| 9 | Trwały magazyn i wersjonowanie kalendarzy sesyjnych | Zakończony | Commit `df867c6efaa7f8cebad74db3291a3c0dde12f67e`; CI [43264555372](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43264555372) sukces, kompilacja i CTest 7/7. Pochodzenie regresji zawiera `calendar_id` i `calendar_version`. |
+| 10 | Generator harmonogramów z IANA TZ/DST i reguł sesji | W toku — implementacja na main, oczekuje na CI | Generator C++20/ICU: zakres dat, dni tygodnia, godziny lokalne, wyłączenia, jawna polityka czasu nieistniejącego i powtórzonego; testy przejść DST w Europe/Warsaw. |
 | 11 | Oficjalne kalendarze instrumentów (NBP, metale, giełdy) | Do wykonania | Brak zweryfikowanych kalendarzy dostawców |
 | 12 | Wspólne fixture i porównanie C++/Pine | Do wykonania | Pine Editor niezweryfikowany; brak potwierdzonej kompilacji TradingView |
 | 13 | Serwer API, autoryzacja, REST/JSON i WebSocket | Do wykonania | Brak aktywnego modułu serwera |
@@ -49,6 +49,12 @@
 - CTest: 7/7; 100% testów zaliczonych; czas testów 0,09 s.
 - Commit zawiera dokumentację i rejestr, nie zmienia logiki aplikacji.
 
+## Weryfikacja etapu 9 — końcowa
+
+- Commit `df867c6efaa7f8cebad74db3291a3c0dde12f67e` — CI 43264555372 zakończony sukcesem; konfiguracja, kompilacja i testy zakończone powodzeniem.
+- Ochrona niezmienności obejmuje zapis partii i `replace(snapshot)`; testy potwierdzają odrzucenie edycji i usunięcia wersji.
+- Starszy dokument schema v1 bez kolekcji kalendarzy jest odczytywany jako pusta lista.
+
 ## Dziennik weryfikacji etapu 9
 
 - Commit `68377875` — CI nieudany na etapie kompilacji: zduplikowana definicja `MarketSessionCalendar` w nagłówku regresji. Błąd został zidentyfikowany w logach GitHub Actions.
@@ -63,6 +69,17 @@
 - Starszy dokument schema v1 bez `session_calendars` pozostaje obsługiwany.
 
 ## Bieżący etap roboczy
+
+### Etap 10 — generator harmonogramów IANA TZ/DST
+
+Zakres:
+1. Generować sloty lokalne według jawnych dni tygodnia i godzin w przedziale dat.
+2. Rozpoznawać wyłącznie strefy IANA z bazy ICU.
+3. Wymagać jawnej polityki dla czasu powtórzonego jesienią; domyślnie odrzucać niejednoznaczność.
+4. Wymagać jawnej polityki dla czasu nieistniejącego wiosną; domyślnie odrzucać, opcjonalnie przesuwać do pierwszego poprawnego czasu.
+5. Obsługiwać daty wyłączone, walidację i deterministyczne sortowanie UTC.
+
+Kryteria zakończenia: testy DST, weekendów, dat wyłączonych, błędnych stref, kolizji i zakresów; pełny CI dla konkretnego SHA.
 
 ### Etap 9 — trwały, niezmienny magazyn kalendarzy
 

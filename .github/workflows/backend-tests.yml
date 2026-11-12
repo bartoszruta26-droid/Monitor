@@ -16,7 +16,7 @@ jobs:
       - name: Install native build tools and provider dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build g++ libcurl4-openssl-dev nlohmann-json3-dev libarchive-dev libxml2-dev
+          sudo apt-get install -y cmake ninja-build g++ libcurl4-openssl-dev nlohmann-json3-dev libarchive-dev libxml2-dev libicu-dev
       - name: Configure
         run: cmake -S native -B build/native -G Ninja -DCMAKE_BUILD_TYPE=Release -DMONITOR_BUILD_TESTS=ON
       - name: Build

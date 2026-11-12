@@ -686,3 +686,10 @@ Bieżący, nadrzędny rejestr etapów znajduje się w [IMPLEMENTATION_STATUS.md]
 **Ważna korekta:** Etap 8 (kalendarz sesyjny) jest zaimplementowany jako funkcja obliczeniowa `session_aware_rolling_regression()`, ale trwały magazyn i wersjonowanie kalendarzy nie zostały jeszcze wdrożone. Poprzednia odpowiedź opisała ten zakres jako wykonany przed sprawdzeniem aktualnych plików repozytorium. Audyt HEAD `d2bc1364986bee6f4474bfce9ad2549e60c90f97` potwierdził brak kalendarzy w `MarketDataSnapshot`, `MarketDataBatch` i `JsonMarketDataRepository`. Magazyn wersji jest następnym etapem, a nie funkcją gotową.
 
 Ostatni CI dla HEAD `d2bc1364986bee6f4474bfce9ad2549e60c90f97` zakończył się powodzeniem: [workflow 43260529082](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43260529082).
+
+
+## 20. Etap 9 — wynik końcowy i etap 10
+
+Etap 9 potwierdzony: commit `df867c6efaa7f8cebad74db3291a3c0dde12f67e`, CI 43264555372 — sukces, kompilacja i testy zakończone powodzeniem. Wersje kalendarzy są trwałe, niezmienne i identyfikowane w wynikach regresji.
+
+Etap 10 rozpoczęty: generator terminów z IANA TZ/DST w C++20, wykorzystujący ICU. Polityki czasu nieistniejącego i powtórzonego są jawne; domyślnie oba przypadki są odrzucane. Zakres dat, dni tygodnia i wyłączenia są jawnie podawane. Etap oczekuje na CI.
