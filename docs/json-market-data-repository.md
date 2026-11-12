@@ -33,10 +33,13 @@ Klucz notowania to (instrument_id, provider_id, observed_at, price_kind, frequen
 
 ## Zależności i ograniczenia
 - C++20, nlohmann-json, POSIX flock/fsync/rename (pierwszy backend plikowy jest przeznaczony dla Linux/POSIX).
-- Nie implementuje jeszcze wspólnego interfejsu dla MariaDB ani serwera wymiany danych.
+- Kontrakt MarketDataRepository jest niezależny od magazynu; adapter MariaDB i serwer wymiany danych nie są jeszcze zaimplementowane.
 - Migracja dokumentu do przyszłej wersji wymaga jawnej funkcji migracyjnej i testów fixture; wersje nieznane są bezpiecznie odrzucane.
 - Jedna migawka JSON upraszcza atomowość i spójność relacji, ale może stać się duża. Paginacja/partycjonowanie należy rozważyć dopiero po pomiarach, zachowując kontrakt repozytorium.
 - Historyczny backend/market_data/storage.py nie jest częścią aktywnego C++ build/test path; korzysta z SQLite/PostgreSQL i nie zastępuje tego magazynu JSON.
+
+## Integracja z adapterami
+MarketDataBatch odwzorowuje kolekcje AdapterResult: instrumenty, dostawców, notowania i metadane. Warstwa wywołująca przekazuje wynik adaptera do upsert_batch(), co zatwierdza cały import jednym zapisem i jedną rewizją. Adaptery nie otrzymują zależności od plikowego magazynu.
 
 ## Testy
 native/tests/test_market_data_repository.cpp sprawdza round-trip, walidację, rewizje, deduplikację, historię korekt, kopie zapasowe, jawne odtwarzanie, odrzucanie nieznanej wersji schematu oraz współbieżne zapisy procesów. Testy nie korzystają z sieci. Partia adaptera jest przyjmowana jako jedna transakcja plikowa, więc błąd walidacji nie pozostawia częściowo zapisanych instrumentów lub notowań.

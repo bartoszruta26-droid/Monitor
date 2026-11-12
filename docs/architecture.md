@@ -65,11 +65,11 @@ MariaDB jest opcjonalnym backendem repozytorium. Wybór odbywa się przez konfig
 
 Wzór znajduje się w `config/monitor.example.json`. Domyślny sterownik to `json`. MariaDB jest wybierana przez ustawienie `storage.driver` na `mariadb`. Hasło pobierane jest ze zmiennej środowiskowej.
 
-Adaptery dostawców C++20 są zaimplementowane. Magazyn JSON C++20 jest w trakcie implementacji: wspólny kontrakt repozytorium, atomowy zapis migawki, blokady międzyprocesowe, kopia zapasowa i historia korekt. MariaDB i serwer wymiany danych pozostają do wykonania.
+Adaptery dostawców C++20 są zaimplementowane. Magazyn JSON C++20 jest zaimplementowany i zweryfikowany w CI: wspólny kontrakt repozytorium, atomowy zapis migawki, blokady międzyprocesowe, kopia zapasowa, historia korekt i atomowe przyjmowanie partii danych. MariaDB i serwer wymiany danych pozostają do wykonania.
 
 ## Status
 
-Obecnie w repozytorium działa natywny rdzeń C++20: regresja, model danych rynkowych v1, walidacja, testy, CLI, transport HTTP libcurl i adaptery NBP, Frankfurter, World Bank Pink Sheet oraz XAUS. Adaptery są budowane w monitor_core i objęte testami bez dostępu do sieci. Magazyn JSON jest obecnie weryfikowany w CI; MariaDB, serwer, API i interfejsy pozostają do implementacji.
+Obecnie w repozytorium działa natywny rdzeń C++20: regresja, model danych rynkowych v1, walidacja, testy, CLI, transport HTTP libcurl i adaptery NBP, Frankfurter, World Bank Pink Sheet oraz XAUS. Adaptery są budowane w monitor_core i objęte testami bez dostępu do sieci. Magazyn JSON jest zaimplementowany i zweryfikowany w CI; MariaDB, serwer, API i interfejsy pozostają do implementacji.
 
 Wspólny model danych rynkowych opisano w [docs/market-data-model.md](market-data-model.md), a adaptery w [docs/cpp-provider-adapters.md](cpp-provider-adapters.md). Typy domenowe znajdują się w native/include/monitor/market_data.hpp, a kontrakt adapterów i transport HTTP w native/include/monitor/market_data_adapters.hpp. Adaptery zwracają rekordy domenowe. Warstwa repozytorium udostępnia atomowy zapis partii wyników do JSON; adaptery nie zapisują bezpośrednio plików.
 

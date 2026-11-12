@@ -590,5 +590,13 @@ Etap 2 można zamknąć dopiero po kompilacji w CI, przejściu testów adapteró
 - Historyczny Python storage SQLite/PostgreSQL pozostaje poza aktywnym procesem C++20.
 - MariaDB i serwer wymiany danych nie są jeszcze zaimplementowane.
 
-### Status
-Etap 3 jest w trakcie weryfikacji CI. Pierwszy przebieg wykazał błędy kompilacji (różne typy iteratorów i porównanie CivilDate bez operatora równości), które poprawiono. Następny przebieg przeszedł kompilację i trzy dotychczasowe zestawy testów; test magazynu wykrył nieprawidłowe czasy received_at w fixture, poprawione w kolejnym commicie. Nie oznaczać etapu jako ukończonego, dopóki najnowszy przebieg CI nie potwierdzi kompilacji i 4/4 testów.
+### 12.1. Wynik weryfikacji i zamknięcie Etapu 3
+- Poprawiono błędy wykryte w pierwszych przebiegach CI: typy iteratorów, jawne porównanie CivilDate, czasy received_at w fixture oraz zapis końcowego znaku nowej linii podczas odtwarzania kopii.
+- Końcowy kod magazynu i testów znajduje się na main; commit kodu: 520cea16677a92cafdc5e86a6754d10c6577709f.
+- GitHub Actions: sukces; konfiguracja CMake, kompilacja C++20 i wszystkie cztery zestawy CTest zakończone powodzeniem (4/4). [Końcowy przebieg CI](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43253237765).
+- Testy magazynu potwierdzają round-trip, rewizje, deduplikację, historię korekt, backup, jawne odtworzenie z podbiciem rewizji, odrzucanie pustego i nieznanego dokumentu, atomowe przyjęcie partii oraz równoległe zapisy procesów.
+- Etap 3 zamknięty w zakresie magazynu JSON dla modelu danych rynkowych.
+- Ograniczenia: implementacja POSIX/Linux; brak jeszcze adaptera MariaDB, serwera wymiany danych, migracji starszych wersji dokumentu i testu wieloplatformowego.
+- Historyczny backend Python SQLite/PostgreSQL pozostaje poza aktywnym C++20 build/test path.
+
+**Następny etap: Etap 4 — agregacja i normalizacja szeregów danych oraz budowa świec OHLC z zachowaniem częstotliwości źródłowej i brakujących okresów.**
