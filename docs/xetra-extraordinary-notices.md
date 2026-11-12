@@ -58,3 +58,8 @@ Wprowadzono `VenueSessionNotice`, kolekcję `venue_session_notices` w migawce i 
 ## Stan implementacji 17B
 
 Parser `parse_xetra_session_notice_html` przyjmuje jawne pola HTML: `Venue`, `Effective date`, `Notice kind`, opcjonalnie `Day status`, `Cancels` oraz tabelę `Product Group / Opens / Closes`. Obsługuje komunikaty informacyjne, nadpisania i anulowania. `XetraCalendarSourceAdapter::import_notice` pobiera komunikat z zatwierdzonego hosta HTTPS, archiwizuje dokładne bajty jako obiekt SHA-256 i zapisuje obiekt oraz komunikat w jednej partii. Powtórny import identycznej rewizji jest idempotentny; zmiana bajtów lub interpretacji dla tej samej rewizji jest odrzucana. Testy używają wyłącznie syntetycznych fixture offline.
+
+
+## Stan implementacji 17C
+
+Dodano `resolve_effective_venue_calendar_day(snapshot, calendar_id, date)`. Resolver wybiera najnowszą rewizję kalendarza, wybiera najnowszą rewizję każdego komunikatu, uwzględnia anulowania i nakłada najwyżej jedno aktywne nadpisanie na kopię bazowego dnia. Komunikaty informacyjne pozostawiają harmonogram bez zmian. Wiele aktywnych nadpisań powoduje jawny konflikt. `requires_official_notice_unresolved` informuje, czy baza nadal oczekuje na oficjalne rozstrzygnięcie. Testy resolvera są dodane; CI aktualnego SHA pozostaje w toku.
