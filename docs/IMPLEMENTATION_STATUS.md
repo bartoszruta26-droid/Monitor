@@ -654,4 +654,19 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 - Dodano `publish_notice_revision_from_archive`: odczytuje i weryfikuje istniejący obiekt PDF, ponownie wydobywa tekst, tworzy nową rewizję komunikatu bez HTTP i ponownie wykorzystuje ten sam obiekt SHA-256.
 - Testy sprawdzają brak dodatkowego żądania HTTP, współdzielenie jednego PDF przez rewizje 1 i 2 oraz idempotentny replay nowej rewizji.
 - Commity: `parser_version` model i parser, serializacja/walidacja JSON, metoda offline reparse i testy są zapisane w historii `main`.
-- CI dla Etapu 18C jest w toku; nie zamykać przed zielonym Configure/Build/Test.
+- CI [43327718619](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43327718619) dla metody offline reparse, parser_version i testów — Configure/Build/Test success. Etap 18C: zakończony.
+
+## 61. Etap 18 — wynik i przejście do weryfikacji źródła pierwotnego
+
+- Etapy 18A–18C zakończone dla implementacji i syntetycznych testów offline: model faz, parser tekstu PDF, import i archiwizacja surowego PDF, wersjonowanie parsera oraz ponowna interpretacja z archiwum bez HTTP.
+- CI dla PDF importu i `pdftotext`: [43327239674](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43327239674) — success.
+- CI dla parser_version i offline reparse: [43327718619](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43327718619) — success.
+- Ograniczenie: harmonogram został odczytany z oficjalnego ogłoszenia publicznego, ale end-to-end fixture PDF jest syntetyczny. Nie zapisano jeszcze oryginalnych bajtów PDF giełdy w repozytorium i nie potwierdzono parsera na oryginalnym pliku.
+- Żadna godzina nie jest wyprowadzana z domysłu; fazy 30 grudnia wynikają z oficjalnego ogłoszenia. Zwykłe godziny sesji nie są sztucznie skracane do 14:00.
+
+### Etap 19 — weryfikacja oryginalnego dokumentu
+1. Pobrać dokładny PDF wskazany przez oficjalną stronę/okólnik 049/2026 i 050/2026.
+2. Zarchiwizować oryginalne bajty, SHA-256, długość, Content-Type, źródłowy URL i datę pobrania.
+3. Wydobyć tekst przez `pdftotext` i porównać z dziewięcioma fazami zapisanymi w fixture.
+4. Dodać oryginalny PDF jako fixture, jeżeli warunki licencji i repozytorium na to pozwalają; w przeciwnym razie dodać kontrolowany test z hash/metryką i tekstem wyodrębnionym.
+5. Dodać raport audytowy: źródło, parser_version, obiekt archiwalny, zastosowane/anulowane komunikaty i daty wymagające dalszego ogłoszenia.
