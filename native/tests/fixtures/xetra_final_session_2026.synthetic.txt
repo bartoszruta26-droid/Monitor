@@ -12,6 +12,6 @@ from 2.00 p.m. Start of closing auction call
 Price determination in the closing auction will take place no earlier than 2.05 p.m.
 Trade-at-Close period will end at 2.10 p.m. for DAX, MDAX and SDAX
 TES OTC and TES LIS trades may be entered, and Xetra EnLight may be used, until 2.59 p.m.
-End of post-trading at 3.00 p.m.
+from 3.00 p.m. End of post-trading
 
 3. Availability
