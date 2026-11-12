@@ -68,3 +68,8 @@ Dodano `resolve_effective_venue_calendar_day(snapshot, calendar_id, date)`. Reso
 ## Stan implementacji 17C–17D
 
 Resolver efektywnego dnia i raport nierozstrzygniętych dat są wdrożone. Testy potwierdzają pozostawienie bazowego harmonogramu przez komunikat informacyjny, nałożenie jawnego skrócenia, cofnięcie override po anulowaniu, zachowanie nowszej rewizji przy anulowaniu starszej oraz jawne odrzucenie konfliktujących nadpisań. Raport osieroconych obiektów uwzględnia referencje zarówno kalendarzy, jak i komunikatów. CI dla resolvera i raportów: [43324719408](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43324719408), [43324853676](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43324853676), [43325061044](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43325061044) — sukces. Dodatkowy test dwóch anulowań tej samej rewizji jest w toku.
+
+
+## Wynik Etapu 17D
+
+Testy regresji potwierdzają dokładne anulowanie wskazanej rewizji, pozostawienie nowszej rewizji aktywnej, odrzucanie wielu anulowań tej samej rewizji, konflikt kilku aktywnych nadpisań, przywrócenie bazowego harmonogramu i raport nierozstrzygniętych dat. CI [43325240256](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43325240256) — success. Etapy 17A–17D są zakończone dla syntetycznych fixture offline. Rzeczywisty format aktualnego okólnika giełdy nie został jeszcze pobrany ani zweryfikowany; to osobny następny etap.
