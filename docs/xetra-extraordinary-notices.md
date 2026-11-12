@@ -83,3 +83,8 @@ Wprowadzono `VenueSessionPhaseEventKind` i `VenueSessionPhaseEvent`, aby zachowa
 ## Etap 18B–18C — PDF i wersjonowanie interpretacji
 
 Importer `import_pdf_notice` pobiera PDF z zatwierdzonego hosta, wydobywa tekst przez `pdftotext`, archiwizuje dokładne bajty jako obiekt SHA-256 i publikuje komunikat z fazami. CI [43327239674](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43327239674) potwierdził ścieżkę na syntetycznym PDF. Dodano też `parser_version` i `publish_notice_revision_from_archive`, które tworzy kolejną rewizję z już zarchiwizowanego PDF bez kolejnego HTTP. Testy tej ostatniej ścieżki oczekują na CI.
+
+
+## Wynik Etapu 18C
+
+`VenueSessionNotice` przechowuje teraz `parser_version`. `publish_notice_revision_from_archive` odczytuje archiwalny PDF, weryfikuje SHA-256 i długość, wydobywa tekst ponownie i publikuje nową rewizję bez HTTP. Kolejne rewizje współdzielą ten sam niezmienny obiekt źródłowy. Testy sprawdzają również idempotentny replay. CI [43327718619](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43327718619) — success. Etapy 18A–18C są zakończone w zakresie offline. Oryginalny PDF giełdy nie został jeszcze zapisany jako fixture; jego weryfikacja to Etap 19.
