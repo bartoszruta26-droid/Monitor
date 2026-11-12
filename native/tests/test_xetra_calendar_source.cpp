@@ -605,7 +605,7 @@ int main() {
                 "new notice revision is reparsed from the archived PDF without another HTTP request");
         auto reparsed_snapshot=pdf_repository.load();
         require(reparsed_snapshot.venue_session_notices.size()==2U &&
-                reparsed_snapshot.venue_session_notices.back().source_object_id==pdf_notice.source_object_id &&
+                reparsed_snapshot.venue_session_notices.back().source_object_id==pdf_snapshot.venue_session_notices.front().source_object_id &&
                 reparsed_snapshot.venue_session_notices.back().parser_version=="xetra-pdf-text-notice-v1" &&
                 reparsed_snapshot.source_objects.size()==2U,
                 "offline reparse reuses the immutable PDF object and records its parser version");
