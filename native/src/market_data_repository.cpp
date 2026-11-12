@@ -386,10 +386,6 @@ SourceArchiveObject decode_source_object(const json& j) {
     x.archive_relative_path=j.at("archive_relative_path").get<std::string>();
     x.content_length_bytes=j.at("content_length_bytes").get<std::uint64_t>();
     x.content_type=j.at("content_type").get<std::string>();
-    x.source_uri=j.at("source_uri").get<std::string>();
-    if(!j.at("retrieved_at").is_null()) x.retrieved_at=parse_utc_timestamp(j.at("retrieved_at").get<std::string>());
-    x.attribution=j.at("attribution").get<std::string>();
-    x.license_status=parse_venue_license_status(j.at("license_status").get<std::string>());
     return x;
 }
 void validate_source_object(const SourceArchiveObject& x) {
@@ -401,13 +397,11 @@ void validate_source_object(const SourceArchiveObject& x) {
     const std::filesystem::path path(x.archive_relative_path);
     if(!valid_hash(x.content_sha256) || x.source_object_id!="sha256:"+x.content_sha256 ||
        x.archive_relative_path.empty() || path.is_absolute() || path.has_root_name() ||
-       path.has_root_directory() || x.content_length_bytes==0U || x.content_type.empty() ||
-       x.source_uri.rfind("https://",0)!=0 || x.attribution.empty())
-        throw std::invalid_argument("Obiekt źródłowy wymaga identyfikatora SHA-256, względnego archiwum i kompletnego pochodzenia.");
+       path.has_root_directory() || x.content_length_bytes==0U || x.content_type.empty())
+        throw std::invalid_argument("Obiekt źródłowy wymaga identyfikatora SHA-256, względnego archiwum i metadanych bajtów.");
     for(const auto& component:path)
         if(component.empty() || component=="." || component=="..")
             throw std::invalid_argument("Ścieżka obiektu źródłowego zawiera niedozwolony komponent.");
-    (void)enum_name(x.license_status);
 }
 std::string venue_calendar_key(const VenueSessionCalendar& x) {
     return x.source.document_id + "\x1f" + std::to_string(x.source.version);
