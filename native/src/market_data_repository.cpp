@@ -921,6 +921,18 @@ std::uint64_t JsonMarketDataRepository::upsert_venue_calendar(const VenueSession
 std::uint64_t JsonMarketDataRepository::upsert_source_object(const SourceArchiveObject& item) {
     MarketDataBatch batch;batch.source_objects.push_back(item);return upsert_batch(batch);
 }
+std::vector<SourceArchiveObject> find_orphaned_source_objects(
+    const MarketDataSnapshot& snapshot) {
+    std::set<std::string> referenced;
+    for(const auto& calendar:snapshot.venue_calendars)
+        if(calendar.source.source_object_id)
+            referenced.insert(*calendar.source.source_object_id);
+    std::vector<SourceArchiveObject> orphaned;
+    for(const auto& object:snapshot.source_objects)
+        if(!referenced.contains(object.source_object_id))
+            orphaned.push_back(object);
+    return orphaned;
+}
 MarketDataSnapshot JsonMarketDataRepository::restore_backup() {
     FileLock lock(file_path_.string()+".lock");
     const auto raw=read_file(backup_path(),config_.max_document_bytes,false);
