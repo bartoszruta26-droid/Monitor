@@ -63,3 +63,8 @@ Parser `parse_xetra_session_notice_html` przyjmuje jawne pola HTML: `Venue`, `Ef
 ## Stan implementacji 17C
 
 Dodano `resolve_effective_venue_calendar_day(snapshot, calendar_id, date)`. Resolver wybiera najnowszą rewizję kalendarza, wybiera najnowszą rewizję każdego komunikatu, uwzględnia anulowania i nakłada najwyżej jedno aktywne nadpisanie na kopię bazowego dnia. Komunikaty informacyjne pozostawiają harmonogram bez zmian. Wiele aktywnych nadpisań powoduje jawny konflikt. `requires_official_notice_unresolved` informuje, czy baza nadal oczekuje na oficjalne rozstrzygnięcie. Testy resolvera są dodane; CI aktualnego SHA pozostaje w toku.
+
+
+## Stan implementacji 17C–17D
+
+Resolver efektywnego dnia i raport nierozstrzygniętych dat są wdrożone. Testy potwierdzają pozostawienie bazowego harmonogramu przez komunikat informacyjny, nałożenie jawnego skrócenia, cofnięcie override po anulowaniu, zachowanie nowszej rewizji przy anulowaniu starszej oraz jawne odrzucenie konfliktujących nadpisań. Raport osieroconych obiektów uwzględnia referencje zarówno kalendarzy, jak i komunikatów. CI dla resolvera i raportów: [43324719408](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43324719408), [43324853676](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43324853676), [43325061044](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43325061044) — sukces. Dodatkowy test dwóch anulowań tej samej rewizji jest w toku.
