@@ -443,7 +443,7 @@ std::vector<MarketObservation> deduplicate_observations(std::vector<MarketObserv
 NbpAdapter::NbpAdapter(HttpClient& http):http_(http){}
 AdapterResult NbpAdapter::fetch(const CivilDate& start,const CivilDate& end) {
     validate_range(start,end);
-    AdapterResult result;const auto received=now_utc();
+    AdapterResult result;
     const Provider gold_provider=provider("nbp-gold","Narodowy Bank Polski — cena złota","https://api.nbp.pl/","Dane publiczne NBP; warunki API NBP");
     result.providers.push_back(gold_provider);
     const auto gold=metal_instrument("XAU","Złoto","PLN",Unit::Gram);result.instruments.push_back(gold);
@@ -451,6 +451,7 @@ AdapterResult NbpAdapter::fetch(const CivilDate& start,const CivilDate& end) {
         const auto url="https://api.nbp.pl/api/cenyzlota/"+date_string(a)+"/"+date_string(b)+"/?format=json";
         const auto response=http_.get(url);
         if(response.status_code==404) continue;
+        const auto received=now_utc();
         const auto payload=json::parse(response.body);
         if(!payload.is_array()) throw std::runtime_error("Nieoczekiwany format odpowiedzi cen złota NBP.");
         for(const auto& row:payload) {
@@ -469,6 +470,7 @@ AdapterResult NbpAdapter::fetch(const CivilDate& start,const CivilDate& end) {
             const auto url="https://api.nbp.pl/api/exchangerates/tables/"+table_code+"/"+date_string(a)+"/"+date_string(b)+"/?format=json";
             const auto response=http_.get(url);
             if(response.status_code==404) continue;
+            const auto received=now_utc();
             const auto payload=json::parse(response.body);
             if(!payload.is_array()) throw std::runtime_error("Nieoczekiwany format tabeli NBP.");
             for(const auto& daily:payload) {
