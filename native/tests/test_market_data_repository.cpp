@@ -290,6 +290,83 @@ int main(){
             "new calendar revision can reference previously orphaned source object");
     require(find_orphaned_source_objects(venue_repo.load()).empty(),
             "source object disappears from orphan report after a calendar references it");
+
+    VenueSessionNotice informational_notice;
+    informational_notice.notice_id="xetra-2026-dec30-circular";
+    informational_notice.revision=1U;
+    informational_notice.calendar_id="XETRA-2026";
+    informational_notice.venue="XETRA";
+    informational_notice.effective_date=parse_date("2026-12-30");
+    informational_notice.source_object_id=orphan_object.source_object_id;
+    informational_notice.source_uri=venue_source.source_uri;
+    informational_notice.attribution="Deutsche Börse Cash Market";
+    informational_notice.kind=VenueSessionNoticeKind::Informational;
+    require(venue_repo.upsert_venue_session_notice(informational_notice)==8U,
+            "informational official notice is persisted separately from the base calendar");
+    require(venue_repo.load().venue_session_notices.size()==1U,
+            "notice JSON round-trip retains its source reference");
+    require(venue_repo.upsert_venue_session_notice(informational_notice)==9U &&
+            venue_repo.load().venue_session_notices.size()==1U,
+            "replaying the same notice does not duplicate its revision");
+    auto edited_notice=informational_notice;
+    edited_notice.attribution="Changed attribution";
+    throws([&]{(void)venue_repo.upsert_venue_session_notice(edited_notice);},
+           "published notice revision is immutable");
+    auto override_notice=informational_notice;
+    override_notice.revision=2U;
+    override_notice.kind=VenueSessionNoticeKind::SessionOverride;
+    override_notice.day_status=VenueDayStatus::Trading;
+    override_notice.product_sessions.push_back({"xetra_regular",{9,0,0},{13,0,0}});
+    require(venue_repo.upsert_venue_session_notice(override_notice)==10U,
+            "new notice revision may publish an explicit product session override");
+    auto incomplete_override=override_notice;
+    incomplete_override.revision=3U;
+    incomplete_override.product_sessions.clear();
+    throws([&]{(void)venue_repo.upsert_venue_session_notice(incomplete_override);},
+           "trading override without explicit hours is rejected");
+
+    const std::string cancellation_bytes="<html>official cancellation notice fixture</html>";
+    const auto cancellation_hash=sha256_hex(cancellation_bytes);
+    SourceArchiveObject cancellation_object;
+    cancellation_object.source_object_id="sha256:"+cancellation_hash;
+    cancellation_object.content_sha256=cancellation_hash;
+    cancellation_object.archive_relative_path="venue-calendars.json.sources/objects/"+cancellation_hash+".html";
+    cancellation_object.content_length_bytes=cancellation_bytes.size();
+    cancellation_object.content_type="text/html";
+    const auto cancellation_archive=venue_repo.file_path().parent_path()/cancellation_object.archive_relative_path;
+    { std::ofstream output(cancellation_archive,std::ios::binary); output<<cancellation_bytes; }
+    VenueSessionNotice cancellation_notice;
+    cancellation_notice.notice_id="xetra-2026-dec30-cancellation";
+    cancellation_notice.revision=1U;
+    cancellation_notice.calendar_id="XETRA-2026";
+    cancellation_notice.venue="XETRA";
+    cancellation_notice.effective_date=parse_date("2026-12-30");
+    cancellation_notice.source_object_id=cancellation_object.source_object_id;
+    cancellation_notice.source_uri=venue_source.source_uri;
+    cancellation_notice.attribution="Deutsche Börse Cash Market";
+    cancellation_notice.kind=VenueSessionNoticeKind::Cancellation;
+    cancellation_notice.cancels_notice_id=override_notice.notice_id;
+    cancellation_notice.cancels_revision=2U;
+    MarketDataBatch cancellation_batch;
+    cancellation_batch.source_objects.push_back(cancellation_object);
+    cancellation_batch.venue_session_notices.push_back(cancellation_notice);
+    require(venue_repo.upsert_batch(cancellation_batch)==11U,
+            "cancellation notice and its immutable source object commit atomically");
+    auto missing_cancellation= cancellation_notice;
+    missing_cancellation.notice_id="bad-cancellation";
+    missing_cancellation.cancels_notice_id="missing-notice";
+    throws([&]{(void)venue_repo.upsert_venue_session_notice(missing_cancellation);},
+           "cancellation must reference an existing notice revision");
+    auto out_of_range_notice=informational_notice;
+    out_of_range_notice.notice_id="out-of-range";
+    out_of_range_notice.effective_date=parse_date("2027-01-01");
+    throws([&]{(void)venue_repo.upsert_venue_session_notice(out_of_range_notice);},
+           "notice date outside the calendar range is rejected");
+    auto notice_delete=venue_repo.load();
+    notice_delete.venue_session_notices.clear();
+    throws([&]{(void)venue_repo.replace(notice_delete);},
+           "replace cannot delete published notice history");
+
     auto conflicting_object=source_object;
     conflicting_object.content_type="application/pdf";
     throws([&]{(void)venue_repo.upsert_source_object(conflicting_object);},
@@ -308,8 +385,8 @@ int main(){
     source_delete.source_objects.clear();
     throws([&]{(void)venue_repo.replace(source_delete);},
            "replace cannot delete an immutable source object");
-    require(venue_repo.load().revision==7U,
-            "rejected source object operations leave repository unchanged");
+    require(venue_repo.load().revision==11U,
+            "rejected source object and notice operations leave repository unchanged");
     std::filesystem::remove(source_archive);
     throws([&]{(void)venue_repo.load();},
            "missing content-addressed source archive blocks repository load");
