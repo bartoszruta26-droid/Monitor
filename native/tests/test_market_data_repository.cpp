@@ -75,7 +75,7 @@ int main(){
     batch.providers.push_back(nbp);
     auto batch_first=observation(4.20,3000);
     batch_first.id="batch-1";
-    auto batch_second=observation(4.21,3001);
+    auto batch_second=observation(4.21,90000);
     batch_second.id="batch-2";
     batch_second.observed_at.unix_seconds+=86400;
     batch.observations={batch_first,batch_second};
