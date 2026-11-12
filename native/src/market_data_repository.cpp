@@ -564,8 +564,8 @@ void validate_snapshot(const MarketDataSnapshot& s) {
         if (!venue_keys.insert(key).second)
             throw std::invalid_argument("Powielona wersja kalendarza sesyjnego venue.");
         if(calendar.source.content_sha256) {
-            const auto source_version_key=calendar.source.document_id+"\\x1f"+
-                std::to_string(calendar.source.version);
+            const auto source_version_key=std::to_string(calendar.source.document_id.size())+":"+
+                calendar.source.document_id+":"+std::to_string(calendar.source.version);
             const auto [source_it,source_inserted]=source_version_hashes.emplace(
                 source_version_key,*calendar.source.content_sha256);
             if(!source_inserted && source_it->second!=*calendar.source.content_sha256)
