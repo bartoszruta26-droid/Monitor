@@ -563,3 +563,19 @@ Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na ma
 1. Dodać `parse_xetra_session_notice_html` i testy dla komunikatu informacyjnego oraz jawnego skrócenia sesji.
 2. Podłączyć parser do importera archiwizującego dokładne bajty jako `SourceArchiveObject`.
 3. Następnie Etap 17C: wyliczanie efektywnego dnia z bazowego kalendarza i aktywnych komunikatów, bez mutacji bazowej rewizji.
+
+## 52. Etap 17B — parser i importer komunikatów Xetra (w toku)
+
+- Dodano `parse_xetra_session_notice_html(html, metadata)` w `native/include/monitor/xetra_calendar_importer.hpp` i `native/src/xetra_calendar_importer.cpp`.
+- Parser wymaga jawnych pól `Venue`, `Effective date` (ISO YYYY-MM-DD) i `Notice kind`; rozpoznaje `informational`, `session override` oraz `cancellation`.
+- Nadpisanie wymaga jawnego `Day status`; sesje odczytywane są z tabeli `Product Group / Opens / Closes`. Parser odrzuca nieznaną grupę produktu, powtórzoną grupę, nieprawidłową godzinę, odwrócony przedział i nadpisanie Trading bez godzin.
+- Komunikat bez jawnych godzin pozostaje informacyjny; parser nie tworzy godzin zastępczych.
+- Dodano `XetraCalendarSourceAdapter::import_notice`: HTTPS do zatwierdzonego hosta, limit 4 MiB, kontrola Content-Type, wyliczenie SHA-256, archiwizacja dokładnych bajtów i atomowy zapis obiektu źródłowego wraz z komunikatem.
+- Ponowny import identycznej rewizji jest idempotentny; inna treść lub interpretacja dla tego samego `notice_id + revision` jest odrzucana. Przy replay sprawdzane są też długość i Content-Type istniejącego obiektu.
+- Dodano trzy syntetyczne fixture offline: override, informational i cancellation oraz testy błędnego rynku, braku godzin, nieznanej grupy, nieprawidłowego czasu, archiwizacji, replay i konfliktu bajtów.
+- Commity: `a666a499fc210cce5c58e2442cf82aba2d3243e3` (API parsera), `7e874783136c0a45225977a39fe73ce768a84e00` / `930acb43cec211e3491995f7a835f2407e62b354` / `f0bfb8b90262ca85e71ea0ec3d2b559fb0ac1900` (parser), `2fa44b48c2f698b9750c930403b038142feb9b43`, `5e02428977035851e770cf4f72bf3a7a6a06d2e0`, `6d90a590609cfee75202840f8d052a8e84effcbe` (fixture/testy), `e9d8c6d186f1eaa708170a7a1447f505e406fb57` / `8cf339b6fc745f7f4bc3b7466efaa7c515e458f6` (importer), `82af62a2a100be027a1481ca37c668abd0d4cecd` (idempotencja), `5acafd8f8cbe7659b02b52c9e29a75acd17478a5`, `3fa27b99f19a0b57ecc646769f3874a71cbc6b64`, `d011f19d26030630bfe361e6d5fdc1af6533fbb3`, `ec0048156b5d892daa39596d235e1a71feb88726` (testy), `02892ea449ca62ee3d1436d24e92fb9d8475c588` (kontrola metadanych replay).
+- Przejściowe CI ujawniły konflikt nazwy zmiennej testowej `missing_hours_html`; zmieniono ją na `notice_missing_hours_html`. CI końcowego SHA jest w toku.
+- Status Etapu 17B: w trakcie — oczekuje na zielony Configure/Build/Test dla aktualnego SHA.
+
+### Następny etap
+Po zielonym CI 17B przejść do 17C: wyliczanie efektywnego dnia kalendarza przez zastosowanie najnowszych aktywnych rewizji komunikatów, anulowań i konfliktów, bez modyfikowania bazowego kalendarza.
