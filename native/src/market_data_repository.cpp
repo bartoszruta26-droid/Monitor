@@ -204,6 +204,139 @@ MarketSessionCalendar decode_session_calendar(const json& j) {
         x.expected_observation_times.push_back(parse_utc_timestamp(value.get<std::string>()));
     return x;
 }
+std::string enum_name(VenueDayStatus value) {
+    switch (value) {
+    case VenueDayStatus::Closed: return "closed";
+    case VenueDayStatus::Trading: return "trading";
+    case VenueDayStatus::SettlementOnly: return "settlement_only";
+    }
+    throw std::invalid_argument("Nieznany status dnia kalendarza venue.");
+}
+VenueDayStatus parse_venue_day_status(const std::string& value) {
+    if (value == "closed") return VenueDayStatus::Closed;
+    if (value == "trading") return VenueDayStatus::Trading;
+    if (value == "settlement_only") return VenueDayStatus::SettlementOnly;
+    throw std::invalid_argument("Nieznany status dnia kalendarza venue w JSON.");
+}
+std::string enum_name(VenueCalendarLicenseStatus value) {
+    switch (value) {
+    case VenueCalendarLicenseStatus::Unknown: return "unknown";
+    case VenueCalendarLicenseStatus::AttributionRequired: return "attribution_required";
+    case VenueCalendarLicenseStatus::OpenData: return "open_data";
+    case VenueCalendarLicenseStatus::Restricted: return "restricted";
+    }
+    throw std::invalid_argument("Nieznany status licencji kalendarza venue.");
+}
+VenueCalendarLicenseStatus parse_venue_license_status(const std::string& value) {
+    if (value == "unknown") return VenueCalendarLicenseStatus::Unknown;
+    if (value == "attribution_required") return VenueCalendarLicenseStatus::AttributionRequired;
+    if (value == "open_data") return VenueCalendarLicenseStatus::OpenData;
+    if (value == "restricted") return VenueCalendarLicenseStatus::Restricted;
+    throw std::invalid_argument("Nieznany status licencji kalendarza venue w JSON.");
+}
+json encode(const VenueSessionCalendar& x) {
+    const auto& source = x.source;
+    json source_json = {
+        {"document_id",source.document_id},{"venue",source.venue},{"version",source.version},
+        {"valid_from",format_date(source.valid_from)},
+        {"valid_to_exclusive",format_date(source.valid_to_exclusive)},
+        {"timezone",source.timezone},{"source_uri",source.source_uri},
+        {"retrieved_at",source.retrieved_at ? json(format_utc_timestamp(*source.retrieved_at)) : json(nullptr)},
+        {"content_sha256",source.content_sha256 ? json(*source.content_sha256) : json(nullptr)},
+        {"attribution",source.attribution},{"license_status",enum_name(source.license_status)}
+    };
+    json days = json::array();
+    for (const auto& day : x.days) {
+        json sessions = json::array();
+        for (const auto& session : day.product_sessions) {
+            sessions.push_back({
+                {"product_group",session.product_group},
+                {"opens_at",{{"hour",session.opens_at.hour},{"minute",session.opens_at.minute},{"second",session.opens_at.second}}},
+                {"closes_at",{{"hour",session.closes_at.hour},{"minute",session.closes_at.minute},{"second",session.closes_at.second}}}
+            });
+        }
+        days.push_back({{"date",format_date(day.date)},{"status",enum_name(day.status)},
+            {"product_sessions",std::move(sessions)},{"requires_official_notice",day.requires_official_notice}});
+    }
+    return {{"source",std::move(source_json)},{"days",std::move(days)}};
+}
+VenueSessionCalendar decode_venue_calendar(const json& j) {
+    VenueSessionCalendar result;
+    const auto& s = j.at("source");
+    result.source.document_id=s.at("document_id").get<std::string>();
+    result.source.venue=s.at("venue").get<std::string>();
+    result.source.version=s.at("version").get<std::uint32_t>();
+    result.source.valid_from=parse_date(s.at("valid_from").get<std::string>());
+    result.source.valid_to_exclusive=parse_date(s.at("valid_to_exclusive").get<std::string>());
+    result.source.timezone=s.at("timezone").get<std::string>();
+    result.source.source_uri=s.at("source_uri").get<std::string>();
+    if (!s.at("retrieved_at").is_null())
+        result.source.retrieved_at=parse_utc_timestamp(s.at("retrieved_at").get<std::string>());
+    if (!s.at("content_sha256").is_null())
+        result.source.content_sha256=s.at("content_sha256").get<std::string>();
+    result.source.attribution=s.at("attribution").get<std::string>();
+    result.source.license_status=parse_venue_license_status(s.at("license_status").get<std::string>());
+    for (const auto& value : j.at("days")) {
+        VenueCalendarDay day;
+        day.date=parse_date(value.at("date").get<std::string>());
+        day.status=parse_venue_day_status(value.at("status").get<std::string>());
+        day.requires_official_notice=value.at("requires_official_notice").get<bool>();
+        for (const auto& item : value.at("product_sessions")) {
+            const auto read_time=[](const json& t) {
+                return LocalTimeOfDay{t.at("hour").get<unsigned>(),t.at("minute").get<unsigned>(),
+                                      t.at("second").get<unsigned>()};
+            };
+            day.product_sessions.push_back({item.at("product_group").get<std::string>(),
+                read_time(item.at("opens_at")),read_time(item.at("closes_at"))});
+        }
+        result.days.push_back(std::move(day));
+    }
+    return result;
+}
+std::string venue_calendar_key(const VenueSessionCalendar& x) {
+    return x.source.document_id + "\x1f" + std::to_string(x.source.version);
+}
+bool same_venue_calendar(const VenueSessionCalendar& a, const VenueSessionCalendar& b) {
+    return encode(a) == encode(b);
+}
+void validate_venue_calendar(const VenueSessionCalendar& x) {
+    validate_source_calendar_document(x.source);
+    using namespace std::chrono;
+    const sys_days begin{year{x.source.valid_from.year}/month{x.source.valid_from.month}/day{x.source.valid_from.day}};
+    const sys_days end{year{x.source.valid_to_exclusive.year}/month{x.source.valid_to_exclusive.month}/day{x.source.valid_to_exclusive.day}};
+    if (x.days.size() != static_cast<std::size_t>((end-begin).count()))
+        throw std::invalid_argument("Kalendarz venue musi zawierać każdy dzień zakresu źródła.");
+    std::set<std::string> keys;
+    for (std::size_t i=0; i<x.days.size(); ++i) {
+        const auto expected=begin+days{static_cast<days::rep>(i)};
+        const year_month_day ymd{expected};
+        const CivilDate expected_date{static_cast<int>(ymd.year()),static_cast<unsigned>(ymd.month()),static_cast<unsigned>(ymd.day())};
+        const auto& day=x.days[i];
+        if (!is_valid_date(day.date) || format_date(day.date)!=format_date(expected_date))
+            throw std::invalid_argument("Dni kalendarza venue muszą być kompletne, uporządkowane i bez duplikatów.");
+        (void)enum_name(day.status);
+        if (day.status==VenueDayStatus::Trading && day.product_sessions.empty())
+            throw std::invalid_argument("Dzień handlowy wymaga co najmniej jednej sesji produktowej.");
+        if (day.status!=VenueDayStatus::Trading && !day.product_sessions.empty())
+            throw std::invalid_argument("Dzień bez handlu nie może zawierać sesji produktowych.");
+        std::set<std::string> products;
+        for (const auto& session : day.product_sessions) {
+            if (session.product_group.empty() || !products.insert(session.product_group).second)
+                throw std::invalid_argument("Grupy produktów sesji muszą być niepuste i unikalne w danym dniu.");
+            const auto valid_time=[](const LocalTimeOfDay& t) {
+                return t.hour<24U && t.minute<60U && t.second<60U;
+            };
+            if (!valid_time(session.opens_at)||!valid_time(session.closes_at))
+                throw std::invalid_argument("Godzina sesji venue jest poza zakresem.");
+            const auto open=std::tuple{session.opens_at.hour,session.opens_at.minute,session.opens_at.second};
+            const auto close=std::tuple{session.closes_at.hour,session.closes_at.minute,session.closes_at.second};
+            if (!(open<close)) throw std::invalid_argument("Koniec sesji musi następować po jej otwarciu.");
+        }
+        if (!keys.insert(format_date(day.date)).second)
+            throw std::invalid_argument("Powtórzona data w kalendarzu venue.");
+    }
+}
+
 std::string calendar_key(const MarketSessionCalendar& x) {
     return x.calendar_id+"\x1f"+std::to_string(x.version);
 }
