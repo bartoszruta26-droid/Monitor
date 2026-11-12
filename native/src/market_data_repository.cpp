@@ -227,7 +227,7 @@ std::string read_file(const std::filesystem::path& path,std::size_t limit,bool m
         if(n==0)break;
         if(n<0){if(errno==EINTR)continue;const int e=errno;::close(fd);throw std::runtime_error("Błąd odczytu magazynu JSON: "+std::string(std::strerror(e)));}
         const auto count=static_cast<std::size_t>(n);
-        if(count>limit-data.size()){::close(fd);throw std::runtime_error("Plik magazynu JSON przekracza skonfigurowany limit.");}
+        if(data.size()>limit||count>limit-data.size()){::close(fd);throw std::runtime_error("Plik magazynu JSON przekracza skonfigurowany limit.");}
         data.append(buffer.data(),count);
     }
     ::close(fd);return data;
