@@ -449,6 +449,28 @@ int main() {
     throws([&]{(void)parse_xetra_session_notice_text(final_session_text,wrong_notice_date);},
            "reject a PDF notice whose date differs from the expected session date");
 
+    const auto official_text=read_fixture("xetra_final_session_2026.official-extracted.txt");
+    auto official_notice_metadata=pdf_notice_metadata;
+    official_notice_metadata.notice_id="xetra-2026-official-announcement";
+    official_notice_metadata.source_object_id="sha256:"+sha256_hex(official_text);
+    official_notice_metadata.source_uri="https://cashmarket.deutsche-boerse.com/resource/blob/5673886/22764993c4b1617c5f465186066344e6/data/Final%20trading%20session%202026.pdf";
+    const auto parsed_official_notice=parse_xetra_session_notice_text(official_text,official_notice_metadata);
+    require(parsed_official_notice.parser_version=="xetra-pdf-text-notice-v2" &&
+            parsed_official_notice.phase_events.size()==9U &&
+            parsed_official_notice.phase_events.at(6).at.hour==14U &&
+            parsed_official_notice.phase_events.at(6).at.minute==10U &&
+            parsed_official_notice.phase_events.at(7).at.hour==14U &&
+            parsed_official_notice.phase_events.at(7).at.minute==59U,
+            "parser v2 handles the official PDF layout with Trade-at-Close and off-book details in separate sections");
+    auto wrong_offbook_mic=official_text;
+    const auto xetra_offbook_marker=wrong_offbook_mic.find("b) Market Deutsche Boerse Xetra");
+    require(xetra_offbook_marker!=std::string::npos,"official fixture has separate Xetra off-book subsection");
+    const auto offbook_mic=wrong_offbook_mic.find("MIC: XETR",xetra_offbook_marker);
+    require(offbook_mic!=std::string::npos,"official fixture has Xetra off-book MIC");
+    wrong_offbook_mic.replace(offbook_mic,9U,"MIC: XFRA");
+    throws([&]{(void)parse_xetra_session_notice_text(wrong_offbook_mic,official_notice_metadata);},
+           "reject an off-book section whose market MIC is not XETR");
+
     const auto override_html=read_fixture("xetra_notice_2026_dec30_override.synthetic.html");
     VenueSessionNotice notice_metadata;
     notice_metadata.notice_id="xetra-2026-dec30-circular";
@@ -606,7 +628,7 @@ int main() {
         auto reparsed_snapshot=pdf_repository.load();
         require(reparsed_snapshot.venue_session_notices.size()==2U &&
                 reparsed_snapshot.venue_session_notices.back().source_object_id==pdf_snapshot.venue_session_notices.front().source_object_id &&
-                reparsed_snapshot.venue_session_notices.back().parser_version=="xetra-pdf-text-notice-v1" &&
+                reparsed_snapshot.venue_session_notices.back().parser_version=="xetra-pdf-text-notice-v2" &&
                 reparsed_snapshot.source_objects.size()==2U,
                 "offline reparse reuses the immutable PDF object and records its parser version");
         const auto revision_after_reparse=reparsed_snapshot.revision;
