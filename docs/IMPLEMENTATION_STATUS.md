@@ -2,14 +2,15 @@
 
 **Repozytorium:** `bartoszruta26-droid/Monitor`  
 **Gałąź:** `main`  
-**Ostatnia weryfikacja:** 2026-11-12 22:40 Europe/Warsaw
+**Ostatnia weryfikacja:** 2026-11-12 22:52 Europe/Warsaw
 **Zasada prowadzenia:** status etapu zmienia się na „zakończony” dopiero po sprawdzeniu kodu, testów i CI dla konkretnego SHA. Ten plik jest bieżącym rejestrem wykonania; szczegóły techniczne pozostają w dokumentach etapów.
 
 ## Stan repozytorium przy audycie
 
-- HEAD `main` przed zapisem tego wpisu: `ae9ccf21716e6cf5300ca5258c0d3f28998fb063`.
-- Ostatni potwierdzony zielony CI przed bieżącym etapem: [CI 43310194865](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43310194865), commit `f01ed918`; Configure, Build i Test przeszły.
-- Bieżące zmiany importera NBP: workflow [43310994641](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43310994641) dla `3b47002` i [43311018764](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43311018764) dla `24fa3ef` były w toku podczas zapisu. Wynik należy uzupełnić po zakończeniu.
+- HEAD `main` przed zapisem tego wpisu: `f24805a0669ffd5ac2a756f03e18dbaf53edd08b`.
+- Najnowszy potwierdzony zielony CI obejmujący kod i testy importera NBP: [CI 43311044110](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43311044110), commit `ae9ccf2`; Configure, Build i Test przeszły.
+- CI dla zmiany czasu odbioru per odpowiedź: [43310994641](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43310994641) — sukces.
+- CI dla dokumentacji Xetra i rejestru: [43311190718](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43311190718) było w toku w chwili zapisu; nie zmienia ono kodu produkcyjnego.
 - Poprzedni problem kompilacji testu kalendarza (brak `#include <algorithm>` w starszym SHA) został naprawiony; nie jest stanem bieżącym.
 - Poprzednie przebiegi obejmują jeden nieudany CI dla wcześniejszego SHA `aa3b7eb`, po którym późniejszy commit przeszedł poprawnie. Nie traktować błędu jako aktualnego, ale zachować go w historii.
 - Gałęzie: wyłącznie `main`.
@@ -31,7 +32,7 @@
 | 8 | Jawny kalendarz sesyjny dla kompletności HTF | Zakończony v1 jako funkcja obliczeniowa | `MarketSessionCalendar` i `session_aware_rolling_regression()`; terminy przekazuje wywołujący |
 | 9 | Trwały magazyn i wersjonowanie kalendarzy sesyjnych | Zakończony | Commit `df867c6efaa7f8cebad74db3291a3c0dde12f67e`; CI [43264555372](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43264555372) sukces, kompilacja i CTest 7/7. Pochodzenie regresji zawiera `calendar_id` i `calendar_version`. |
 | 10 | Generator harmonogramów z IANA TZ/DST i reguł sesji | Zakończony | Commit `da61302dc4de43308228e6f60e82e187bef566df`; CI [43301335250](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43301335250) sukces: konfiguracja, kompilacja i CTest 8/8. Testy obejmują DST wiosenny i jesienny, polityki czasu, weekendy, wyłączenia, błędne strefy i zakres dat. |
-| 11 | Kalendarze źródłowe i instrumentowe (NBP, metale, giełdy) | W toku — generator okien publikacji NBP | Generator okien A/B/C przeszedł CI 43303169211 (8/8). Generator okien A/B/C, świąt ustawowych i automatycznego stosowania kalendarza świąt przeszedł CI 43304025796 (8/8). Etap 11 nadal w toku: model obserwowanych publikacji NBP jest zaimplementowany i przetestowany; importer NBP ma już podział zakresu 93-dniowego i obsługę 404 z testami offline (CI bieżącej zmiany w toku); pozostaje import/wersjonowanie oficjalnego kalendarza venue (Xetra). |
+| 11 | Kalendarze źródłowe i instrumentowe (NBP, metale, giełdy) | W toku — generator okien publikacji NBP | Generator okien A/B/C przeszedł CI 43303169211 (8/8). Generator okien A/B/C, świąt ustawowych i automatycznego stosowania kalendarza świąt przeszedł CI 43304025796 (8/8). Etap 11 nadal w toku: model obserwowanych publikacji NBP jest zaimplementowany i przetestowany; importer NBP ma już podział zakresu 93-dniowego i obsługę 404 z testami offline (CI bieżącej zmiany w toku); pozostaje implementacja parsera/wersjonowanego rejestru oficjalnego kalendarza venue (Xetra). |
 | 12 | Wspólne fixture i porównanie C++/Pine | Do wykonania | Pine Editor niezweryfikowany; brak potwierdzonej kompilacji TradingView |
 | 13 | Serwer API, autoryzacja, REST/JSON i WebSocket | Do wykonania | Brak aktywnego modułu serwera |
 | 14 | Klienci Linux GUI, WebUI, TUI i Android | Do wykonania | Brak aktywnych modułów klientów |
@@ -258,3 +259,15 @@ Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na ma
 - Commit `ae9ccf21716e6cf5300ca5258c0d3f28998fb063`: dokumentacja wyjaśnia semantykę fragmentów, 404, pustych odpowiedzi, czasu odbioru i rozdzielenia `tradingDate` / `effectiveDate`.
 - Workflow [43310994641](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43310994641) dla zmiany czasu odbioru i [43311018764](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43311018764) dla testu 93 dni były w toku w chwili zapisu; nie oznaczać podetapu za zakończony przed potwierdzeniem Build i Test.
 - Następny zakres: pozyskać oficjalny plik/kalendarz Xetra, potwierdzić format i warunki ponownego wykorzystania, a następnie zaprojektować importer z SHA-256 i niezmiennymi wersjami.
+
+
+## 35. Etap 11 — potwierdzenie źródła kalendarza Xetra i status CI
+
+- Potwierdzono oficjalną stronę kalendarza Xetra/Deutsche Börse: https://www.eurexgroup.com/xetra-en/newsroom/trading-calendar oraz stronę Cash Market: https://www.cashmarket.deutsche-boerse.com/cash-en/trading/trading-calendar-and-trading-hours.
+- Potwierdzono oficjalny plik roczny 2026: https://www.cashmarket.deutsche-boerse.com/resource/blob/4580826/3e974decb414d6769cc2bc8e601f6c9a/data/xetra-trading-calendar-2026.pdf.
+- Strona rozdziela dni bez handlu FWB od dni świątecznych, w których Xetra i Börse Frankfurt prowadzą handel. Dla 2026 r. jawne wyjątki handlowe: 14 maja, 25 maja i 4 czerwca. Parser musi zachować wyjątki zamiast dziedziczyć ogólną listę świąt.
+- Sesje zapisujemy w strefie IANA `Europe/Berlin`; stały skrót CET nie wystarcza do obsługi CEST/DST.
+- PDF jest kalendarzem graficznym, a nie stabilnym plikiem CSV/XLSX. Data publikacji PDF i licencja ponownego rozpowszechniania nie zostały potwierdzone; SHA-256 należy zapisać dopiero po pobraniu dokładnych bajtów. Nie wdrażać heurystycznego parsera PDF.
+- Podzakres NBP (93-dniowe fragmenty, 404, puste odpowiedzi i rzeczywisty czas odbioru per odpowiedź) przeszedł CI dla commitu dokumentacyjno-integracyjnego `ae9ccf21716e6cf5300ca5258c0d3f28998fb063`: [43311044110](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43311044110), Configure/Build/Test — success.
+- CI dla commitu dokumentacji Xetra `f24805a`: [43311190718](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43311190718) — w toku w chwili zapisu.
+- Kolejny etap implementacyjny: dodać model `SourceCalendarDocument` (venue, zakres roku, IANA zone, URL, retrieved_at, content SHA-256, atrybucja/licencja) i jawne wyjątki sesyjne; następnie parser HTML oficjalnej tabeli Xetra z fixture obejmującym zamknięcia i dni handlu w święta. Skrócone sesje wymagają dodatkowego oficjalnego komunikatu/aukcyjnego harmonogramu.
