@@ -76,7 +76,7 @@ CivilDate parse_year_date(const std::smatch& match, int expected_year) {
     const auto month=month_number(month_first ? match[2].str() : match[6].str());
     const auto day=static_cast<unsigned>(std::stoul(month_first ? match[3].str() : match[5].str()));
     const auto year=static_cast<int>(std::stoi(month_first ? match[4].str() : match[7].str()));
-    if(year!=expected_year)
+    if(expected_year!=0 && year!=expected_year)
         throw std::invalid_argument("Rok daty w źródle Xetra nie odpowiada zakresowi dokumentu.");
     const CivilDate date{year,month,day};
     if(!is_valid_date(date)) throw std::invalid_argument("Niepoprawna data w źródle Xetra.");
@@ -97,7 +97,7 @@ CivilDate date_from_cell(const std::string& text, int expected_year) {
     return parse_year_date(match,expected_year);
 }
 
-std::vector<CivilDate> dates_in_text(const std::string& text, int expected_year) {
+std::vector<CivilDate> dates_in_text(const std::string& text,int expected_year=0) {
     std::vector<CivilDate> result;
     for(std::sregex_iterator it(text.begin(),text.end(),year_date_pattern()),end;it!=end;++it)
         result.push_back(parse_year_date(*it,expected_year));
@@ -223,11 +223,13 @@ VenueSessionCalendar parse_xetra_html_calendar(
         const auto label=normalized(node_text(item));
         for(const auto& name:named_trading) {
             if(label.find(name)==std::string::npos) continue;
-            const auto parsed_dates=dates_in_text(node_text(item),calendar_year);
-            if(parsed_dates.size()!=1U ||
-               !actual_trading.emplace(name,parsed_dates.front()).second ||
+            const auto parsed_dates=dates_in_text(node_text(item));
+            if(parsed_dates.size()!=1U)
+                throw std::invalid_argument("Data święta z handlem jest niejednoznaczna.");
+            if(parsed_dates.front().year!=calendar_year) continue;
+            if(!actual_trading.emplace(name,parsed_dates.front()).second ||
                !trading_dates.insert(format_date(parsed_dates.front())).second)
-                throw std::invalid_argument("Data święta z handlem jest niejednoznaczna lub powtórzona.");
+                throw std::invalid_argument("Data święta z handlem jest powtórzona.");
         }
     }
     if(actual_trading.size()!=named_trading.size())
@@ -238,9 +240,12 @@ VenueSessionCalendar parse_xetra_html_calendar(
     for(xmlNode* paragraph:paragraphs) {
         const auto label=normalized(node_text(paragraph));
         if(label.find("deviating trading hours may apply")==std::string::npos) continue;
-        const auto dates=dates_in_text(node_text(paragraph),calendar_year);
-        if(dates.size()!=1U || !extraordinary_notice_dates.insert(format_date(dates.front())).second)
+        const auto dates=dates_in_text(node_text(paragraph));
+        if(dates.size()!=1U)
             throw std::invalid_argument("Komunikat o nadzwyczajnych godzinach Xetra ma niejednoznaczną datę.");
+        if(dates.front().year!=calendar_year) continue;
+        if(!extraordinary_notice_dates.insert(format_date(dates.front())).second)
+            throw std::invalid_argument("Komunikat o nadzwyczajnych godzinach Xetra powtarza datę.");
     }
 
     VenueSessionCalendar result;
