@@ -783,7 +783,7 @@ void validate_venue_session_notice(const VenueSessionNotice& x) {
     if(x.notice_id.empty() || x.revision==0U || x.calendar_id.empty() || x.venue.empty() ||
        !is_valid_date(x.effective_date) || x.source_object_id.rfind("sha256:",0)!=0 ||
        x.source_object_id.size()!=71U || x.source_uri.rfind("https://",0)!=0 ||
-       x.attribution.empty())
+       x.parser_version.empty() || x.parser_version.size()>64U || x.attribution.empty())
         throw std::invalid_argument("Komunikat sesyjny wymaga identyfikatora, daty, archiwum i pochodzenia HTTPS.");
     (void)enum_name(x.license_status);
     (void)enum_name(x.kind);
