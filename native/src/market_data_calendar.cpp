@@ -334,4 +334,80 @@ std::vector<ObservedPublication> build_observed_publications(
     return result;
 }
 
+
+void validate_source_calendar_document(const SourceCalendarDocument& document) {
+    if(document.document_id.empty()||document.venue.empty()||document.version==0U||
+       document.timezone.empty()||document.source_uri.rfind("https://",0)!=0||
+       document.attribution.empty()||!is_valid_date(document.valid_from)||
+       !is_valid_date(document.valid_to_exclusive))
+        throw std::invalid_argument("Dokument kalendarza wymaga identyfikatora, źródła HTTPS, zakresu i atrybucji.");
+    using namespace std::chrono;
+    const sys_days first{year{document.valid_from.year}/month{document.valid_from.month}/day{document.valid_from.day}};
+    const sys_days last{year{document.valid_to_exclusive.year}/month{document.valid_to_exclusive.month}/day{document.valid_to_exclusive.day}};
+    if(!(first<last)||(last-first).count()>36600)
+        throw std::invalid_argument("Zakres dokumentu kalendarza jest pusty lub przekracza 100 lat.");
+    if(document.content_sha256) {
+        if(document.content_sha256->size()!=64U||
+           !std::all_of(document.content_sha256->begin(),document.content_sha256->end(),[](unsigned char ch) {
+               return (ch>='0'&&ch<='9')||(ch>='a'&&ch<='f');
+           }))
+            throw std::invalid_argument("SHA-256 dokumentu musi zawierać dokładnie 64 małe znaki szesnastkowe.");
+    }
+}
+
+VenueSessionCalendar build_xetra_2026_calendar(const SourceCalendarDocument& document) {
+    validate_source_calendar_document(document);
+    if(document.venue!="XETRA"||document.timezone!="Europe/Berlin"||
+       format_date(document.valid_from)!="2026-01-01"||
+       format_date(document.valid_to_exclusive)!="2027-01-01")
+        throw std::invalid_argument("Fixture Xetra 2026 wymaga venue XETRA, strefy Europe/Berlin i zakresu roku 2026.");
+    VenueSessionCalendar result;
+    result.source=document;
+    using namespace std::chrono;
+    const sys_days begin{year{2026}/January/1};
+    const sys_days end{year{2027}/January/1};
+    const auto civil=[](sys_days point) {
+        const year_month_day ymd{point};
+        return CivilDate{static_cast<int>(ymd.year()),static_cast<unsigned>(ymd.month()),static_cast<unsigned>(ymd.day())};
+    };
+    const std::set<std::int64_t> closed{
+        sys_days{year{2026}/January/1}.time_since_epoch().count(),
+        sys_days{year{2026}/April/3}.time_since_epoch().count(),
+        sys_days{year{2026}/April/6}.time_since_epoch().count(),
+        sys_days{year{2026}/May/1}.time_since_epoch().count(),
+        sys_days{year{2026}/December/25}.time_since_epoch().count()
+    };
+    const std::set<std::int64_t> settlement_only{
+        sys_days{year{2026}/December/24}.time_since_epoch().count(),
+        sys_days{year{2026}/December/31}.time_since_epoch().count()
+    };
+    const std::set<std::int64_t> extended_holidays{
+        sys_days{year{2026}/May/14}.time_since_epoch().count(),
+        sys_days{year{2026}/May/25}.time_since_epoch().count(),
+        sys_days{year{2026}/June/4}.time_since_epoch().count()
+    };
+    for(auto date=begin;date<end;date+=days{1}) {
+        VenueCalendarDay day;
+        day.date=civil(date);
+        const auto key=date.time_since_epoch().count();
+        const unsigned weekday_number=weekday{date}.iso_encoding();
+        if(weekday_number>=6U||closed.contains(key)) {
+            day.status=VenueDayStatus::Closed;
+        } else if(settlement_only.contains(key)) {
+            day.status=VenueDayStatus::SettlementOnly;
+        } else {
+            day.status=VenueDayStatus::Trading;
+            if(extended_holidays.contains(key)) {
+                day.product_sessions.push_back({"shares_and_etps",{9,0,0},{20,0,0}});
+                day.product_sessions.push_back({"structured_products",{9,0,0},{22,0,0}});
+            } else {
+                day.product_sessions.push_back({"xetra_regular",{9,0,0},{17,30,0}});
+            }
+            day.requires_official_notice=key==sys_days{year{2026}/December/30}.time_since_epoch().count();
+        }
+        result.days.push_back(std::move(day));
+    }
+    return result;
+}
+
 } // namespace monitor::market
