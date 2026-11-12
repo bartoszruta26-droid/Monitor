@@ -27,7 +27,7 @@
 | 6 | Regresja krocząca DGT/LTB/n-2 | Zakończony jako silnik liczbowy | `regression.*`; zachowano różne mianowniki metod |
 | 7 | Regresja HTF z segmentacją po brakujących okresach | Zakończony v1 | `market_data_regression.*`; okresy kalendarzowe, bez reguł sesji |
 | 8 | Jawny kalendarz sesyjny dla kompletności HTF | Zakończony v1 jako funkcja obliczeniowa | `MarketSessionCalendar` i `session_aware_rolling_regression()`; terminy przekazuje wywołujący |
-| 9 | Trwały magazyn i wersjonowanie kalendarzy sesyjnych | Do wykonania | **Nie jest jeszcze zaimplementowany w JSON repository.** Poprzednia odpowiedź sugerująca jego wdrożenie była przedwczesna; kod repozytorium nie zawiera jeszcze pola kalendarzy, serializacji ani testów wersji. |
+| 9 | Trwały magazyn i wersjonowanie kalendarzy sesyjnych | W toku — kod zapisany na main, oczekuje na CI | Model domenowy, kolekcje snapshot/batch, serializacja JSON, walidacja, ochrona niezmienności wersji i testy zapisane w commicie `68377875`. Pochodzenie regresji sesyjnej dopinane osobno. |
 | 10 | Generator harmonogramów z IANA TZ/DST i reguł sesji | Do wykonania | Brak generatora i zależności/strefowych testów |
 | 11 | Oficjalne kalendarze instrumentów (NBP, metale, giełdy) | Do wykonania | Brak zweryfikowanych kalendarzy dostawców |
 | 12 | Wspólne fixture i porównanie C++/Pine | Do wykonania | Pine Editor niezweryfikowany; brak potwierdzonej kompilacji TradingView |
@@ -48,6 +48,13 @@
 - Kroki: konfiguracja, kompilacja i testy zakończone powodzeniem.
 - CTest: 7/7; 100% testów zaliczonych; czas testów 0,09 s.
 - Commit zawiera dokumentację i rejestr, nie zmienia logiki aplikacji.
+
+## Ostatnia aktualizacja — etap 9
+
+- Commit: `68377875d9d8a60b4bfbbf8cabfe08b989af541d`.
+- Zmieniono model domenowy, repozytorium JSON i testy magazynu.
+- CI dla tego commitu oczekuje na uruchomienie/wynik; etap nie jest jeszcze oznaczony jako zakończony.
+- Starszy dokument schema v1 bez `session_calendars` pozostaje obsługiwany.
 
 ## Bieżący etap roboczy
 

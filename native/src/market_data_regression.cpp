@@ -160,9 +160,15 @@ std::vector<TimeAwareRollingRegressionPoint> session_aware_rolling_regression(
         throw std::invalid_argument("Okno regresji sesyjnej wymaga co najmniej dwóch próbek.");
     if (method == WidthMethod::ResidualStandardErrorNMinus2 && window_size < 3U)
         throw std::invalid_argument("Metoda n-2 wymaga co najmniej trzech okresów HTF.");
-    if (calendar.calendar_id.empty() || calendar.instrument_id.empty() ||
-        calendar.provider_id.empty() || calendar.expected_observation_times.empty())
+    if (calendar.calendar_id.empty() || calendar.version==0U || calendar.instrument_id.empty() ||
+        calendar.provider_id.empty() || calendar.timezone.empty() || calendar.expected_observation_times.empty())
         throw std::invalid_argument("Kalendarz sesyjny wymaga identyfikatora, szeregu i terminów.");
+    switch (calendar.source_frequency) {
+    case Frequency::Minute: case Frequency::Hour: case Frequency::Daily: case Frequency::Weekly:
+    case Frequency::Monthly: case Frequency::Quarterly: case Frequency::SemiAnnual: case Frequency::Annual: break;
+    case Frequency::Tick: case Frequency::Irregular:
+    default: throw std::invalid_argument("Kalendarz regresji sesyjnej wymaga regularnej częstotliwości.");
+    }
     if (observations.empty()) return {};
 
     std::set<std::int64_t> expected_times;
@@ -259,6 +265,8 @@ std::vector<TimeAwareRollingRegressionPoint> session_aware_rolling_regression(
                 const auto last = window.end_index;
                 TimeAwareRollingRegressionPoint point;
                 point.segment_index = segment_index;
+                point.calendar_id = calendar.calendar_id;
+                point.calendar_version = calendar.version;
                 point.target_frequency = target_frequency;
                 point.window_start = segment[first].candle->period_start;
                 point.window_end = segment[last].candle->period_end;

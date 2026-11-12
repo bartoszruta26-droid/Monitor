@@ -26,6 +26,8 @@ enum class HtfSamplePolicy {
 
 struct TimeAwareRollingRegressionPoint {
     std::size_t segment_index{};
+    std::string calendar_id;
+    std::uint32_t calendar_version{};
     Frequency target_frequency{Frequency::Daily};
     UtcTimestamp window_start{};
     UtcTimestamp window_end{}; // granica wyłączna

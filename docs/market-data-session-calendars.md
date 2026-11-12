@@ -12,11 +12,17 @@
 - odrzuca obserwacje spoza kalendarza i dane innego instrumentu, dostawcy lub częstotliwości;
 - zachowuje źródłowe identyfikatory obserwacji i rzeczywisty czas próbki.
 
+## Magazyn i wersjonowanie
+
+Kalendarze są częścią modelu domenowego oraz migawki i partii repozytorium JSON. Kluczem jest para `calendar_id + version`. Opublikowanej wersji nie można zmienić ani usunąć przez zapis partii lub podmianę migawki. Zmiana harmonogramu wymaga nowego, większego numeru wersji, a starsze wersje pozostają dostępne do odtworzenia analiz. Dokumenty schema v1 bez pola `session_calendars` są odczytywane jako pusta lista.
+
+Wyniki regresji sesyjnej zachowują `calendar_id` i `calendar_version`, dzięki czemu pochodzenie obliczenia wskazuje dokładny harmonogram.
+
 ## Odpowiedzialność za kalendarz
 
 Moduł nie zgaduje świąt, godzin sesji ani reguł czasu letniego. Dostawca kalendarza musi przekazać konkretne terminy w UTC po rozstrzygnięciu lokalnej strefy czasowej i wyjątków rynkowych. Zmiana czasu letniego powinna być odzwierciedlona w terminach UTC wygenerowanych dla każdej sesji. Wersja kalendarza powinna być stabilna i audytowalna.
 
-Wersja v1 jest harmonogramem slotów, a nie generatorem reguł cyklicznych. Nie ma jeszcze gotowych kalendarzy giełdowych dla poszczególnych instrumentów ani pobierania oficjalnych świąt. Brak kalendarza nie uprawnia do automatycznego uznania szeregu za kompletny.
+Pole `timezone` przechowuje identyfikator strefy użyty do przygotowania slotów; znaczniki czasu pozostają w UTC. Walidacja składni nie potwierdza obecności strefy w lokalnej bazie IANA. Wersja v1 jest harmonogramem slotów, a nie generatorem reguł cyklicznych. Nie ma jeszcze gotowych kalendarzy giełdowych dla poszczególnych instrumentów ani pobierania oficjalnych świąt. Brak kalendarza nie uprawnia do automatycznego uznania szeregu za kompletny.
 
 ## Ważne ograniczenie
 
