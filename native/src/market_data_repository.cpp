@@ -194,16 +194,27 @@ void verify_source_archives(const MarketDataSnapshot& snapshot,const std::filesy
             if(component==".." || component=="." || component.empty())
                 throw std::runtime_error("Ścieżka archiwum źródła wychodzi poza katalog repozytorium.");
         }
-        auto current=root;
-        for(const auto& component:relative) {
-            current/=component;
-            std::error_code ec;
-            const auto status=std::filesystem::symlink_status(current,ec);
-            if(ec || std::filesystem::is_symlink(status))
-                throw std::runtime_error("Archiwum źródła zawiera brakujący element lub dowiązanie symboliczne.");
+
+        // Resolve every component relative to an already-open directory. This
+        // prevents a symlink swap between a path check and opening the file.
+        int current_fd=::open(root.c_str(),O_RDONLY|O_DIRECTORY|O_CLOEXEC|O_NOFOLLOW);
+        if(current_fd<0)
+            throw std::runtime_error("Nie można bezpiecznie otworzyć katalogu repozytorium archiwum.");
+        for(auto it=relative.begin();it!=relative.end();++it) {
+            const bool final_component=std::next(it)==relative.end();
+            const int flags=O_RDONLY|O_CLOEXEC|O_NOFOLLOW|
+                (final_component ? 0 : O_DIRECTORY);
+            const auto component_name=it->string();
+            const int next_fd=::openat(current_fd,component_name.c_str(),flags);
+            const int open_error=errno;
+            ::close(current_fd);
+            if(next_fd<0) {
+                errno=open_error;
+                throw std::runtime_error("Brak pliku archiwum lub niebezpieczny komponent ścieżki manifestu.");
+            }
+            current_fd=next_fd;
         }
-        const int fd=::open(current.c_str(),O_RDONLY|O_CLOEXEC|O_NOFOLLOW);
-        if(fd<0) throw std::runtime_error("Brak pliku archiwum wskazanego przez manifest źródła.");
+        const int fd=current_fd;
         struct stat st{};
         if(::fstat(fd,&st)!=0 || !S_ISREG(st.st_mode) || st.st_size<0) {
             ::close(fd);
