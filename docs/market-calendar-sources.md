@@ -148,3 +148,13 @@ Ważne rozróżnienie semantyczne:
 - nie zmieniono JSON schema v1 ani znaczenia istniejącego `observed_at`.
 
 Testy offline obejmują grupowanie wielu walut w jedną publikację, rozdzielenie tabeli A i złota, pominięcie rekordów bez daty publikacji oraz odrzucenie braku identyfikatora dostawcy.
+
+## 13. NBP — ograniczenie zakresu zapytania i czas odbioru odpowiedzi
+
+Importer `NbpAdapter` dzieli zakres historyczny na rozłączne fragmenty nieprzekraczające 93 dni kalendarzowych (granice obu końców są włączone). Dla zakresu dłuższego niż 93 dni wykonywane są kolejne zapytania, bez nakładania dat i bez pomijania dnia na granicy fragmentów.
+
+Odpowiedź HTTP 404 dla pojedynczego fragmentu jest interpretowana jako brak danych w tym fragmencie i nie przerywa pobierania pozostałych tabel/zakresów. Pusta tablica JSON oznacza poprawną odpowiedź bez rekordów. Żaden z tych przypadków nie tworzy syntetycznych obserwacji.
+
+`received_at` jest teraz pobierany osobno po otrzymaniu każdej poprawnej odpowiedzi HTTP, zamiast raz na początku całego przebiegu `NbpAdapter::fetch`. Dzięki temu różne fragmenty i tabele zachowują własny rzeczywisty czas odebrania odpowiedzi. `provider_published_on` nadal pochodzi wyłącznie z daty zwróconej przez NBP; dla tabeli C `observed_at` zachowuje `tradingDate`, a `provider_published_on` — `effectiveDate`.
+
+Test offline sprawdza zakres 95-dniowy podzielony na fragmenty 93 + 2 dni, wszystkie cztery endpointy (złoto oraz tabele A/B/C), 404 dla pierwszego fragmentu i pustą odpowiedź 200 dla drugiego. Test nie wykonuje połączeń sieciowych.
