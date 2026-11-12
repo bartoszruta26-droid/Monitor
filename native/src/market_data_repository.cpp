@@ -57,31 +57,61 @@ std::string enum_name(SeriesCompleteness v) {
 }
 template<class E> E parse_enum(const std::string& value);
 template<> AssetClass parse_enum(const std::string& s) {
-    if(s=="currency")return AssetClass::Currency;if(s=="precious_metal")return AssetClass::PreciousMetal;if(s=="commodity")return AssetClass::Commodity;
+    if(s=="currency") return AssetClass::Currency;
+    if(s=="precious_metal") return AssetClass::PreciousMetal;
+    if(s=="commodity") return AssetClass::Commodity;
     throw std::invalid_argument("Nieznana klasa aktywa w JSON.");
 }
 template<> Unit parse_enum(const std::string& s) {
-    if(s=="currency_unit")return Unit::CurrencyUnit;if(s=="gram")return Unit::Gram;if(s=="kilogram")return Unit::Kilogram;if(s=="troy_ounce")return Unit::TroyOunce;if(s=="metric_ton")return Unit::MetricTon;if(s=="barrel")return Unit::Barrel;if(s=="megawatt_hour")return Unit::MegawattHour;
+    if(s=="currency_unit") return Unit::CurrencyUnit;
+    if(s=="gram") return Unit::Gram;
+    if(s=="kilogram") return Unit::Kilogram;
+    if(s=="troy_ounce") return Unit::TroyOunce;
+    if(s=="metric_ton") return Unit::MetricTon;
+    if(s=="barrel") return Unit::Barrel;
+    if(s=="megawatt_hour") return Unit::MegawattHour;
     throw std::invalid_argument("Nieznana jednostka w JSON.");
 }
 template<> PriceKind parse_enum(const std::string& s) {
-    if(s=="reference")return PriceKind::Reference;if(s=="average")return PriceKind::Average;if(s=="bid")return PriceKind::Bid;if(s=="ask")return PriceKind::Ask;if(s=="mid")return PriceKind::Mid;if(s=="spot")return PriceKind::Spot;if(s=="transaction")return PriceKind::Transaction;
+    if(s=="reference") return PriceKind::Reference;
+    if(s=="average") return PriceKind::Average;
+    if(s=="bid") return PriceKind::Bid;
+    if(s=="ask") return PriceKind::Ask;
+    if(s=="mid") return PriceKind::Mid;
+    if(s=="spot") return PriceKind::Spot;
+    if(s=="transaction") return PriceKind::Transaction;
     throw std::invalid_argument("Nieznany rodzaj ceny w JSON.");
 }
 template<> Frequency parse_enum(const std::string& s) {
-    if(s=="tick")return Frequency::Tick;if(s=="minute")return Frequency::Minute;if(s=="hour")return Frequency::Hour;if(s=="daily")return Frequency::Daily;if(s=="weekly")return Frequency::Weekly;if(s=="monthly")return Frequency::Monthly;if(s=="quarterly")return Frequency::Quarterly;if(s=="semi_annual")return Frequency::SemiAnnual;if(s=="annual")return Frequency::Annual;if(s=="irregular")return Frequency::Irregular;
+    if(s=="tick") return Frequency::Tick;
+    if(s=="minute") return Frequency::Minute;
+    if(s=="hour") return Frequency::Hour;
+    if(s=="daily") return Frequency::Daily;
+    if(s=="weekly") return Frequency::Weekly;
+    if(s=="monthly") return Frequency::Monthly;
+    if(s=="quarterly") return Frequency::Quarterly;
+    if(s=="semi_annual") return Frequency::SemiAnnual;
+    if(s=="annual") return Frequency::Annual;
+    if(s=="irregular") return Frequency::Irregular;
     throw std::invalid_argument("Nieznana częstotliwość w JSON.");
 }
 template<> PeriodStatus parse_enum(const std::string& s) {
-    if(s=="complete")return PeriodStatus::Complete;if(s=="partial")return PeriodStatus::Partial;if(s=="provisional")return PeriodStatus::Provisional;
+    if(s=="complete") return PeriodStatus::Complete;
+    if(s=="partial") return PeriodStatus::Partial;
+    if(s=="provisional") return PeriodStatus::Provisional;
     throw std::invalid_argument("Nieznany status okresu w JSON.");
 }
 template<> QualityStatus parse_enum(const std::string& s) {
-    if(s=="unreviewed")return QualityStatus::Unreviewed;if(s=="validated")return QualityStatus::Validated;if(s=="suspect")return QualityStatus::Suspect;
+    if(s=="unreviewed") return QualityStatus::Unreviewed;
+    if(s=="validated") return QualityStatus::Validated;
+    if(s=="suspect") return QualityStatus::Suspect;
     throw std::invalid_argument("Nieznany status jakości w JSON.");
 }
 template<> SeriesCompleteness parse_enum(const std::string& s) {
-    if(s=="complete")return SeriesCompleteness::Complete;if(s=="partial")return SeriesCompleteness::Partial;if(s=="sparse")return SeriesCompleteness::Sparse;if(s=="unknown")return SeriesCompleteness::Unknown;
+    if(s=="complete") return SeriesCompleteness::Complete;
+    if(s=="partial") return SeriesCompleteness::Partial;
+    if(s=="sparse") return SeriesCompleteness::Sparse;
+    if(s=="unknown") return SeriesCompleteness::Unknown;
     throw std::invalid_argument("Nieznana kompletność szeregu w JSON.");
 }
 
