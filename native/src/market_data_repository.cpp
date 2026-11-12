@@ -634,7 +634,7 @@ void validate_snapshot(const MarketDataSnapshot& s) {
     }
     for(const auto& notice:s.venue_session_notices) {
         if(notice.kind!=VenueSessionNoticeKind::Cancellation) continue;
-        const auto target_key=notice.cancels_notice_id+"\\x1f"+std::to_string(notice.cancels_revision);
+        const auto target_key=notice.cancels_notice_id+"\x1f"+std::to_string(notice.cancels_revision);
         const auto target=notice_versions.find(target_key);
         if(target==notice_versions.end() || target->second->kind==VenueSessionNoticeKind::Cancellation ||
            target->second->calendar_id!=notice.calendar_id || target->second->venue!=notice.venue ||
@@ -700,7 +700,7 @@ VenueSessionNotice decode_venue_session_notice(const json& j) {
     return x;
 }
 std::string venue_session_notice_key(const VenueSessionNotice& x) {
-    return x.notice_id+"\\x1f"+std::to_string(x.revision);
+    return x.notice_id+"\x1f"+std::to_string(x.revision);
 }
 bool same_venue_session_notice(const VenueSessionNotice& a,const VenueSessionNotice& b) {
     return encode(a)==encode(b);
@@ -743,7 +743,7 @@ void validate_venue_session_notice(const VenueSessionNotice& x) {
     }
 }
 std::string notice_stable_identity(const VenueSessionNotice& x) {
-    return x.calendar_id+"\\x1f"+x.venue+"\\x1f"+format_date(x.effective_date);
+    return x.calendar_id+"\x1f"+x.venue+"\x1f"+format_date(x.effective_date);
 }
 json encode_snapshot(const MarketDataSnapshot& s) {
     json instruments=json::array(),providers=json::array(),observations=json::array(),series=json::array(),history=json::array(),calendars=json::array(),venue_calendars=json::array(),source_objects=json::array(),venue_session_notices=json::array();
