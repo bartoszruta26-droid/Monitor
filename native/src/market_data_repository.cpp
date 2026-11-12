@@ -738,7 +738,7 @@ json encode(const VenueSessionNotice& x) {
     return {{"notice_id",x.notice_id},{"revision",x.revision},{"calendar_id",x.calendar_id},
         {"venue",x.venue},{"effective_date",format_date(x.effective_date)},
         {"source_object_id",x.source_object_id},{"source_uri",x.source_uri},
-        {"retrieved_at",x.retrieved_at ? json(format_utc_timestamp(*x.retrieved_at)) : json(nullptr)},
+        {"parser_version",x.parser_version},{"retrieved_at",x.retrieved_at ? json(format_utc_timestamp(*x.retrieved_at)) : json(nullptr)},
         {"attribution",x.attribution},{"license_status",enum_name(x.license_status)},
         {"kind",enum_name(x.kind)},
         {"day_status",x.day_status ? json(enum_name(*x.day_status)) : json(nullptr)},
@@ -754,6 +754,8 @@ VenueSessionNotice decode_venue_session_notice(const json& j) {
     x.effective_date=parse_date(j.at("effective_date").get<std::string>());
     x.source_object_id=j.at("source_object_id").get<std::string>();
     x.source_uri=j.at("source_uri").get<std::string>();
+    x.parser_version=j.contains("parser_version")
+        ? j.at("parser_version").get<std::string>() : "legacy-unversioned";
     if(!j.at("retrieved_at").is_null()) x.retrieved_at=parse_utc_timestamp(j.at("retrieved_at").get<std::string>());
     x.attribution=j.at("attribution").get<std::string>();
     x.license_status=parse_venue_license_status(j.at("license_status").get<std::string>());
