@@ -1,4 +1,4 @@
-name: Backend tests
+name: Native C++ checks
 
 on:
   push:
@@ -11,25 +11,18 @@ permissions:
   contents: read
 
 jobs:
-  backend-tests:
+  native-linux:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: pip
-          cache-dependency-path: backend/requirements.txt
-      - name: Install dependencies
-        working-directory: backend
+      - name: Install native build tools
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
-      - name: Run tests
-        working-directory: backend
-        env:
-          DATABASE_URL: sqlite:///./ci_market_data.db
-          ADMIN_API_TOKEN: ci-test-token
-        run: pytest -q
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++
+      - name: Configure
+        run: cmake -S native -B build/native -G Ninja -DCMAKE_BUILD_TYPE=Release -DMONITOR_BUILD_TESTS=ON
+      - name: Build
+        run: cmake --build build/native --parallel
+      - name: Test
+        run: ctest --test-dir build/native --output-on-failure
