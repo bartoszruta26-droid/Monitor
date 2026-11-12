@@ -535,10 +535,11 @@ void validate_venue_calendar(const VenueSessionCalendar& x) {
         if (!is_valid_date(day.date) || format_date(day.date)!=format_date(expected_date))
             throw std::invalid_argument("Dni kalendarza venue muszą być kompletne, uporządkowane i bez duplikatów.");
         (void)enum_name(day.status);
-        if (day.status==VenueDayStatus::Trading && day.product_sessions.empty())
-            throw std::invalid_argument("Dzień handlowy wymaga co najmniej jednej sesji produktowej.");
-        if (day.status!=VenueDayStatus::Trading && !day.product_sessions.empty())
-            throw std::invalid_argument("Dzień bez handlu nie może zawierać sesji produktowych.");
+        validate_phase_events(day.phase_events);
+        if(day.status==VenueDayStatus::Trading && day.product_sessions.empty() && day.phase_events.empty())
+            throw std::invalid_argument("Dzień handlowy wymaga sesji produktowej lub zdarzeń fazowych.");
+        if(day.status!=VenueDayStatus::Trading && (!day.product_sessions.empty() || !day.phase_events.empty()))
+            throw std::invalid_argument("Dzień bez handlu nie może zawierać sesji ani zdarzeń fazowych.");
         std::set<std::string> products;
         for (const auto& session : day.product_sessions) {
             if (session.product_group.empty() || !products.insert(session.product_group).second)
@@ -787,6 +788,7 @@ void validate_venue_session_notice(const VenueSessionNotice& x) {
     const auto valid_time=[](const LocalTimeOfDay& t) {
         return t.hour<=23U && t.minute<=59U && t.second<=59U;
     };
+    validate_phase_events(x.phase_events);
     std::set<std::string> product_groups;
     for(const auto& session:x.product_sessions) {
         if(session.product_group.empty() || !product_groups.insert(session.product_group).second ||
@@ -797,18 +799,18 @@ void validate_venue_session_notice(const VenueSessionNotice& x) {
     }
     switch(x.kind) {
     case VenueSessionNoticeKind::Informational:
-        if(x.day_status || !x.product_sessions.empty() || !x.cancels_notice_id.empty() || x.cancels_revision!=0U)
+        if(x.day_status || !x.product_sessions.empty() || !x.phase_events.empty() || !x.cancels_notice_id.empty() || x.cancels_revision!=0U)
             throw std::invalid_argument("Komunikat informacyjny nie może zmieniać sesji ani anulować innego komunikatu.");
         break;
     case VenueSessionNoticeKind::SessionOverride:
         if(!x.day_status || !x.cancels_notice_id.empty() || x.cancels_revision!=0U ||
-           (*x.day_status==VenueDayStatus::Trading && x.product_sessions.empty()) ||
-           (*x.day_status!=VenueDayStatus::Trading && !x.product_sessions.empty()))
+           (*x.day_status==VenueDayStatus::Trading && x.product_sessions.empty() && x.phase_events.empty()) ||
+           (*x.day_status!=VenueDayStatus::Trading && (!x.product_sessions.empty() || !x.phase_events.empty())))
             throw std::invalid_argument("Nadpisanie sesji wymaga statusu dnia i zgodnych godzin produktów.");
         break;
     case VenueSessionNoticeKind::Cancellation:
         if(x.cancels_notice_id.empty() || x.cancels_revision==0U || x.day_status ||
-           !x.product_sessions.empty() || x.cancels_notice_id==x.notice_id)
+           !x.product_sessions.empty() || !x.phase_events.empty() || x.cancels_notice_id==x.notice_id)
             throw std::invalid_argument("Anulowanie musi wskazywać wcześniejszy komunikat i nie może zawierać godzin.");
         break;
     }
@@ -1265,6 +1267,7 @@ EffectiveVenueCalendarDay resolve_effective_venue_calendar_day(
             throw std::invalid_argument("Aktywne nadpisanie sesji nie ma statusu dnia.");
         result.day.status=*active_override->day_status;
         result.day.product_sessions=active_override->product_sessions;
+        result.day.phase_events=active_override->phase_events;
         result.day.requires_official_notice=false;
         result.requires_official_notice_unresolved=false;
     }
