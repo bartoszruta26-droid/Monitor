@@ -21,6 +21,7 @@ Model domenowy i obliczenia pozostają niezależne od Qt, Android SDK, serwera H
 - wersjonowany dokument JSON, rewizje, zapis atomowy, blokady międzyprocesowe i kopie zapasowe;
 - atomowe przyjmowanie partii adapterów oraz historia korekt notowań;
 - testy magazynu obejmujące round-trip, odzyskiwanie i współbieżność;
+- regresję HTF z jawnym harmonogramem sesji, wykrywaniem brakujących slotów i zachowaniem pochodzenia;
 - CLI, testy jednostkowe i CTest.
 
 ## Budowanie i testowanie

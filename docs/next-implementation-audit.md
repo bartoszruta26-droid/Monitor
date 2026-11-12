@@ -677,3 +677,12 @@ Etap 2 można zamknąć dopiero po kompilacji w CI, przejściu testów adapteró
 3. Dodać odrębne kalendarze dla NBP, metali spot i instrumentów giełdowych; nie stosować jednego uniwersalnego kalendarza.
 4. Zdefiniować jawne polityki jakości i ewentualne tolerancje brakujących slotów.
 5. Przygotować fixture wspólne dla C++ i Pine oraz niezależnie skompilować Pine w TradingView.
+
+
+## 18. Rejestr wykonania i korekta statusu kalendarzy (2026-11-12)
+
+Bieżący, nadrzędny rejestr etapów znajduje się w [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md). Rejestr wiąże każdy etap z kodem, commitem i CI.
+
+**Ważna korekta:** Etap 8 (kalendarz sesyjny) jest zaimplementowany jako funkcja obliczeniowa `session_aware_rolling_regression()`, ale trwały magazyn i wersjonowanie kalendarzy nie zostały jeszcze wdrożone. Poprzednia odpowiedź opisała ten zakres jako wykonany przed sprawdzeniem aktualnych plików repozytorium. Audyt HEAD `d2bc1364986bee6f4474bfce9ad2549e60c90f97` potwierdził brak kalendarzy w `MarketDataSnapshot`, `MarketDataBatch` i `JsonMarketDataRepository`. Magazyn wersji jest następnym etapem, a nie funkcją gotową.
+
+Ostatni CI dla HEAD `d2bc1364986bee6f4474bfce9ad2549e60c90f97` zakończył się powodzeniem: [workflow 43260529082](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43260529082).
