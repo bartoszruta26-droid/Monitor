@@ -296,3 +296,20 @@ Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na ma
 - Ostatni zielony commit bazowy: `a063463480d71ccc60de858bb230182ccdfb3805`, CI [43311594077](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43311594077) zakończone sukcesem.
 - Nie zapisano sumy SHA-256 kalendarza Xetra 2026, ponieważ nie pobrano dokładnych bajtów pliku źródłowego. Nie potwierdzono również licencji redystrybucji; status pozostaje `Unknown`.
 - Następny etap: parser semantycznej tabeli HTML źródła Xetra z fixture offline, wykrywanie zmian i niezmienne wersje dokumentu. Po nim integracja źródła z repozytorium JSON i testy regresji wersji.
+
+
+## 38. Etap 11 — parser semantycznego HTML Xetra 2026
+
+- Commit `dc9f814990172f835574afd915e8a8605cddaa08`: zadeklarowano publiczny kontrakt `parse_xetra_html_calendar`.
+- Commit `f74adf990ef2ed745c7ceccb9e2d6ff69fcd4deb`: dodano parser HTML oparty o libxml2; bez wykonywania skryptów i bez dostępu sieciowego.
+- Commit `f70f5246f36ff63164a0306e9ff6805f4cf2e635`: obsłużono format dat dzień–miesiąc występujący w komunikatach o świętach.
+- Commit `34bcbfe40d7b374d385f0d91491679d44f0d28e7`: dołączono importer do biblioteki natywnej. Pierwsze przebiegi po podłączeniu ujawniły brak jawnego nagłówka `<chrono>`; błąd kompilacji został naprawiony w commicie `0aee9f9359d6bd9a888d47d2a94a9e9f3767f329`.
+- Commit `df0db6a1db2169e867801fef61ec74c450939d0c`: dodano offline fixture semantycznej tabeli i listy wyjątków.
+- Commit `37771666d8362d5d09094301705f4b53913140b6` oraz `849991baaaac2b8b76b240705b8967d99e413555`: testy parsera, błędnych/niekompletnych danych i konfiguracja ścieżki fixture.
+- Commit `0aee9f9359d6bd9a888d47d2a94a9e9f3767f329`: poprawiono wiązanie wyjątków z semantycznymi elementami listy; walidowane są etykiety Ascension Day, Whit Monday i Corpus Christi.
+- Commit `d72b638eb0462c5ec5b41db76b079fb4238b5aad`: dokumentacja zakresu i ograniczeń importera.
+- CI najnowszego HEAD: [43312439068](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43312439068) — Configure, Build i Test: success.
+- Wcześniejsze przebiegi po pierwszym podłączeniu źródła zakończyły się błędem kompilacji z powodu braku `<chrono>`; poprawka jest obecna na HEAD, a pełny workflow najnowszego SHA przeszedł.
+- Testy parsują syntetyczny fixture offline i weryfikują 365 dni, święta zamknięte, trzy święta handlowe, godziny 20:00/22:00, settlement-only, wymóg okólnika 30 grudnia, surowy SHA-256 i odrzucanie niekompletnej listy wyjątków.
+- **Ograniczenia:** importer obsługuje wyłącznie schemat i zakres 2026; nie pobiera HTML, nie archiwizuje automatycznie kolejnych wersji, nie potwierdza licencji i nie parsuje okólników skróconych sesji. Fixture jest syntetyczny, a jego hash nie jest hashem oficjalnej strony.
+- Następny etap: pobieranie surowych bajtów przez adapter źródłowy z limitem, timeoutem i walidacją HTTPS; zapis niezmiennych wersji `SourceCalendarDocument` i `VenueSessionCalendar` w JSON repository z zachowaniem zgodności schematu v1; testy round-trip, konfliktu wersji, niezmienności oraz nieudanych pobrań. Dopiero później importer okólników i rozszerzenie kalendarza na kolejne lata.
