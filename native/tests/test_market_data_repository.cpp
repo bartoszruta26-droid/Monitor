@@ -67,6 +67,35 @@ int main(){
     require(loaded.observation_history.front().previous.value==4.25,"previous value retained");
     require(loaded.observations.front().value==4.31,"latest correction becomes current");
 
+    // A provider response can be ingested in one atomic commit.
+    JsonMarketDataRepository batch_repo(dir/"batch.json");
+    MarketDataBatch batch;
+    batch.instruments.push_back(fx);
+    batch.providers.push_back(nbp);
+    auto batch_first=observation(4.20,3000);
+    batch_first.id="batch-1";
+    auto batch_second=observation(4.21,3001);
+    batch_second.id="batch-2";
+    batch_second.observed_at.unix_seconds+=86400;
+    batch.observations={batch_first,batch_second};
+    batch.series_metadata.push_back(SeriesMetadata{fx.id,nbp.id,Frequency::Daily,
+        batch_first.observed_at,batch_second.observed_at,2,2,SeriesCompleteness::Complete});
+    require(batch_repo.upsert_batch(batch)==1,"provider batch is committed as one revision");
+    auto batch_loaded=batch_repo.load();
+    require(batch_loaded.instruments.size()==1&&batch_loaded.providers.size()==1&&
+            batch_loaded.observations.size()==2&&batch_loaded.series_metadata.size()==1,
+            "atomic batch persists all adapter result collections");
+    require(batch_repo.upsert_batch(batch)==2,"replaying a batch is safe and revisioned");
+    batch_loaded=batch_repo.load();
+    require(batch_loaded.observations.size()==2&&batch_loaded.observation_history.empty(),
+            "replayed identical batch does not duplicate observations");
+    MarketDataBatch invalid_batch;
+    auto orphan=observation(4.5,4000);
+    orphan.provider_id="missing-provider";
+    invalid_batch.observations.push_back(orphan);
+    throws([&]{(void)batch_repo.upsert_batch(invalid_batch);},"invalid batch rejected as a whole");
+    require(batch_repo.load().revision==2,"failed batch leaves committed revision unchanged");
+
     const auto raw_before=std::filesystem::file_size(file);
     throws([&]{auto bad=loaded;bad.instruments.front().quote_currency="PL";(void)repo.replace(bad);},"invalid snapshot rejected");
     require(std::filesystem::file_size(file)==raw_before,"failed validation leaves primary file unchanged");
