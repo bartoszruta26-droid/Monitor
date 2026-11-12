@@ -25,7 +25,7 @@ QualityStatus rozróżnia dane niezweryfikowane, zweryfikowane i podejrzane. qua
 Provider przechowuje stabilny identyfikator, nazwę, stronę główną i informację licencyjną. Każde notowanie ma provider_id. Opcjonalne provider_record_id i source_uri pozwalają odtworzyć pochodzenie. Adresy w wersji 1 muszą używać HTTPS. Sekrety nie należą do modelu.
 
 ## Walidacja i wersjonowanie
-Walidatory odrzucają błędne identyfikatory, kody walut, pary FX z identyczną walutą bazową i kwotowaną, metale bez jednostki masy, nieobsługiwane wersje schematu, rozbieżne identyfikatory, NaN i nieskończoności, niedozwolone ceny ujemne, czas pobrania wcześniejszy niż obserwacja, błędne daty i URI oraz sprzeczne liczniki kompletności.
+Walidatory odrzucają błędne identyfikatory, kody walut, pary FX z identyczną walutą bazową i kwotowaną, metale bez jednostki masy, nieznane wartości enum (klasa aktywa, jednostka, częstotliwość, rodzaj ceny, status okresu, jakość i kompletność), nieobsługiwane wersje schematu, rozbieżne identyfikatory, NaN i nieskończoności, niedozwolone ceny ujemne, czas pobrania wcześniejszy niż obserwacja, błędne daty i URI oraz sprzeczne liczniki kompletności.
 Ujemne ceny są dozwolone wyłącznie po jawnym ustawieniu allow_negative_prices. Nie zakładamy dodatniości dla wszystkich rynków.
 MarketObservation zawiera jawny numer schematu. Zmiany niekompatybilne wymagają podniesienia wersji i migracji w przyszłej warstwie magazynu.
 
