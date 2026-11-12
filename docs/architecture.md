@@ -70,3 +70,47 @@ To wzór docelowy, a nie deklaracja implementacji. Serwer i oba adaptery magazyn
 ## Status
 
 Obecnie w repozytorium działa natywny rdzeń regresji C++20, program CLI, testy i CI. Serwer, magazyny JSON/MariaDB, adaptery, API i interfejsy pozostają do implementacji.
+
+
+## Integracja z Nextcloud — kierunek przyszły
+
+Monitor ma być przygotowany do późniejszego udostępnienia jako aplikacja Nextcloud. Rdzeń C++20, serwer i model domenowy pozostają niezależne od platformy Nextcloud. Integracja powinna korzystać z publicznych i stabilnych interfejsów platformy: aplikacji Nextcloud, OCS API oraz WebDAV/Files API. Nie należy opierać się na prywatnych klasach ani bezpośrednio modyfikować wewnętrznych tabel bazy Nextcloud.
+
+Zalecany podział:
+- cienka aplikacja Nextcloud odpowiada za ekran, ustawienia, uprawnienia i integrację z plikami;
+- niezależny silnik/serwer C++20 wykonuje pobieranie danych, agregację, regresję, wycenę i analizę portfela;
+- komunikacja odbywa się przez wersjonowane HTTPS API;
+- AppAPI/ExApp może zostać ocenione jako wariant wdrożenia zewnętrznego komponentu, jeśli będzie to uzasadnione.
+
+Nextcloud ma pełnić rolę warstwy integracji, synchronizacji, przechowywania i udostępniania plików. Nie należy bez decyzji architektonicznej tworzyć dwóch równorzędnych źródeł prawdy. Domyślnie autorytatywne pozostaje repozytorium Monitora, a Nextcloud synchronizuje zatwierdzone rekordy, raporty i prognozy.
+
+## ChatGPT i Model Context Protocol
+
+Przyszła integracja ChatGPT powinna korzystać z dedykowanego, uwierzytelnionego serwera MCP, który wywołuje API Monitora i kontrolowaną integrację Nextcloud. ChatGPT nie otrzymuje bezpośredniego, nieograniczonego dostępu do dysku ani katalogu danych Androida.
+
+Narzędzia MCP należy rozdzielić na:
+- odczyt danych rynkowych, agregatów, analiz i dozwolonego zakresu portfela;
+- deterministyczne obliczenia realizowane przez silnik C++;
+- zapis prognoz i raportów do repozytorium oraz wskazanego katalogu/obszaru Nextcloud;
+- operacje zmieniające portfel, domyślnie wyłączone lub wymagające jawnego potwierdzenia.
+
+AI może interpretować dane i tworzyć scenariusze, ale regresja, agregacja, wycena i kalkulacja wyniku transakcji muszą być wykonywane przez testowalny silnik obliczeniowy, a nie szacowane swobodnie przez model językowy. Każda prognoza musi zawierać czas, źródła, horyzont, wersję algorytmu/modelu i informację o niepewności.
+
+Dostęp lokalny do plików tabletu wymaga kontrolowanego klienta/pośrednika z uprawnieniami systemowymi. Serwer zdalny nie może samodzielnie odczytać prywatnej ścieżki Androida. Preferowany kanał synchronizacji to Nextcloud WebDAV/Files API lub API klienta.
+
+## Integracja transakcji z inną aplikacją — przyszła
+
+Część funkcji ręcznego wprowadzania zakupów, sprzedaży i wymiany aktywów ma w przyszłości zostać udostępniona również w innej aplikacji użytkownika, rozwijanej w osobnym repozytorium. Nie jest to zakres bieżącego etapu, ale model transakcji i API należy od początku projektować niezależnie od interfejsu Monitora.
+
+Wymagane przygotowanie:
+- wersjonowany kontrakt tworzenia, odczytu i korekty transakcji;
+- stabilne identyfikatory i klucze idempotencji;
+- uprawnienia ograniczone do operacji;
+- rejestr klienta/źródła wprowadzającego transakcję;
+- audyt każdej zmiany i ochrona przed duplikacją.
+
+## Klienci i źródło danych
+
+Android App, TUI, Linux GUI i WebUI mają wyświetlać wspólny, zatwierdzony zestaw danych i prognoz. Mogą korzystać bezpośrednio z API Monitora oraz z kontrolowanej synchronizacji plików Nextcloud. Tryb lokalny/offline musi rozróżniać dane zsynchronizowane od oczekujących na synchronizację oraz obsługiwać wersjonowanie i konflikty.
+
+Szczegółowy audyt, priorytety, model danych i kryteria akceptacji znajdują się w [audytcie i planie realizacji](market-monitor-audit-and-roadmap.md).
