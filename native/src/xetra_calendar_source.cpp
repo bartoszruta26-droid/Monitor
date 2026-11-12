@@ -10,6 +10,8 @@
 #include <cstring>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
+#include <signal.h>
 #include <unistd.h>
 #include <stdexcept>
 #include <string>
@@ -63,6 +65,90 @@ bool same_notice_payload(const VenueSessionNotice& a,const VenueSessionNotice& b
             return false;
     }
     return true;
+}
+std::string extract_pdf_text(std::string_view pdf_bytes) {
+    if(pdf_bytes.empty() || pdf_bytes.size()>16U*1024U*1024U)
+        throw std::invalid_argument("Plik PDF Xetra jest pusty lub przekracza limit 16 MiB.");
+#ifndef MONITOR_PDFTOTEXT_EXECUTABLE
+    throw std::runtime_error("Obsługa PDF wymaga zainstalowanego programu pdftotext.");
+#else
+    char temporary_path[]="/tmp/monitor-xetra-pdf-XXXXXX";
+    const int file_fd=::mkstemp(temporary_path);
+    if(file_fd<0) throw std::runtime_error("Nie można utworzyć tymczasowego pliku PDF.");
+    int write_fd=file_fd;
+    try {
+        if(::fcntl(write_fd,F_SETFD,FD_CLOEXEC)!=0)
+            throw std::runtime_error("Nie można ustawić bezpiecznych flag pliku PDF.");
+        std::size_t offset=0;
+        while(offset<pdf_bytes.size()) {
+            const auto count=::write(write_fd,pdf_bytes.data()+offset,pdf_bytes.size()-offset);
+            if(count<0) { if(errno==EINTR) continue; throw std::runtime_error("Nie można zapisać tymczasowego PDF."); }
+            if(count==0) throw std::runtime_error("Zapis tymczasowego PDF nie postępuje.");
+            offset+=static_cast<std::size_t>(count);
+        }
+        if(::fsync(write_fd)!=0) throw std::runtime_error("Nie można zsynchronizować tymczasowego PDF.");
+        if(::close(write_fd)!=0) { write_fd=-1; throw std::runtime_error("Nie można zamknąć tymczasowego PDF."); }
+        write_fd=-1;
+    } catch(...) {
+        if(write_fd>=0) ::close(write_fd);
+        ::unlink(temporary_path);
+        throw;
+    }
+
+    int pipe_fds[2]{};
+    if(::pipe(pipe_fds)!=0) {
+        ::unlink(temporary_path);
+        throw std::runtime_error("Nie można utworzyć potoku dla pdftotext.");
+    }
+    const pid_t child=::fork();
+    if(child<0) {
+        ::close(pipe_fds[0]); ::close(pipe_fds[1]); ::unlink(temporary_path);
+        throw std::runtime_error("Nie można uruchomić procesu pdftotext.");
+    }
+    if(child==0) {
+        (void)::dup2(pipe_fds[1],STDOUT_FILENO);
+        ::close(pipe_fds[0]); ::close(pipe_fds[1]);
+        ::execl(MONITOR_PDFTOTEXT_EXECUTABLE,"pdftotext","-layout",temporary_path,"-",
+                static_cast<char*>(nullptr));
+        ::_exit(127);
+    }
+    ::close(pipe_fds[1]);
+    std::string extracted;
+    std::array<char,8192> buffer{};
+    bool too_large=false;
+    while(true) {
+        const auto count=::read(pipe_fds[0],buffer.data(),buffer.size());
+        if(count==0) break;
+        if(count<0) {
+            if(errno==EINTR) continue;
+            ::kill(child,SIGKILL);
+            ::close(pipe_fds[0]);
+            int status=0; (void)::waitpid(child,&status,0);
+            ::unlink(temporary_path);
+            throw std::runtime_error("Błąd odczytu tekstu z PDF Xetra.");
+        }
+        const auto size=static_cast<std::size_t>(count);
+        if(extracted.size()>2U*1024U*1024U || size>2U*1024U*1024U-extracted.size()) {
+            too_large=true;
+            ::kill(child,SIGKILL);
+            break;
+        }
+        extracted.append(buffer.data(),size);
+    }
+    ::close(pipe_fds[0]);
+    int status=0;
+    while(::waitpid(child,&status,0)<0) {
+        if(errno==EINTR) continue;
+        ::unlink(temporary_path);
+        throw std::runtime_error("Nie można odebrać wyniku procesu pdftotext.");
+    }
+    ::unlink(temporary_path);
+    if(too_large) throw std::runtime_error("Tekst wydobyty z PDF przekracza limit 2 MiB.");
+    if(!WIFEXITED(status) || WEXITSTATUS(status)!=0)
+        throw std::runtime_error("pdftotext nie rozpoznał oficjalnego PDF Xetra.");
+    if(extracted.empty()) throw std::runtime_error("PDF Xetra nie zawiera wydobywalnego tekstu.");
+    return extracted;
+#endif
 }
 struct DownloadedCalendar {
     VenueSessionCalendar calendar;
