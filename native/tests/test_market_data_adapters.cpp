@@ -97,6 +97,37 @@ int main() {
         [](const auto& o){return o.instrument_id=="METAL:XAU";});
     require(gold!=nbp_data.observations.end()&&gold->value==300.25&&gold->price_kind==PriceKind::Reference,"NBP gold is PLN per gram reference");
 
+    // NBP history endpoints accept at most 93 calendar days per request.
+    // A 95-day inclusive range must be split into 93 + 2 days. HTTP 404
+    // means that the selected provider has no data for that slice, not that
+    // the whole import should fail.
+    auto range_transport=std::make_shared<FakeTransport>();
+    HttpClient range_http(range_transport,config);
+    const std::string first_start="2026-01-01",first_end="2026-04-03";
+    const std::string second_start="2026-04-04",second_end="2026-04-05";
+    const std::vector<std::string> nbp_prefixes{
+        "https://api.nbp.pl/api/cenyzlota/",
+        "https://api.nbp.pl/api/exchangerates/tables/A/",
+        "https://api.nbp.pl/api/exchangerates/tables/B/",
+        "https://api.nbp.pl/api/exchangerates/tables/C/"
+    };
+    for(const auto& prefix:nbp_prefixes) {
+        range_transport->responses[prefix+first_start+"/"+first_end+"/?format=json"]={response(404,"")};
+        range_transport->responses[prefix+second_start+"/"+second_end+"/?format=json"]={response(200,"[]")};
+    }
+    NbpAdapter range_nbp(range_http);
+    const auto empty_range=range_nbp.fetch(parse_date(first_start),parse_date(second_end));
+    require(range_transport->calls.size()==8U,
+            "95-day NBP import is split into two requests for each of four endpoints");
+    require(empty_range.observations.empty(),
+            "NBP 404 and empty successful responses produce no fabricated observations");
+    require(std::count(range_transport->calls.begin(),range_transport->calls.end(),
+            "https://api.nbp.pl/api/cenyzlota/"+first_start+"/"+first_end+"/?format=json")==1,
+            "NBP first date chunk is exactly 93 calendar days");
+    require(std::count(range_transport->calls.begin(),range_transport->calls.end(),
+            "https://api.nbp.pl/api/cenyzlota/"+second_start+"/"+second_end+"/?format=json")==1,
+            "NBP second date chunk contains the remaining two days");
+
     const std::string frank_url="https://api.frankfurter.dev/v2/rates?from=2026-01-05&to=2026-01-06";
     transport->responses[frank_url]={response(503,"temporary"),response(200,
         R"([{"date":"2026-01-05","base":"EUR","quote":"PLN","rate":4.23},{"date":"2026-01-06","base":"EUR","quote":"USD","rate":1.17}])")};
