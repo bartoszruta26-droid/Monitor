@@ -119,4 +119,4 @@ Rewizja jest niezmienna. Zmiana bajtów źródła nie musi automatycznie zmienia
 
 ## Etap 15D — diagnostyka osieroconych obiektów
 
-`find_orphaned_source_objects(snapshot)` zwraca obiekty `source_objects`, do których nie odwołuje się żadna rewizja kalendarza venue. Jest to raport manifestu, a nie procedura sprzątająca: nie usuwa plików, nie zmienia repozytorium i nie wyszukuje plików spoza indeksu JSON. Usuwanie obiektów pozostaje zabronione przez politykę niezmienności; decyzja o retencji wymaga osobnego, audytowalnego procesu.
+`find_orphaned_source_objects(snapshot)` zwraca obiekty `source_objects`, do których nie odwołuje się żadna rewizja kalendarza venue ani komunikat sesyjny. Jest to raport manifestu, a nie procedura sprzątająca: nie usuwa plików, nie zmienia repozytorium i nie wyszukuje plików spoza indeksu JSON. Usuwanie obiektów pozostaje zabronione przez politykę niezmienności; decyzja o retencji wymaga osobnego, audytowalnego procesu.
