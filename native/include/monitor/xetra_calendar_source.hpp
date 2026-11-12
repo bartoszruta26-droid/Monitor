@@ -7,6 +7,8 @@ namespace monitor::market {
 
 // Fetches exact HTML bytes through the existing HTTPS transport and commits
 // only a successfully parsed, complete calendar version.
+[[nodiscard]] bool xetra_pdf_import_available() noexcept;
+
 class XetraCalendarSourceAdapter final {
 public:
     explicit XetraCalendarSourceAdapter(HttpTransport& transport) : transport_(transport) {}
