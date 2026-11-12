@@ -31,19 +31,6 @@ std::string lower(std::string value) {
     });
     return value;
 }
-std::string safe_component(const std::string& value) {
-    if (value.empty() || value.size()>120U)
-        throw std::invalid_argument("Nieprawidłowy identyfikator archiwum źródła.");
-    std::string result;
-    for (unsigned char c:value) {
-        if ((c>='a'&&c<='z')||(c>='A'&&c<='Z')||
-            (c>='0'&&c<='9')||c=='-'||c=='_') result.push_back(static_cast<char>(c));
-        else result.push_back('_');
-    }
-    if (result=="." || result=="..")
-        throw std::invalid_argument("Niebezpieczny identyfikator archiwum źródła.");
-    return result;
-}
 struct DownloadedCalendar {
     VenueSessionCalendar calendar;
     std::string raw_html;
