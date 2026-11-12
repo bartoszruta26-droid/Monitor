@@ -549,6 +549,58 @@ int main() {
     require(notice_repository.load().revision==revision_before_notice_replay,
             "invalid notice does not change repository revision");
 
+    if(xetra_pdf_import_available()) {
+        const auto pdf_import_folder=folder/"pdf-import";
+        std::filesystem::create_directories(pdf_import_folder);
+        JsonMarketDataRepository pdf_repository(pdf_import_folder/"calendar.json");
+        transport.response.status_code=200;
+        transport.response.headers={{"content-type","text/html"}};
+        transport.response.body=html;
+        require(adapter.import(pdf_repository,source(),"XETRA-2026",1U)==1U,
+                "PDF import test starts from a persisted base calendar");
+        const auto pdf_bytes=make_pdf_notice_fixture();
+        transport.response.headers={{"content-type","application/pdf"}};
+        transport.response.body=pdf_bytes;
+        VenueSessionNotice pdf_notice;
+        pdf_notice.notice_id="xetra-2026-final-session-pdf";
+        pdf_notice.revision=1U;
+        pdf_notice.calendar_id="XETRA-2026";
+        pdf_notice.venue="XETRA";
+        pdf_notice.effective_date=parse_date("2026-12-30");
+        pdf_notice.attribution="Deutsche Börse Cash Market";
+        require(adapter.import_pdf_notice(pdf_repository,pdf_notice,notice_url)==2U,
+                "PDF adapter extracts official phase text and publishes the archived PDF notice");
+        const auto pdf_snapshot=pdf_repository.load();
+        require(pdf_snapshot.venue_session_notices.size()==1U &&
+                pdf_snapshot.venue_session_notices.front().phase_events.size()==9U &&
+                pdf_snapshot.source_objects.size()==2U,
+                "PDF import persists all phase events and the content-addressed PDF object");
+        const auto pdf_hash=sha256_hex(pdf_bytes);
+        const auto pdf_object=std::find_if(pdf_snapshot.source_objects.begin(),pdf_snapshot.source_objects.end(),
+            [&](const SourceArchiveObject& object){return object.content_sha256==pdf_hash;});
+        require(pdf_object!=pdf_snapshot.source_objects.end() &&
+                pdf_object->content_type=="application/pdf" &&
+                std::filesystem::exists(pdf_import_folder/"calendar.json.sources"/"objects"/(pdf_hash+".pdf")),
+                "raw PDF bytes are archived exactly as a SHA-256 object");
+        const auto pdf_revision_before_replay=pdf_repository.load().revision;
+        require(adapter.import_pdf_notice(pdf_repository,pdf_notice,notice_url)==pdf_revision_before_replay &&
+                pdf_repository.load().venue_session_notices.size()==1U,
+                "re-importing an identical PDF notice revision is idempotent");
+        transport.response.body=pdf_bytes+"\n";
+        throws([&]{(void)adapter.import_pdf_notice(pdf_repository,pdf_notice,notice_url);},
+               "changed PDF bytes cannot replace an already published notice revision");
+        require(pdf_repository.load().revision==pdf_revision_before_replay &&
+                pdf_repository.load().source_objects.size()==2U,
+                "conflicting PDF notice import does not publish a second source object");
+        auto invalid_pdf_notice=pdf_notice;
+        invalid_pdf_notice.notice_id="xetra-2026-invalid-pdf";
+        transport.response.body="not a PDF document";
+        throws([&]{(void)adapter.import_pdf_notice(pdf_repository,invalid_pdf_notice,notice_url);},
+               "invalid PDF source is rejected before archive publication");
+        require(pdf_repository.load().revision==pdf_revision_before_replay,
+                "invalid PDF notice leaves the repository unchanged");
+    }
+
     std::filesystem::remove_all(folder);
     std::cout<<"Xetra HTTPS source adapter tests passed\n";
 }
