@@ -406,7 +406,8 @@ json encode(const VenueSessionCalendar& x) {
             });
         }
         days.push_back({{"date",format_date(day.date)},{"status",enum_name(day.status)},
-            {"product_sessions",std::move(sessions)},{"requires_official_notice",day.requires_official_notice}});
+            {"product_sessions",std::move(sessions)},{"phase_events",encode_phase_events(day.phase_events)},
+            {"requires_official_notice",day.requires_official_notice}});
     }
     return {{"calendar_id",x.calendar_id},{"revision",x.revision},
             {"parser_version",x.parser_version},
@@ -458,6 +459,7 @@ VenueSessionCalendar decode_venue_calendar(const json& j) {
             day.product_sessions.push_back({item.at("product_group").get<std::string>(),
                 read_time(item.at("opens_at")),read_time(item.at("closes_at"))});
         }
+        if(value.contains("phase_events")) day.phase_events=decode_phase_events(value.at("phase_events"));
         result.days.push_back(std::move(day));
     }
     return result;
@@ -739,7 +741,7 @@ json encode(const VenueSessionNotice& x) {
         {"attribution",x.attribution},{"license_status",enum_name(x.license_status)},
         {"kind",enum_name(x.kind)},
         {"day_status",x.day_status ? json(enum_name(*x.day_status)) : json(nullptr)},
-        {"product_sessions",std::move(sessions)},
+        {"product_sessions",std::move(sessions)},{"phase_events",encode_phase_events(x.phase_events)},
         {"cancels_notice_id",x.cancels_notice_id},{"cancels_revision",x.cancels_revision}};
 }
 VenueSessionNotice decode_venue_session_notice(const json& j) {
@@ -763,6 +765,7 @@ VenueSessionNotice decode_venue_session_notice(const json& j) {
         x.product_sessions.push_back({item.at("product_group").get<std::string>(),
             read_time(item.at("opens_at")),read_time(item.at("closes_at"))});
     }
+    if(j.contains("phase_events")) x.phase_events=decode_phase_events(j.at("phase_events"));
     x.cancels_notice_id=j.at("cancels_notice_id").get<std::string>();
     x.cancels_revision=j.at("cancels_revision").get<std::uint32_t>();
     return x;
