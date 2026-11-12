@@ -161,3 +161,8 @@ Wyniki obu profili muszą zawierać jawny identyfikator metody, by można było 
 ## 8. Status
 
 Audyt drugiego skryptu i projekt integracji z profilem DGT są dokumentacją techniczną. Wersja pluginu nie zawiera jeszcze uruchomionego silnika OHLCV, wykresu ani trwałego rejestru sygnałów. Do tego potrzebne są źródła danych, backend obliczeniowy i testy porównawcze.
+
+
+## Aktualizacja implementacyjna — 2026-11-12
+
+W repozytorium dodano połączony wskaźnik Pine Script v6: [`tradingview/monitor_combined_linear_regression.pine`](../tradingview/monitor_combined_linear_regression.pine) oraz instrukcję [`tradingview/README.md`](../tradingview/README.md). Implementacja zachowuje odrębne mianowniki i ustawienia profili. Kod został zapisany i ponownie odczytany z gałęzi `main`; nie został jednak skompilowany w TradingView Pine Editor. Audyt nadal opisuje także szerszą docelową integrację backendową, która pozostaje osobnym zadaniem.
