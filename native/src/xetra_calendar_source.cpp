@@ -334,7 +334,7 @@ std::string read_source_object_bytes(const JsonMarketDataRepository& repository,
                                      const SourceArchiveObject& object) {
     const std::filesystem::path relative(object.archive_relative_path);
     if(relative.empty() || relative.is_absolute() || relative.has_root_name() ||
-       relative.has_root_directory() || object.content_length_bytes>4U*1024U*1024U)
+       relative.has_root_directory() || object.content_length_bytes>16U*1024U*1024U)
         throw std::invalid_argument("Ścieżka lub rozmiar archiwum źródłowego jest nieprawidłowy.");
     for(const auto& component:relative)
         if(component.empty() || component=="." || component=="..")
@@ -533,6 +533,50 @@ std::uint64_t XetraCalendarSourceAdapter::import_pdf_notice(
     batch.source_objects.push_back(std::move(source_object));
     batch.venue_session_notices.push_back(std::move(parsed_notice));
     return repository.upsert_batch(batch);
+}
+std::uint64_t XetraCalendarSourceAdapter::publish_notice_revision_from_archive(
+    JsonMarketDataRepository& repository,VenueSessionNotice notice) const {
+    if(notice.notice_id.empty() || notice.revision==0U)
+        throw std::invalid_argument("Ponowna interpretacja wymaga identyfikatora komunikatu i rewizji.");
+    const auto snapshot=repository.load();
+    const VenueSessionNotice* previous=nullptr;
+    for(const auto& item:snapshot.venue_session_notices)
+        if(item.notice_id==notice.notice_id &&
+           (previous==nullptr || item.revision>previous->revision))
+            previous=&item;
+    if(previous==nullptr)
+        throw std::invalid_argument("Nie znaleziono wcześniejszej rewizji komunikatu do ponownej interpretacji.");
+    if(notice.revision<=previous->revision)
+        throw std::invalid_argument("Nowa rewizja komunikatu musi być większa od poprzedniej.");
+    if(notice.calendar_id.empty()) notice.calendar_id=previous->calendar_id;
+    if(notice.venue.empty()) notice.venue=previous->venue;
+    if(!is_valid_date(notice.effective_date)) notice.effective_date=previous->effective_date;
+    if(notice.source_object_id.empty()) notice.source_object_id=previous->source_object_id;
+    if(notice.source_uri.empty()) notice.source_uri=previous->source_uri;
+    if(!notice.retrieved_at) notice.retrieved_at=previous->retrieved_at;
+    if(notice.attribution.empty()) notice.attribution=previous->attribution;
+    if(notice.license_status==VenueCalendarLicenseStatus::Unknown)
+        notice.license_status=previous->license_status;
+
+    const auto object=std::find_if(snapshot.source_objects.begin(),snapshot.source_objects.end(),
+        [&](const SourceArchiveObject& item){return item.source_object_id==notice.source_object_id;});
+    if(object==snapshot.source_objects.end() ||
+       object->content_type.rfind("application/pdf",0)!=0)
+        throw std::invalid_argument("Ponowna interpretacja wymaga zarchiwizowanego obiektu PDF.");
+    const auto pdf_bytes=read_source_object_bytes(repository,*object);
+    const auto extracted=extract_pdf_text(pdf_bytes);
+    auto parsed_notice=parse_xetra_session_notice_text(extracted,std::move(notice));
+
+    const auto existing=std::find_if(snapshot.venue_session_notices.begin(),snapshot.venue_session_notices.end(),
+        [&](const VenueSessionNotice& item) {
+            return item.notice_id==parsed_notice.notice_id && item.revision==parsed_notice.revision;
+        });
+    if(existing!=snapshot.venue_session_notices.end()) {
+        if(!same_notice_payload(*existing,parsed_notice))
+            throw std::invalid_argument("Istniejąca rewizja komunikatu ma inną interpretację.");
+        return snapshot.revision;
+    }
+    return repository.upsert_venue_session_notice(parsed_notice);
 }
 std::uint64_t XetraCalendarSourceAdapter::publish_revision_from_archive(
     JsonMarketDataRepository& repository,SourceCalendarDocument source,
