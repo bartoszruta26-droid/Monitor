@@ -1,4 +1,5 @@
 #include "monitor/xetra_calendar_source.hpp"
+#include "monitor/xetra_calendar_importer.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -331,6 +332,69 @@ int main() {
     require(revision_repository.load().revision==4U &&
             revision_repository.load().source_objects.size()==2U,
             "conflicting source version is rejected without repository mutation");
+
+    const auto read_fixture=[](const std::string& name) {
+        std::ifstream input(std::filesystem::path(MONITOR_TEST_SOURCE_DIR)/"fixtures"/name,std::ios::binary);
+        if(!input) throw std::runtime_error("Missing synthetic notice fixture: "+name);
+        return std::string(std::istreambuf_iterator<char>(input),std::istreambuf_iterator<char>());
+    };
+    const auto override_html=read_fixture("xetra_notice_2026_dec30_override.synthetic.html");
+    VenueSessionNotice notice_metadata;
+    notice_metadata.notice_id="xetra-2026-dec30-circular";
+    notice_metadata.revision=1U;
+    notice_metadata.calendar_id="XETRA-2026";
+    notice_metadata.venue="XETRA";
+    notice_metadata.source_object_id="sha256:"+sha256_hex(override_html);
+    notice_metadata.source_uri=source().source_uri;
+    notice_metadata.attribution="Deutsche Börse Cash Market";
+    const auto parsed_notice=parse_xetra_session_notice_html(override_html,notice_metadata);
+    require(parsed_notice.kind==VenueSessionNoticeKind::SessionOverride &&
+            parsed_notice.effective_date==parse_date("2026-12-30") &&
+            parsed_notice.day_status==VenueDayStatus::Trading &&
+            parsed_notice.product_sessions.size()==1U &&
+            parsed_notice.product_sessions.front().product_group=="xetra_regular" &&
+            parsed_notice.product_sessions.front().closes_at.hour==13U,
+            "notice parser reads explicit date, trading status and shortened product session");
+
+    const auto info_html=read_fixture("xetra_notice_2026_dec30_info.synthetic.html");
+    auto info_metadata=notice_metadata;
+    info_metadata.notice_id="xetra-2026-dec30-info";
+    info_metadata.source_object_id="sha256:"+sha256_hex(info_html);
+    const auto parsed_info=parse_xetra_session_notice_html(info_html,info_metadata);
+    require(parsed_info.kind==VenueSessionNoticeKind::Informational &&
+            !parsed_info.day_status && parsed_info.product_sessions.empty(),
+            "notice without explicit hours remains informational and does not invent sessions");
+
+    const auto cancel_html=read_fixture("xetra_notice_2026_dec30_cancel.synthetic.html");
+    auto cancel_metadata=notice_metadata;
+    cancel_metadata.notice_id="xetra-2026-dec30-cancel";
+    cancel_metadata.source_object_id="sha256:"+sha256_hex(cancel_html);
+    const auto parsed_cancel=parse_xetra_session_notice_html(cancel_html,cancel_metadata);
+    require(parsed_cancel.kind==VenueSessionNoticeKind::Cancellation &&
+            parsed_cancel.cancels_notice_id=="xetra-2026-dec30-circular" &&
+            parsed_cancel.cancels_revision==2U,
+            "notice parser extracts an explicit cancellation target and revision");
+
+    auto wrong_venue_html=override_html;
+    wrong_venue_html.replace(wrong_venue_html.find("Venue: XETRA"),13U,"Venue: EUREX");
+    throws([&]{(void)parse_xetra_session_notice_html(wrong_venue_html,notice_metadata);},
+           "reject a notice whose venue differs from the selected calendar");
+    auto missing_hours_html=override_html;
+    const auto session_row=missing_hours_html.find("<tr><td>xetra_regular</td><td>09:00</td><td>13:00</td></tr>");
+    require(session_row!=std::string::npos,"override fixture has explicit session row");
+    missing_hours_html.erase(session_row,std::string("<tr><td>xetra_regular</td><td>09:00</td><td>13:00</td></tr>").size());
+    throws([&]{(void)parse_xetra_session_notice_html(missing_hours_html,notice_metadata);},
+           "reject a trading override without explicit product hours");
+    auto unknown_product_html=override_html;
+    const auto product_at=unknown_product_html.find("xetra_regular");
+    unknown_product_html.replace(product_at,std::string("xetra_regular").size(),"unknown_group");
+    throws([&]{(void)parse_xetra_session_notice_html(unknown_product_html,notice_metadata);},
+           "reject unknown product groups in official session notices");
+    auto invalid_time_html=override_html;
+    const auto close_at=invalid_time_html.find("13:00");
+    invalid_time_html.replace(close_at,5U,"26:00");
+    throws([&]{(void)parse_xetra_session_notice_html(invalid_time_html,notice_metadata);},
+           "reject session times outside the local day");
 
     std::filesystem::remove_all(folder);
     std::cout<<"Xetra HTTPS source adapter tests passed\n";
