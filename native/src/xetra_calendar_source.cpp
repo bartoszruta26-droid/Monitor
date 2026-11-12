@@ -331,6 +331,14 @@ std::uint64_t XetraCalendarSourceAdapter::import_notice(
     if(existing_notice!=existing_snapshot.venue_session_notices.end()) {
         if(!same_notice_payload(*existing_notice,parsed_notice))
             throw std::invalid_argument("Opublikowana rewizja komunikatu Xetra wskazuje inną treść lub interpretację.");
+        const auto existing_object=std::find_if(existing_snapshot.source_objects.begin(),
+            existing_snapshot.source_objects.end(),[&](const SourceArchiveObject& item) {
+                return item.source_object_id==parsed_notice.source_object_id;
+            });
+        if(existing_object==existing_snapshot.source_objects.end() ||
+           existing_object->content_length_bytes!=static_cast<std::uint64_t>(response.body.size()) ||
+           existing_object->content_type!=type_it->second)
+            throw std::invalid_argument("Metadane obiektu źródłowego komunikatu nie zgadzają się z ponownym pobraniem.");
         return existing_snapshot.revision;
     }
 
