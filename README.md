@@ -649,3 +649,16 @@ Dane zewnętrzne podlegają warunkom właściwych dostawców. Użytkownik projek
 **Monitor Rynków — dane jawne, obliczenia odtwarzalne, decyzje odpowiedzialne.**
 
 </div>
+
+
+---
+
+## ✧ Wskaźnik TradingView — integracja DGT + LonesomeTheBlue
+
+W repozytorium znajduje się połączony wskaźnik Pine Script v6:
+- [Kod wskaźnika](tradingview/monitor_combined_linear_regression.pine)
+- [Instrukcja konfiguracji, matematyka i testy akceptacyjne](tradingview/README.md)
+
+Wskaźnik zawiera dwa odrębne profile metodologiczne. DGT zachowuje szerokość kanału `sqrt(SSE/(n-1))), a LonesomeTheBlue `sqrt(SSE/n)`. Dostępne są dwa kanały DGT, trzy kanały LonesomeTheBlue, poziomy SD, poziomy Fibo, dodatki ATR/wolumenowe, wybicia i alerty. Parametry każdego kanału można konfigurować niezależnie.
+
+**Status:** kod został zapisany w repozytorium, ale nie został jeszcze skompilowany w TradingView Pine Editor. W szczególności należy wykonać test kompilacji i testy akceptacyjne opisane w instrukcji. Przeskalowanie interwału DGT jest zgodne z ideą oryginału i nie stanowi pobrania rzeczywistych świec HTF.
