@@ -85,3 +85,18 @@ Rewizja jest niezmienna. Zmiana bajtów źródła nie musi automatycznie zmienia
 - Dla tego samego SHA ponowne pobranie nie może tworzyć kopii pliku. Różne rewizje kalendarza mogą wskazywać ten sam obiekt.
 - Zapisywać obiekt przed publikacją kalendarza; awaria importu nie może pozostawić referencji do nieistniejących bajtów.
 - Zachować obsługę dotychczasowych archiwów `document_id/version/hash` jako legacy do czasu jawnej migracji.
+### Etap 15B — archiwum content-addressed i integracja adaptera Xetra
+
+- Adapter Xetra zapisuje dokładne bajty do `calendar.json.sources/objects/<sha256>.html`, niezależnie od numeru rewizji kalendarza.
+- `SourceArchiveObject` i `VenueSessionCalendar` są publikowane w jednej partii repozytorium. Archiwum jest tworzone przed zapisem metadanych; przerwanie może pozostawić osierocony plik, ale nie referencję do brakujących bajtów.
+- Powtórne pobranie identycznych bajtów ponownie wykorzystuje istniejący plik i obiekt. Nowy hash tworzy nowy obiekt; kolejne rewizje mogą wskazywać ten sam identyfikator treści.
+- Publikacja pliku jest atomowa i bez nadpisywania istniejącego obiektu: tymczasowy plik jest zapisywany i synchronizowany, następnie publikowany przez `link()` (no-clobber), a katalog jest synchronizowany. Kolizja istniejącego SHA wymaga identyczności bajtów; symlink i konflikt treści są odrzucane.
+- Importer sam ustala SHA, czas pobrania, referencję obiektu i metadane archiwum. Wywołujący nie może podać tych pól z góry.
+- Legacy ścieżki `document_id/version/hash` i opcjonalne pola manifestu w `SourceCalendarDocument` pozostają obsługiwane dla starszych rekordów.
+- CI dla SHA `f61f1bd103348ff1c07c0133f22e4a75503ae573`: [43319017765](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43319017765) — Configure, Build i Test: success; CTest **9/9**.
+
+### Etap 15C — następny
+
+- Rozdzielić `calendar_id + revision` od `document_id` i ewentualnej wersji dokumentu źródłowego. Nie zmieniać klucza legacy `document_id + version` bez migracji.
+- Umożliwić nową interpretację/parser revision dla istniejącego `source_object_id` bez ponownego pobierania i kopiowania pliku.
+- Wprowadzić migrację zgodną z JSON v1, testy wielokrotnego wskazania jednego źródła oraz reguły konfliktów rewizji semantycznych.
