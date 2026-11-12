@@ -187,14 +187,22 @@ struct ZipArchive {
         if(archive_read_open_memory(handle,bytes.data(),bytes.size())!=ARCHIVE_OK)
             throw std::runtime_error("Nie można otworzyć skoroszytu XLSX jako ZIP.");
         archive_entry* item=nullptr;
+        std::size_t total_uncompressed=0;
+        std::size_t entry_count=0;
         while(archive_read_next_header(handle,&item)==ARCHIVE_OK) {
             const char* name=archive_entry_pathname(item);
             if(!name) { archive_read_data_skip(handle); continue; }
+            if(++entry_count>5000U) throw std::runtime_error("Skoroszyt XLSX zawiera zbyt wiele elementów.");
             std::string data;
             std::array<char,16384> buffer{};
             la_ssize_t count{};
-            while((count=archive_read_data(handle,buffer.data(),buffer.size()))>0)
-                data.append(buffer.data(),static_cast<std::size_t>(count));
+            while((count=archive_read_data(handle,buffer.data(),buffer.size()))>0) {
+                const auto size=static_cast<std::size_t>(count);
+                if(size>64U*1024U*1024U-total_uncompressed)
+                    throw std::runtime_error("Rozpakowany skoroszyt XLSX przekracza limit 64 MB.");
+                total_uncompressed+=size;
+                data.append(buffer.data(),size);
+            }
             if(count<0) throw std::runtime_error("Błąd odczytu pliku XLSX.");
             entries.emplace(name,std::move(data));
         }
@@ -587,6 +595,7 @@ AdapterResult XausSpotAdapter::fetch_latest() {
     const auto state=payload.value("data_state",json::object());
     const auto status=state.value("status",std::string("unknown"));
     if(status=="unavailable") throw std::runtime_error("XAUS nie udostępnia aktualnie rzeczywistej ceny spot.");
+    if(status!="fresh"&&status!="stale") throw std::runtime_error("XAUS nie zwrócił rozpoznanego statusu świeżości danych.");
     const std::string as_of=state.value("as_of",payload.value("updated_at",std::string{}));
     if(as_of.empty()) throw std::runtime_error("XAUS nie zwrócił czasu obserwacji.");
     const auto observed=parse_utc_timestamp(as_of);

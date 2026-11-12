@@ -128,6 +128,14 @@ int main() {
     require(spot.observations.size()==2,"XAUS returns XAU and XAG");
     require(spot.observations[0].price_kind==PriceKind::Spot,"XAUS values are spot indicative");
     require(format_utc_timestamp(spot.observations[0].observed_at)=="2026-01-05T10:00:00Z","XAUS preserves intraday observation timestamp");
+    transport->responses[xaus_url]={response(200,
+        R"({"data_state":{"status":"stale","as_of":"2026-01-05T09:30:00Z"},"xau":{"price":4490.0,"currency":"USD","unit":"oz"}})")};
+    auto stale_spot=xaus.fetch_latest();
+    require(stale_spot.observations.size()==1&&stale_spot.observations.front().quality==QualityStatus::Suspect,
+            "XAUS stale quote is marked suspect");
+    transport->responses[xaus_url]={response(200,
+        R"({"data_state":{"status":"unknown","as_of":"2026-01-05T09:30:00Z"},"xau":{"price":4490.0,"currency":"USD","unit":"oz"}})")};
+    throws([&]{(void)xaus.fetch_latest();},"XAUS unknown freshness state is rejected");
 
     auto duplicated=frank_data.observations;
     duplicated.push_back(duplicated.front());
