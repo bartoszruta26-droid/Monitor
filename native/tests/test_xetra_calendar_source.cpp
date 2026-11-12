@@ -48,19 +48,29 @@ SourceCalendarDocument source() {
 }
 std::string make_pdf_notice_fixture() {
     const std::vector<std::string> lines{
-        "Final trading session 2026",
-        "Effective date: 30 December 2026",
-        "Market Deutsche Boerse Xetra - electronic trading system T7 - MIC: XETR",
+        "Final trading session on 30 December 2026",
+        "1. Market Deutsche Boerse Frankfurt (electronic trading system T7 - MIC: XFRA)",
+        "from 7.00 a.m. Start of pre-trading",
+        "from 8.00 a.m. Continuous auctions",
+        "from 2.00 p.m. Start of post-trading",
+        "from 3.00 p.m. End of post-trading",
+        "2. Market Deutsche Boerse Xetra (electronic trading system T7 - MIC: XETR)",
         "from 7.00 a.m. Start of pre-trading",
         "from 8.00 a.m. Start of retail early",
-        "from 8.55 a.m. Start of opening auction call",
-        "from 1.00 p.m. Start of intraday auction call",
-        "from 2.00 p.m. Start of closing auction call",
-        "Price determination in the closing auction will take place no earlier than 2.05 p.m.",
-        "Trade-at-Close period will end at 2.10 p.m. for DAX, MDAX and SDAX",
-        "TES OTC and TES LIS trades may be entered and Xetra EnLight may be used until 2.59 p.m.",
-        "End of post-trading at 3.00 p.m.",
-        "3. Availability"
+        "from 8.55 a.m. Opening auction call",
+        "from 1.00 p.m. Intraday auction call",
+        "from 2.00 p.m. Closing auction call",
+        "from 3.00 p.m. End of post-trading",
+        "Price determination in the closing auction will take place no earlier than 2.05 p.m. For",
+        "DAX, MDAX and SDAX instruments, the subsequent Trade-at-Close period will end",
+        "at 2.10 p.m. The start of end-of-day processing remains unchanged.",
+        "3. Availability of off-book services",
+        "a) Market Deutsche Boerse Frankfurt (electronic trading system - MIC: XFRA):",
+        "TES OTC and TES LIS trades in combination with clearing and settlement may be",
+        "entered until 2.59 p.m. on 30 December 2026.",
+        "b) Market Deutsche Boerse Xetra (electronic trading system T7 - MIC: XETR):",
+        "TES OTC and TES LIS trades in combination with clearing and settlement may be",
+        "entered, and Xetra EnLight may be used, until 2.59 p.m. on 30 December 2026."
     };
     std::string stream="BT\n/F1 10 Tf\n50 750 Td\n";
     const auto escape=[](const std::string& value) {
