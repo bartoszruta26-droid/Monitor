@@ -6,6 +6,7 @@
 #include <array>
 #include <atomic>
 #include <cerrno>
+#include <chrono>
 #include <cmath>
 #include <cstring>
 #include <fcntl.h>
@@ -271,7 +272,10 @@ private:int fd_{-1};
 };
 bool same_payload(const MarketObservation& a,const MarketObservation& b) {
     return a.schema==b.schema&&a.id==b.id&&a.instrument_id==b.instrument_id&&a.provider_id==b.provider_id&&
-        a.observed_at.unix_seconds==b.observed_at.unix_seconds&&a.provider_published_on==b.provider_published_on&&
+        a.observed_at.unix_seconds==b.observed_at.unix_seconds&&
+        ((!a.provider_published_on&&!b.provider_published_on)||(a.provider_published_on&&b.provider_published_on&&
+          a.provider_published_on->year==b.provider_published_on->year&&a.provider_published_on->month==b.provider_published_on->month&&
+          a.provider_published_on->day==b.provider_published_on->day))&&
         a.frequency==b.frequency&&a.period_status==b.period_status&&a.price_kind==b.price_kind&&a.value==b.value&&
         a.quality==b.quality&&a.quality_flags==b.quality_flags&&a.provider_record_id==b.provider_record_id&&a.source_uri==b.source_uri;
 }
@@ -298,8 +302,9 @@ JsonMarketDataRepository::JsonMarketDataRepository(std::filesystem::path file_pa
 std::filesystem::path JsonMarketDataRepository::backup_path() const {return file_path_.string()+".bak";}
 bool JsonMarketDataRepository::exists() const {return std::filesystem::exists(file_path_);}
 MarketDataSnapshot JsonMarketDataRepository::load_unlocked() const {
-    const auto raw=read_file(file_path_,config_.max_document_bytes,true);
-    if(raw.empty())return MarketDataSnapshot{};
+    if(!std::filesystem::exists(file_path_))return MarketDataSnapshot{};
+    const auto raw=read_file(file_path_,config_.max_document_bytes,false);
+    if(raw.empty())throw std::runtime_error("Dokument magazynu JSON jest pusty.");
     try{return decode_snapshot(json::parse(raw));}
     catch(const std::exception& e){throw std::runtime_error("Magazyn JSON jest uszkodzony lub niezgodny ze schematem: "+std::string(e.what()));}
 }
@@ -309,14 +314,15 @@ MarketDataSnapshot JsonMarketDataRepository::load() const {
 void JsonMarketDataRepository::write_unlocked(const MarketDataSnapshot& input,bool rotate_backup) const {
     MarketDataSnapshot s=input;
     validate_snapshot(s);
-    if(s.revision==std::numeric_limits<std::uint64_t>::max())throw std::overflow_error("Przekroczono licznik rewizji magazynu.");
     const auto existing=read_file(file_path_,config_.max_document_bytes,true);
+    const auto previous=existing.empty()?MarketDataSnapshot{}:decode_snapshot(json::parse(existing));
+    if(previous.revision==std::numeric_limits<std::uint64_t>::max())throw std::overflow_error("Przekroczono licznik rewizji magazynu.");
     if(!existing.empty()&&rotate_backup&&config_.backup_on_write) {
         const auto backup=backup_path();
         durable_write(backup,existing);
         auto parent=file_path_.parent_path();if(parent.empty())parent=".";sync_directory(parent);
     }
-    s.revision=existing.empty()?1U:(load_unlocked().revision+1U);
+    s.revision=existing.empty()?1U:(previous.revision+1U);
     if(s.revision==0U)throw std::overflow_error("Przekroczono licznik rewizji magazynu.");
     const auto now=std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     s.updated_at=UtcTimestamp{now};

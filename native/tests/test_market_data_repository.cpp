@@ -32,6 +32,7 @@ void child_write(const std::string& file,int value) {
     const Provider provider{"nbp-a","NBP tabela A","https://api.nbp.pl/","public data"};
     (void)repo.upsert_instrument(instrument);(void)repo.upsert_provider(provider);
     auto o=observation(4.0+static_cast<double>(value)/100.0,1000+value);
+    o.observed_at.unix_seconds+=value;
     o.id="test-"+std::to_string(value);(void)repo.upsert_observation(o);
 }
 }
