@@ -349,7 +349,7 @@ int main() {
     notice_metadata.attribution="Deutsche Börse Cash Market";
     const auto parsed_notice=parse_xetra_session_notice_html(override_html,notice_metadata);
     require(parsed_notice.kind==VenueSessionNoticeKind::SessionOverride &&
-            parsed_notice.effective_date==parse_date("2026-12-30") &&
+            format_date(parsed_notice.effective_date)=="2026-12-30" &&
             parsed_notice.day_status==VenueDayStatus::Trading &&
             parsed_notice.product_sessions.size()==1U &&
             parsed_notice.product_sessions.front().product_group=="xetra_regular" &&
