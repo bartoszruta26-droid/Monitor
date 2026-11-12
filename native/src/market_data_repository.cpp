@@ -440,7 +440,7 @@ MarketDataSnapshot JsonMarketDataRepository::restore_backup() {
     const auto now=std::chrono::duration_cast<std::chrono::seconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();
     recovered.updated_at=UtcTimestamp{now};
-    const auto restored=encode_snapshot(recovered).dump(2)+'\\n';
+    const auto restored=encode_snapshot(recovered).dump(2)+"\n";
     if(restored.size()>config_.max_document_bytes)
         throw std::runtime_error("Odtworzony dokument przekracza skonfigurowany limit.");
     durable_write(file_path_,restored);
