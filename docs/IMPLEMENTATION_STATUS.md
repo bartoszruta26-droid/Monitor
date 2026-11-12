@@ -595,3 +595,11 @@ Po zielonym CI 17B przejść do 17C: wyliczanie efektywnego dnia kalendarza prze
 2. Dodać testy dla anulowania starszej rewizji, pozostawienia nowszej rewizji aktywnej oraz konfliktu kilku anulowań.
 3. Dodać raport nierozstrzygniętych `requires_official_notice` dla całego zakresu kalendarza.
 4. Zamknąć Etap 17C dopiero po zielonym CI; następnie zakończyć Etap 17D testami regresji i fixture.
+
+## 55. Korekta raportu osieroconych źródeł po wprowadzeniu komunikatów
+
+- Audyt Etapu 15D po dodaniu `VenueSessionNotice` wykazał, że raport osieroconych obiektów musi uwzględniać także referencje komunikatów, a nie wyłącznie bazowych kalendarzy.
+- `find_orphaned_source_objects` rozszerzono o `venue_session_notices`; obiekt wskazany wyłącznie przez komunikat nie jest już fałszywie raportowany jako osierocony.
+- Dodano regresję dla obiektu źródłowego anulowania, którego jedyną referencją jest komunikat.
+- Commity: `a2e0fe988eea3c89fa83fb704ece92654f38b855` (implementacja), `ed2a6d45457f6fe95c2dcc2e24bce9ad64afd76a` (test).
+- CI dla korekty jest w toku; status pozostaje otwarty do zielonego przebiegu.
