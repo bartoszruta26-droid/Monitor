@@ -425,6 +425,8 @@ VenueSessionCalendar build_xetra_2026_calendar(const SourceCalendarDocument& doc
        format_date(document.valid_to_exclusive)!="2027-01-01")
         throw std::invalid_argument("Fixture Xetra 2026 wymaga venue XETRA, strefy Europe/Berlin i zakresu roku 2026.");
     VenueSessionCalendar result;
+    result.calendar_id=document.document_id;
+    result.revision=document.version;
     result.source=document;
     using namespace std::chrono;
     const sys_days begin{year{2026}/January/1};
