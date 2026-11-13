@@ -743,3 +743,10 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 - Commit `48fadaa15cf9ec555a84baf0bd85cf0b5fc6b2fc` poprawia zakończenie raportu rzeczywistym znakiem nowej linii.
 - Commit `3749922b6a99f5e031bfa108e93f32c8b5bc335d` dodaje ograniczony fragment tekstu ekstrakcji do błędu brakującej podsekcji. To diagnostyka, nie obejście kontroli rynku; jawny MIC XETR pozostaje wymagany.
 - Następny przebieg CI musi potwierdzić raport i dostarczyć dokładny fragment tekstu PDF. Etapy 19A i 19B pozostają otwarte.
+
+
+### Diagnostyka CI i korekta fixture PDF — 2026-11-13
+- CI [43385685546](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43385685546) dla SHA `3749922` pokazał, że tekst wyekstrahowany z syntetycznego PDF kończył się na samym słowie „availability”; generator jednego długiego obiektu tekstowego nie zachowywał dalszych linii w ścieżce testowej Poppler.
+- Commit `e3adbe4303052adbc58b8834e53c3d732d192f91` zmienia generator PDF: każda linia otrzymuje osobny obiekt tekstowy i bezwzględną pozycję bazową. Dzięki temu fixture sprawdza import wielowierszowego PDF, a nie zachowanie jednego długiego strumienia tekstowego.
+- Ten sam przebieg wykazał zbyt ścisłą asercję raportu: dzień może mieć kilka aktywnych referencji komunikatów. Commit `a461065eefc0443c01bba63fbab9219383af09f4` sprawdza obecność konkretnego komunikatu fazowego zamiast wymagać dokładnie jednej referencji.
+- Pełny CI dla obu poprawek pozostaje wymagany.
