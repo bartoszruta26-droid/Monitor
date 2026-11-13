@@ -62,14 +62,22 @@ int main(){
     JsonPortfolioRepository paired_repo(paired_file,"PLN");
     require(paired_repo.append(PortfolioTransaction{"pln-cash","PLN",PortfolioAssetKind::Currency,
         TradeSide::Buy,1000,1,1,0,10,"cash"},0)==1,"opening reporting-currency balance");
+    const FxExecutionAudit audit{
+        "EUR","PLN",4.30,4.34,4.32,(4.34-4.30)/4.32*10000.0,
+        1.0/4.34,100.0/434.0,0.0,0.0,"EUR","provider-repo",
+        "quote-repo-1","https://provider.example/quotes/repo-1",19};
     const auto pair=make_fx_exchange_transactions(
-        {"repo-exchange-1","PLN","EUR",434,100,4.32,2,20,"kantor"});
+        {"repo-exchange-1","PLN","EUR",434,100,4.32,2,20,"kantor",audit});
     require(paired_repo.append_batch(pair,1)==2,"paired FX legs commit in one revision");
     const auto paired_loaded=paired_repo.load();
     require(paired_loaded.transactions.size()==3 &&
             paired_loaded.transactions[1].operation_id=="repo-exchange-1" &&
-            paired_loaded.transactions[2].operation_id=="repo-exchange-1",
-            "paired operation id survives JSON round trip");
+            paired_loaded.transactions[2].operation_id=="repo-exchange-1" &&
+            paired_loaded.transactions[2].fx_audit.has_value() &&
+            paired_loaded.transactions[2].fx_audit->provider_id=="provider-repo" &&
+            paired_loaded.transactions[2].fx_audit->observation_id=="quote-repo-1" &&
+            paired_loaded.transactions[2].fx_audit->source_uri=="https://provider.example/quotes/repo-1",
+            "paired operation and complete FX quote audit survive JSON round trip");
     auto orphan_leg=pair.front();
     orphan_leg.id="orphan-debit";
     orphan_leg.operation_id="orphan-operation";
