@@ -124,7 +124,7 @@ int main() {
     require(file.good(),"fixture exists");
     const std::string html((std::istreambuf_iterator<char>(file)),std::istreambuf_iterator<char>());
     FakeTransport transport;
-    transport.response={200,{{"content-type","text/html; charset=utf-8"}},html};
+    transport.response={200,{{"Content-Type","text/html; charset=utf-8"}},html};
     XetraCalendarSourceAdapter adapter(transport);
     const auto parsed=adapter.fetch(source());
     require(parsed.days.size()==365U,"all days imported");
@@ -661,7 +661,7 @@ int main() {
         require(adapter.import(pdf_repository,source(),"XETRA-2026",1U)==1U,
                 "PDF import test starts from a persisted base calendar");
         const auto pdf_bytes=make_pdf_notice_fixture();
-        transport.response.headers={{"content-type","application/pdf"}};
+        transport.response.headers={{"CONTENT-TYPE","application/pdf"}};
         transport.response.body=pdf_bytes;
         VenueSessionNotice pdf_notice;
         pdf_notice.notice_id="xetra-2026-final-session-pdf";
