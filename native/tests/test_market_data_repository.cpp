@@ -1,5 +1,7 @@
 #include "monitor/market_data_repository.hpp"
 
+#include <nlohmann/json.hpp>
+
 #include <algorithm>
 #include <cstdlib>
 #include <filesystem>
