@@ -44,22 +44,30 @@ FxConversion convert_currency(double amount, const std::string& from,
     }
     validate_fees(fee_percent, fixed_fee);
 
+    const double quote_mid = q.bid + (q.ask - q.bid) / 2.0;
+    if (!std::isfinite(quote_mid) || quote_mid <= 0.0)
+        throw std::invalid_argument("Nie można obliczyć skończonego kursu środkowego.");
     double execution_rate{};
     double mid_rate{};
     if (from == q.base_currency && to == q.quote_currency) {
         execution_rate = q.bid;
-        mid_rate = (q.bid + q.ask) / 2.0;
+        mid_rate = quote_mid;
     } else if (from == q.quote_currency && to == q.base_currency) {
         execution_rate = 1.0 / q.ask;
-        mid_rate = 2.0 / (q.bid + q.ask);
+        mid_rate = 1.0 / quote_mid;
     } else {
         throw std::invalid_argument("Kwotowanie nie obsługuje wskazanego kierunku wymiany.");
     }
+    if (!std::isfinite(execution_rate) || execution_rate <= 0.0 ||
+        !std::isfinite(mid_rate) || mid_rate <= 0.0)
+        throw std::overflow_error("Kurs wymiany wykracza poza zakres liczbowy.");
     const double gross = amount * execution_rate;
     if (!std::isfinite(gross)) throw std::overflow_error("Przekroczono zakres wymiany.");
     double fee{};
     const double net = net_after_fees(gross, fee_percent, fixed_fee, fee);
-    const double spread_bps = ((q.ask - q.bid) / ((q.ask + q.bid) / 2.0)) * 10000.0;
+    const double spread_bps = ((q.ask - q.bid) / quote_mid) * 10000.0;
+    if (!std::isfinite(spread_bps))
+        throw std::overflow_error("Spread wykracza poza zakres liczbowy.");
     return {from, to, amount, gross, fee, net, execution_rate, mid_rate, spread_bps};
 }
 
