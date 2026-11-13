@@ -19,9 +19,15 @@ f_channel(float src, int length, bool sampleDenominator) =>
     // Center prices on the oldest sample before forming moments. This
     // avoids subtracting O(price^2) sums when the residual variance is small.
     float anchor = src[length - 1]
-    float centeredSrc = src - anchor
-    float sumY = math.sum(centeredSrc, length)
-    float sumY2 = math.sum(centeredSrc * centeredSrc, length)
+    float sumY = 0.0
+    float sumY2 = 0.0
+    // Recenter every historical sample against this bar's anchor. A rolling
+    // sum of a series centered on its own past anchors would mix coordinate
+    // systems and produce an incorrect SSE.
+    for i = 0 to length - 1
+        float centeredValue = src[i] - anchor
+        sumY += centeredValue
+        sumY2 += centeredValue * centeredValue
     float n = length
     float sxx = n * (n * n - 1.0) / 12.0
     float sseRaw = sumY2 - (sumY * sumY) / n - slope * slope * sxx
