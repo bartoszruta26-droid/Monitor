@@ -41,6 +41,12 @@ std::string lower(std::string value) {
     });
     return value;
 }
+std::string header_value(const HttpResponse& response,std::string_view name) {
+    const auto expected=lower(std::string(name));
+    for(const auto& [key,value]:response.headers)
+        if(lower(key)==expected) return value;
+    throw std::runtime_error("Odpowiedź HTTP nie zawiera wymaganego nagłówka: "+std::string(name)+".");
+}
 bool same_notice_payload(const VenueSessionNotice& a,const VenueSessionNotice& b) {
     if(a.notice_id!=b.notice_id || a.revision!=b.revision || a.calendar_id!=b.calendar_id ||
        a.venue!=b.venue || format_date(a.effective_date)!=format_date(b.effective_date) ||
@@ -175,10 +181,8 @@ DownloadedCalendar download(HttpTransport& transport,SourceCalendarDocument sour
         throw std::runtime_error("Oficjalne źródło Xetra zwróciło HTTP "+std::to_string(response.status_code)+".");
     if (response.body.empty() || response.body.size()>request.max_response_bytes)
         throw std::runtime_error("Odpowiedź HTML Xetra jest pusta lub przekracza limit.");
-    const auto it=response.headers.find("content-type");
-    if (it==response.headers.end())
-        throw std::runtime_error("Odpowiedź HTML Xetra nie ma nagłówka Content-Type.");
-    const auto type=lower(it->second);
+    const auto content_type=header_value(response,"content-type");
+    const auto type=lower(content_type);
     if (type!="text/html" && type.rfind("text/html;",0)!=0)
         throw std::runtime_error("Źródło Xetra zwróciło nieoczekiwany typ treści.");
     source.content_sha256=sha256_hex(response.body);
@@ -186,7 +190,7 @@ DownloadedCalendar download(HttpTransport& transport,SourceCalendarDocument sour
         std::chrono::system_clock::now().time_since_epoch()).count();
     source.retrieved_at=UtcTimestamp{now};
     auto calendar=parse_xetra_html_calendar(response.body,source);
-    return DownloadedCalendar{std::move(calendar),response.body,it->second};
+    return DownloadedCalendar{std::move(calendar),response.body,content_type};
 }
 void archive_exact_bytes(const std::filesystem::path& path,const std::string& bytes) {
     std::filesystem::create_directories(path.parent_path());
@@ -481,10 +485,7 @@ std::uint64_t XetraCalendarSourceAdapter::import_pdf_notice(
         throw std::runtime_error("Oficjalne źródło PDF Xetra zwróciło HTTP "+std::to_string(response.status_code)+".");
     if(response.body.empty() || response.body.size()>request.max_response_bytes)
         throw std::runtime_error("Odpowiedź PDF Xetra jest pusta lub przekracza limit.");
-    const auto type_it=response.headers.find("content-type");
-    if(type_it==response.headers.end())
-        throw std::runtime_error("Odpowiedź PDF Xetra nie ma nagłówka Content-Type.");
-    const auto content_type=lower(type_it->second);
+    const auto content_type=lower(header_value(response,"content-type"));
     if(content_type!="application/pdf" && content_type.rfind("application/pdf;",0)!=0)
         throw std::runtime_error("Źródło komunikatu Xetra nie zwróciło application/pdf.");
 
