@@ -1236,7 +1236,10 @@ Przed każdym następnym etapem sprawdzić bieżący `main`, gałęzie, PR, Issu
 - #483, SHA `36166b6c4d086a62c521218bcd3d2f6f9102edf3`: Test failure — test używał repozytorium portfela z niekompletnym stanem początkowym.
 - #484, SHA `71fe17dd32d9609f794eed6fed90a15d4fbf41d5`: Test failure — log wykazał błędną asercję przypisującą audyt do nogi debetowej zamiast kredytowej.
 - #485, SHA `caf770c25b3dd5bf9f21ec0d1a96dd0c6fc1442f`: poprawiono deterministyczne sortowanie nóg, ale przebieg wymagał jeszcze korekty asercji testowej.
-- #486, SHA `6350293924f9ce4fe0837b83debe362148ef8f51`: przebieg CI uruchomiony po poprawie asercji; wynik końcowy do potwierdzenia.
+- #486, SHA `6350293924f9ce4fe0837b83debe362148ef8f51`: Test failure — filtr pary nie dopasował orientacji BASE/QUOTE; log potwierdził błąd asercji filtra.
+- #487, SHA `e1d784de7de929c6644739003d4dbefedfde4078`: Test failure — commit dokumentacyjny uruchomił ponownie zestaw z tym samym błędem.
+- Poprawka w commicie `f03603dcc24642485b3eade2e5eed4979ff040bd`: para jest teraz budowana zgodnie z kolejnością nogi debetowej (waluta bazowa) i kredytowej (waluta kwotowana), niezależnie od sortowania identyfikatorów. CI #489 dla dokładnego SHA jest w toku.
+- CI #488 dla dokumentacyjnego SHA `fd53b29271fd5bc46a99fdabffe416673f69c10f` jest w toku.
 - Etap 25 pozostaje w toku do zielonego CI dla aktualnego SHA. Nie uznawać wcześniejszych #481/#482 za potwierdzenie końcowej wersji.
 
 ### Następny etap
