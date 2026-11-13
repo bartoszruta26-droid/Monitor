@@ -70,8 +70,12 @@ int main() {
            "invalid reporting currency");
     throws([&]{(void)calculate_portfolio("PLN",tx,{{"EUR",4.4},{"EUR",4.5},{"XAU",320}});},
            "duplicate price");
+    const FxExecutionAudit audit{
+        "EUR","PLN",4.30,4.34,4.32,(4.34-4.30)/4.32*10000.0,
+        1.0/4.34,100.0/434.0,0.0,0.0,"EUR","provider-x",
+        "quote-20261113-001","https://provider.example/quotes/001",590};
     const auto fx_pair=make_fx_exchange_transactions(
-        {"exchange-001","PLN","EUR",434,100,4.32,2,600,"kantor-1"});
+        {"exchange-001","PLN","EUR",434,100,4.32,2,600,"kantor-1",audit});
     require(fx_pair.size()==2 && fx_pair[0].operation_id=="exchange-001" &&
             fx_pair[1].operation_id=="exchange-001","FX conversion creates linked debit and credit legs");
     require(fx_pair[0].side==TradeSide::Sell && fx_pair[1].side==TradeSide::Buy,
@@ -79,6 +83,13 @@ int main() {
     require(near(fx_pair[0].quantity*fx_pair[0].unit_price_reporting,434),
             "source leg carries the balanced gross reporting value");
     require(near(fx_pair[1].fee_reporting,2),"exchange fee is booked exactly once on acquired leg");
+    require(fx_pair[1].fx_audit.has_value()&&!fx_pair[0].fx_audit.has_value(),
+            "quote audit is stored exactly once on acquired FX leg");
+    require(fx_pair[1].fx_audit->provider_id=="provider-x" &&
+            fx_pair[1].fx_audit->observation_id=="quote-20261113-001" &&
+            near(fx_pair[1].fx_audit->gross_execution_rate,1.0/4.34) &&
+            near(fx_pair[1].fx_audit->effective_execution_rate,100.0/434.0),
+            "audit preserves provider quote, gross and net effective rates");
     std::vector<PortfolioTransaction> paired_ledger{
         {"pln-opening","PLN",PortfolioAssetKind::Currency,TradeSide::Buy,1000,1,1,0,500,"cash"},
         fx_pair[0],fx_pair[1]
@@ -87,6 +98,10 @@ int main() {
     require(near(paired.positions[1].gross_quantity,566),"source currency balance decreases by exchanged amount");
     require(near(paired.positions[0].gross_quantity,100),"destination currency balance increases");
     require(near(paired.total_fees_reporting,2),"paired exchange fee is counted once");
+    auto invalid_audit=paired_ledger;
+    invalid_audit.back().fx_audit->effective_execution_rate=0.25;
+    throws([&]{(void)calculate_portfolio("PLN",invalid_audit,{{"PLN",1},{"EUR",4.32}});},
+           "inconsistent effective FX rate in audit rejected");
     auto unbalanced=paired_ledger;unbalanced.back().fee_reporting=3;
     throws([&]{(void)calculate_portfolio("PLN",unbalanced,{{"PLN",1},{"EUR",4.32}});},
            "unbalanced paired exchange rejected");
