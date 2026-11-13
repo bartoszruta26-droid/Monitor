@@ -181,7 +181,11 @@ VenueSessionCalendar parse_xetra_html_calendar(
             if (year_column == static_cast<std::size_t>(-1)) continue;
             found_year_table=true;
             if (cells.size() <= year_column || cells.size() < 2U) continue;
-            const std::string label = normalized(node_text(cells.front()));
+            std::string label = normalized(node_text(cells.front()));
+            // The live Deutsche Börse table marks settlement-only dates with
+            // superscript footnote stars (e.g. "Christmas Eve**"). They are
+            // presentation markers, not part of the holiday's semantic name.
+            label = std::regex_replace(label, std::regex(R"(\\*+$)"), "");
             if (!required.contains(label)) continue;
             const auto date=date_from_cell(node_text(cells[year_column]),calendar_year);
             if (!holidays.emplace(label, date).second)
@@ -207,19 +211,30 @@ VenueSessionCalendar parse_xetra_html_calendar(
         paragraph_text+=normalized(node_text(paragraph));
     }
     std::smatch regular_hours_match;
+    // Accept both the older normalized fixture wording and the live
+    // Deutsche Börse page wording ("from 9 until 17:30 CET"). Opening minutes
+    // are optional in the latter; closing minutes remain explicit.
     const std::regex regular_hours_pattern(
-        R"(regular trading hours are from ([0-9]{1,2}):([0-9]{2}) to ([0-9]{1,2}):([0-9]{2}))",
+        R"((?:regular trading hours are from|trading on xetra takes place from mondays to fridays from) ([0-9]{1,2})(?::([0-9]{2}))? (?:to|until) ([0-9]{1,2}):([0-9]{2}))",
         std::regex::icase);
     if(!std::regex_search(paragraph_text,regular_hours_match,regular_hours_pattern))
         throw std::invalid_argument("Brak jednoznacznych regularnych godzin sesji w dokumencie Xetra.");
-    const auto regular_open=parse_clock_time(regular_hours_match,1U,2U);
+    const auto regular_open_hour=static_cast<unsigned>(std::stoul(regular_hours_match[1].str()));
+    const auto regular_open_minute=regular_hours_match[2].matched
+        ? static_cast<unsigned>(std::stoul(regular_hours_match[2].str())) : 0U;
+    if(regular_open_hour>23U || regular_open_minute>59U)
+        throw std::invalid_argument("Godzina otwarcia regularnej sesji Xetra jest nieprawidłowa.");
+    const LocalTimeOfDay regular_open{regular_open_hour,regular_open_minute,0U};
     const auto regular_close=parse_clock_time(regular_hours_match,3U,4U);
     if(std::tie(regular_open.hour,regular_open.minute)>=std::tie(regular_close.hour,regular_close.minute))
         throw std::invalid_argument("Regularne godziny sesji Xetra są odwrócone lub puste.");
 
     std::smatch shares_hours_match,structured_hours_match;
+    // The current page inserts the venue and holiday-calendar qualification
+    // between the product label and "at 20:00"; older layouts place "ends at"
+    // immediately after the label. Capture the first explicit time after it.
     const std::regex shares_hours_pattern(
-        R"(shares and exchange traded products ends at ([0-9]{1,2}):([0-9]{2}))",std::regex::icase);
+        R"(shares and exchange traded products.*?([0-9]{1,2}):([0-9]{2}))",std::regex::icase);
     const std::regex structured_hours_pattern(
         R"(structured products are traded until ([0-9]{1,2}):([0-9]{2}))",std::regex::icase);
     if(!std::regex_search(paragraph_text,shares_hours_match,shares_hours_pattern) ||
