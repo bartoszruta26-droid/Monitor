@@ -711,3 +711,10 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 - CI [43385176559](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43385176559) wykazał, że samo uelastycznienie nagłówka nie rozwiązało problemu: `pdftotext` rozdziela elementy nagłówka/podsekcji na linie, więc detekcja wymagająca wszystkich słów w jednym wierszu nadal zawodziła.
 - Commit `2a2f13fbd63ef5fa277b47fe23751657e308b41a` zmienia wykrywanie podsekcji: wyszukiwanie odbywa się na całym znormalizowanym tekście, a Xetra subsection jest wybierana dopiero po nagłówku dostępności. Weryfikacja MIC XETR pozostaje obowiązkowa.
 - CI dla tego commitu oraz dla raportu audytowego jest monitorowane; Etap 19A nadal otwarty.
+
+
+### Uzupełnienie 19A — kontrola MIC i diagnostyka tekstu ekstrakcji
+- CI wcześniejszej poprawki nadal wykazał brak wykrycia podsekcji, dlatego parser nie może opierać się na pełnej nazwie prawnej rynku w jednej linii.
+- Commit `0746f308c946f805779ccb404c9e32112edf04c9` przełącza wybór podsekcji na etykietę Xetra występującą po sekcji dostępności.
+- Commit `c22642023cf8ac3ab2a8e3afe7f50396f7cf8c65` wzmacnia walidację: wymaga jawnego MIC XETR oraz TES OTC w wybranej części tekstu; w razie niepowodzenia komunikat zawiera ograniczony fragment ekstrakcji do diagnozy CI. Test negatywny XFRA nadal musi odrzucać komunikat.
+- Wynik CI dla tych commitów jest oczekiwany. Etap 19A nie został zamknięty.
