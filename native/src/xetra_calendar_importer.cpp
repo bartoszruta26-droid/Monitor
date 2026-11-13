@@ -358,16 +358,15 @@ VenueSessionNotice parse_xetra_session_notice_text(
     const auto offbook_heading=text.find("availability");
     if(offbook_heading==std::string::npos)
         throw std::invalid_argument("Ogłoszenie PDF nie zawiera sekcji dostępności usług off-book.");
-    const auto offbook_xetra_borse=text.find("market deutsche börse xetra",offbook_heading);
-    const auto offbook_xetra_ascii=text.find("market deutsche boerse xetra",offbook_heading);
-    std::size_t offbook_xetra=std::string::npos;
-    if(offbook_xetra_borse!=std::string::npos) offbook_xetra=offbook_xetra_borse;
-    if(offbook_xetra_ascii!=std::string::npos &&
-       (offbook_xetra==std::string::npos || offbook_xetra_ascii<offbook_xetra))
-        offbook_xetra=offbook_xetra_ascii;
+    // Avoid assuming how PDF extraction tokenizes the full legal market name:
+    // the Xetra subsection is identified by its explicit Xetra label and MIC.
+    const auto offbook_xetra=text.find("xetra",offbook_heading);
     if(offbook_xetra==std::string::npos)
         throw std::invalid_argument("Ogłoszenie PDF nie zawiera podsekcji dostępności usług Xetra.");
     const std::string offbook_section=text.substr(offbook_xetra);
+    if(offbook_section.find("xetr")==std::string::npos ||
+       offbook_section.find("tes otc")==std::string::npos)
+        throw std::invalid_argument("Podsekcja off-book nie potwierdza usług Xetra/MIC XETR.");
     if(offbook_section.find("mic: xetr")==std::string::npos &&
        offbook_section.find("mic xetr")==std::string::npos)
         throw std::invalid_argument("Podsekcja usług off-book nie potwierdza MIC XETR.");
