@@ -1201,6 +1201,102 @@ std::vector<SourceArchiveObject> find_orphaned_source_objects(
             orphaned.push_back(object);
     return orphaned;
 }
+
+std::string build_venue_audit_report_json(const MarketDataSnapshot& snapshot) {
+    validate_snapshot(snapshot);
+    json report={{"report_schema","monitor.venue_audit.v1"},
+        {"repository_schema_version",snapshot.schema_version},
+        {"repository_revision",snapshot.revision},
+        {"generated_at",format_utc_timestamp(snapshot.updated_at)}};
+    std::vector<const SourceArchiveObject*> objects;
+    for(const auto& object:snapshot.source_objects) objects.push_back(&object);
+    std::sort(objects.begin(),objects.end(),[](const auto* a,const auto* b) {
+        return a->source_object_id<b->source_object_id;
+    });
+    auto source_objects=json::array();
+    for(const auto* object:objects) {
+        source_objects.push_back({{"source_object_id",object->source_object_id},
+            {"content_sha256",object->content_sha256},
+            {"archive_relative_path",object->archive_relative_path},
+            {"content_length_bytes",object->content_length_bytes},
+            {"content_type",object->content_type}});
+    }
+    report["source_objects"]=std::move(source_objects);
+
+    std::vector<const VenueSessionCalendar*> calendars;
+    for(const auto& calendar:snapshot.venue_calendars) calendars.push_back(&calendar);
+    std::sort(calendars.begin(),calendars.end(),[](const auto* a,const auto* b) {
+        return std::tie(a->calendar_id,a->revision,a->source.document_id,a->source.version)<
+               std::tie(b->calendar_id,b->revision,b->source.document_id,b->source.version);
+    });
+    auto calendar_reports=json::array();
+    std::set<std::string> reported_calendars;
+    for(const auto* calendar:calendars) {
+        const auto id=effective_venue_calendar_id(*calendar);
+        if(!reported_calendars.insert(id).second) continue;
+        const VenueSessionCalendar* latest=calendar;
+        for(const auto* candidate:calendars)
+            if(effective_venue_calendar_id(*candidate)==id &&
+               effective_venue_calendar_revision(*candidate)>effective_venue_calendar_revision(*latest))
+                latest=candidate;
+        json item={{"calendar_id",id},
+            {"revision",effective_venue_calendar_revision(*latest)},
+            {"venue",latest->source.venue},
+            {"valid_from",format_date(latest->source.valid_from)},
+            {"valid_to_exclusive",format_date(latest->source.valid_to_exclusive)},
+            {"timezone",latest->source.timezone},
+            {"document_id",latest->source.document_id},
+            {"source_version",latest->source.version},
+            {"source_uri",latest->source.source_uri},
+            {"retrieved_at",latest->source.retrieved_at ? json(format_utc_timestamp(*latest->source.retrieved_at)) : json(nullptr)},
+            {"attribution",latest->source.attribution},
+            {"license_status",enum_name(latest->source.license_status)},
+            {"content_sha256",latest->source.content_sha256 ? json(*latest->source.content_sha256) : json(nullptr)},
+            {"source_object_id",latest->source.source_object_id ? json(*latest->source.source_object_id) : json(nullptr)},
+            {"parser_version",latest->parser_version}};
+        const auto unresolved=find_unresolved_venue_notice_dates(snapshot,id);
+        auto unresolved_json=json::array();
+        for(const auto& date:unresolved) unresolved_json.push_back(format_date(date));
+        item["unresolved_official_notice_dates"]=std::move(unresolved_json);
+        auto days=json::array();
+        for(const auto& base_day:latest->days) {
+            const auto effective=resolve_effective_venue_calendar_day(snapshot,id,base_day.date);
+            auto sessions=json::array();
+            for(const auto& session:effective.day.product_sessions)
+                sessions.push_back({{"product_group",session.product_group},
+                    {"opens_at",{{"hour",session.opens_at.hour},{"minute",session.opens_at.minute},{"second",session.opens_at.second}}},
+                    {"closes_at",{{"hour",session.closes_at.hour},{"minute",session.closes_at.minute},{"second",session.closes_at.second}}}});
+            auto phase_events=encode_phase_events(effective.day.phase_events);
+            days.push_back({{"date",format_date(effective.day.date)},
+                {"status",enum_name(effective.day.status)},
+                {"product_sessions",std::move(sessions)},
+                {"phase_events",std::move(phase_events)},
+                {"requires_official_notice_unresolved",effective.requires_official_notice_unresolved},
+                {"applied_notice_ids",effective.applied_notice_ids}});
+        }
+        item["effective_days"]=std::move(days);
+        calendar_reports.push_back(std::move(item));
+    }
+    report["calendars"]=std::move(calendar_reports);
+
+    std::vector<const VenueSessionNotice*> notices;
+    for(const auto& notice:snapshot.venue_session_notices) notices.push_back(&notice);
+    std::sort(notices.begin(),notices.end(),[](const auto* a,const auto* b) {
+        return std::tie(a->calendar_id,a->effective_date.year,a->effective_date.month,
+                        a->effective_date.day,a->notice_id,a->revision)<
+               std::tie(b->calendar_id,b->effective_date.year,b->effective_date.month,
+                        b->effective_date.day,b->notice_id,b->revision);
+    });
+    auto notice_reports=json::array();
+    for(const auto* notice:notices) notice_reports.push_back(encode(*notice));
+    report["notices"]=std::move(notice_reports);
+
+    auto orphaned=json::array();
+    for(const auto& object:find_orphaned_source_objects(snapshot))
+        orphaned.push_back(object.source_object_id);
+    report["orphaned_source_object_ids"]=std::move(orphaned);
+    return report.dump(2)+"\\n";
+}
 EffectiveVenueCalendarDay resolve_effective_venue_calendar_day(
     const MarketDataSnapshot& snapshot,std::string_view calendar_id,CivilDate date) {
     validate_snapshot(snapshot);
