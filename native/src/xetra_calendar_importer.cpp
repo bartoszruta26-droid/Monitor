@@ -327,8 +327,11 @@ VenueSessionNotice parse_xetra_session_notice_text(
 
     const auto text=normalized(std::string(extracted_text));
     const auto has_market_marker=[](const std::string& line) {
-        return line.find("market deutsche börse xetra")!=std::string::npos ||
-               line.find("market deutsche boerse xetra")!=std::string::npos;
+        // PDF text extraction may split the legal market name or normalize the
+        // hyphenation/diacritics differently between Poppler versions.
+        return line.find("market")!=std::string::npos &&
+               line.find("deutsche")!=std::string::npos &&
+               line.find("xetra")!=std::string::npos;
     };
     std::vector<std::string> market_lines;
     bool in_market=false;
@@ -355,7 +358,10 @@ VenueSessionNotice parse_xetra_session_notice_text(
     std::istringstream offbook_input{std::string(extracted_text)};
     while(std::getline(offbook_input,raw_line)) {
         const auto line=normalized(raw_line);
-        if(line.find("availability of off-book services")!=std::string::npos) {
+        if(line.find("availability")!=std::string::npos &&
+           line.find("off")!=std::string::npos &&
+           line.find("book")!=std::string::npos &&
+           line.find("services")!=std::string::npos) {
             in_offbook=true;
             continue;
         }
