@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <charconv>
+#include <cstddef>
+#include <string_view>
 #include <cmath>
 #include <map>
 #include <set>
