@@ -28,22 +28,29 @@ int main(){
         TradeSide::Buy,100,1,4.2,0,10,"bank"},0)==1,"persist EUR acquisition");
     require(repo.append(PortfolioTransaction{"gold-buy","XAU",PortfolioAssetKind::Gold,
         TradeSide::Buy,2,0.585,300,0,20,"dealer"},1)==2,"persist gold acquisition");
+    JsonPortfolioRepository history_repo(dir/"history.json","PLN");
+    require(history_repo.append(PortfolioTransaction{"history-eur-buy","EUR",PortfolioAssetKind::Currency,
+        TradeSide::Buy,100,1,4.2,0,10,"bank"},0)==1,"seed history EUR acquisition");
+    require(history_repo.append(PortfolioTransaction{"history-gold-buy","XAU",PortfolioAssetKind::Gold,
+        TradeSide::Buy,2,0.585,300,0,20,"dealer"},1)==2,"seed history XAU acquisition");
+    require(history_repo.append(PortfolioTransaction{"history-usd-buy","USD",PortfolioAssetKind::Currency,
+        TradeSide::Buy,100,1,3.68,0,25,"bank"},2)==3,"seed history USD acquisition");
     const FxExecutionAudit execution_audit{
         "USD","EUR",0.92,0.94,0.93,(0.94-0.92)/0.93*10000.0,
         0.92,0.92,0.0,0.0,"EUR","bank-provider",
         "usd-eur-quote-1","https://bank.example/quotes/1",29};
     const auto fx_legs=make_fx_exchange_transactions(
         {"fx-history-1","USD","EUR",100,92,4.0,0.0,30,"bank-provider",execution_audit});
-    require(repo.append_batch(fx_legs,2)==3,"persist audited FX exchange atomically");
+    require(history_repo.append_batch(fx_legs,3)==4,"persist audited FX exchange atomically");
 
-    const auto history_snapshot=repo.load();
+    const auto history_snapshot=history_repo.load();
     const auto all_history=build_portfolio_history(history_snapshot);
-    require(all_history.transaction_count==4&&all_history.entries.size()==4,
+    require(all_history.transaction_count==5&&all_history.entries.size()==5,
             "history returns all persisted FX and XAU ledger entries");
     require(all_history.audited_fx_execution_count==1,
             "history counts a quote-audited execution once per operation");
-    require(all_history.entries[2].transaction.id=="fx-history-1:debit" &&
-            all_history.entries[3].transaction.id=="fx-history-1:credit" &&
+    require(all_history.entries[3].transaction.id=="fx-history-1:debit" &&
+            all_history.entries[4].transaction.id=="fx-history-1:credit" &&
             all_history.entries[3].price_evidence==PortfolioPriceEvidence::ExecutedWithQuoteAudit,
             "history is chronological and distinguishes executed quote evidence");
     PortfolioHistoryFilter pair_filter;pair_filter.fx_pair="USD/EUR";
