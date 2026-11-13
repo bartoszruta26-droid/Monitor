@@ -7,9 +7,23 @@
 
 Ten dokument jest punktem odniesienia dla kolejnych prac. Zmiany architektury i kolejności realizacji należy z nim uzgadniać oraz aktualizować go po istotnych decyzjach.
 
+
+
+## Obowiązujący zakres produktu — decyzja 2026-11-13
+
+**Priorytetem Monitora są wymiana walut (FX) oraz zakup, sprzedaż i wymiana złota.** Cały rozwój funkcjonalny, modelowanie domenowe, źródła danych, wykresy, analizy, portfel i transakcje należy podporządkować tym dwóm zastosowaniom.
+
+Zakres obejmuje pary walutowe, kursy referencyjne i dostępne kwotowania bid/ask, przeliczanie walut z jawnym spreadem i opłatami, wycenę złota (XAU) w różnych walutach i jednostkach (gram, kilogram, uncja trojańska), ewidencję fizycznego złota oraz rozróżnienie ceny referencyjnej/spot od rzeczywistej ceny kupna lub sprzedaży.
+
+**Poza zakresem są akcje spółek, instrumenty udziałowe, giełdowe zlecenia kupna/sprzedaży akcji, arkusze zleceń, brokerzy akcyjni oraz funkcje i kalendarze sesji giełd papierów wartościowych.** Nie planować, nie rozwijać ani nie testować tych funkcji. W szczególności dalsze prace nad Xetra/Frankfurt, MIC XETR/XFRA, aukcjami giełdowymi i kalendarzami sesji akcji są wyłączone. Istniejący kod i historia Xetra pozostają w repozytorium wyłącznie jako zapis wcześniejszych prac; nie są kryterium ukończenia produktu ani zależnością kolejnych etapów.
+
+Srebro i inne surowce nie są priorytetem bieżącej realizacji. Można zachować istniejące, współdzielone typy lub adaptery bez rozbudowy; nowe prace nad nimi wymagają osobnej decyzji. Nie wolno przez nie opóźniać funkcji FX i złota.
+
+Wskaźniki regresji i Pine/TradingView mogą być rozwijane wyłącznie jako narzędzia analizy szeregów walutowych i złota. Nie stanowią uzasadnienia do przywracania zakresu akcji ani giełdowego obrotu papierami wartościowymi.
+
 ## 1. Cel i priorytety produktu
 
-Monitor Rynków ma pobierać i przechowywać aktualne oraz historyczne dane o walutach i kruszcach, prezentować je na wykresach, analizować metodami regresji liniowej DGT i LonesomeTheBlue, a także umożliwiać prowadzenie portfela aktywów i ocenę statystycznej opłacalności transakcji.
+Monitor Rynków ma przede wszystkim obsługiwać wymianę walut oraz zakup, sprzedaż i wymianę złota: pobierać aktualne i historyczne kursy FX oraz ceny XAU, prezentować je na wykresach, analizować metodami DGT/LonesomeTheBlue i prowadzić portfel walutowo-złotowy wraz z kosztami i wynikiem operacji.
 
 Priorytety funkcjonalne, w kolejności:
 1. Pobieranie aktualnych i historycznych danych z otwartych źródeł.
@@ -59,8 +73,8 @@ Obecny `native/CMakeLists.txt` buduje moduł regresji, CLI i testy. Dokumentacja
 |---|---|---|
 | NBP API | Tabele A/B — kursy średnie; tabela C — kupno/sprzedaż; złoto PLN/g | Dane publikowane w dniach roboczych; pobieranie historii partiami zgodnie z limitami API |
 | Frankfurter API | Referencyjne kursy walut i szeregi historyczne | Nie jest notowaniem transakcyjnym w czasie rzeczywistym; zachować datę i walutę bazową |
-| World Bank Pink Sheet | Historyczne ceny złota, srebra i surowców | Dane miesięczne; nie wolno sztucznie przedstawiać ich jako dziennych |
-| Dodatkowy dostawca cen spot | Dzienna lub częstsza cena złota i srebra, jeśli dostępna | Przed wyborem ocenić licencję, opóźnienie, jednostkę, wiarygodność i możliwość pobierania historii |
+| World Bank Pink Sheet | Historyczne ceny złota (XAU) | Dane miesięczne; zachować częstotliwość miesięczną; srebro i inne surowce nie są priorytetem |
+| Dostawca spot złota | Orientacyjna cena XAU w czasie zbliżonym do rzeczywistego i historia, jeśli dostępna | Odróżnić mid-market od wykonywalnych cen kupna/sprzedaży; ocenić spread, opóźnienie, jednostkę, licencję i retencję |
 
 Dokumentacja źródeł:
 - NBP: https://api.nbp.pl/
@@ -308,7 +322,7 @@ Każdy interfejs ma prezentować te same notowania, agregaty, wyniki regresji, p
 ### Etap 1 — modele domenowe i adaptery źródeł
 - modele instrumentów, notowań, jednostek, źródeł i jakości;
 - adapter NBP, Frankfurter i World Bank;
-- ocena i wybór źródła cen spot złota/srebra;
+- ocena i wybór źródła cen spot złota (XAU);
 - pobieranie aktualnych i historycznych danych, paginacja i limity;
 - testy odpowiedzi wzorcowych i błędów sieci.
 
@@ -352,7 +366,7 @@ Każdy interfejs ma prezentować te same notowania, agregaty, wyniki regresji, p
 
 **Akceptacja:** porównanie na identycznych danych i ustawieniach mieści się w określonej tolerancji numerycznej.
 
-### Etap 7 — portfel i transakcje
+### Etap 7 — portfel walutowo-złotowy i transakcje
 - aktywa i pozycje;
 - kupno, sprzedaż, wymiana i opłaty;
 - wycena i wynik netto;
