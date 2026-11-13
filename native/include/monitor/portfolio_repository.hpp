@@ -38,13 +38,15 @@ public:
         const PortfolioTransaction& transaction, std::uint64_t expected_revision);
     [[nodiscard]] std::uint64_t append_batch(
         const std::vector<PortfolioTransaction>& transactions, std::uint64_t expected_revision);
+    // Explicit recovery only; never invoked automatically after a corrupt read.
+    [[nodiscard]] PortfolioSnapshot restore_backup();
     [[nodiscard]] const std::filesystem::path& file_path() const noexcept { return file_path_; }
     [[nodiscard]] std::filesystem::path backup_path() const;
     [[nodiscard]] bool exists() const;
 
 private:
     [[nodiscard]] PortfolioSnapshot load_unlocked() const;
-    void write_unlocked(const PortfolioSnapshot& snapshot) const;
+    void write_unlocked(const PortfolioSnapshot& snapshot, bool rotate_backup = true) const;
 
     std::filesystem::path file_path_;
     std::string initial_reporting_currency_;
