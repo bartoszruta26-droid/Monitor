@@ -57,6 +57,7 @@ std::optional<Route> find_route(const std::string& from,const std::string& to,
 void add_provenance(PortfolioPriceProvenance& p,const MarketObservation& o,
                     const std::string& instrument_id) {
     p.instrument_ids.push_back(instrument_id);
+    p.observation_ids.push_back(o.id);
     p.provider_ids.push_back(o.provider_id);
     if(o.source_uri) p.source_uris.push_back(*o.source_uri);
     p.price_kinds.push_back(o.price_kind);
@@ -128,6 +129,17 @@ PortfolioPriceBook build_portfolio_price_book(const MarketDataSnapshot& snapshot
         const auto* inverse=ask?ask:fallback;
         if(direct) graph[base].push_back({quote,direct->value,direct,id});
         if(inverse) graph[quote].push_back({base,1.0/inverse->value,inverse,id});
+    }
+
+    for(auto& [currency,edges]:graph) {
+        (void)currency;
+        std::stable_sort(edges.begin(),edges.end(),[](const Edge& a,const Edge& b) {
+            if(a.observation->observed_at.unix_seconds!=b.observation->observed_at.unix_seconds)
+                return a.observation->observed_at.unix_seconds>b.observation->observed_at.unix_seconds;
+            if(a.observation->received_at.unix_seconds!=b.observation->received_at.unix_seconds)
+                return a.observation->received_at.unix_seconds>b.observation->received_at.unix_seconds;
+            return a.instrument_id<b.instrument_id;
+        });
     }
 
     PortfolioPriceBook book;
