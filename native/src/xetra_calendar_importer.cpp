@@ -362,7 +362,8 @@ VenueSessionNotice parse_xetra_session_notice_text(
     // the Xetra subsection is identified by its explicit Xetra label and MIC.
     const auto offbook_xetra=text.find("xetra",offbook_heading);
     if(offbook_xetra==std::string::npos)
-        throw std::invalid_argument("Ogłoszenie PDF nie zawiera podsekcji dostępności usług Xetra.");
+        throw std::invalid_argument("Ogłoszenie PDF nie zawiera podsekcji dostępności usług Xetra; ekstrakcja po nagłówku: "+
+            text.substr(offbook_heading,std::min<std::size_t>(1000U,text.size()-offbook_heading)));
     const std::string offbook_section=text.substr(offbook_xetra);
     if((offbook_section.find("mic: xetr")==std::string::npos &&
         offbook_section.find("mic xetr")==std::string::npos) ||
