@@ -52,6 +52,9 @@ struct MarketDataSnapshot {
 [[nodiscard]] std::vector<SourceArchiveObject> find_orphaned_source_objects(
     const MarketDataSnapshot& snapshot);
 
+// Deterministic, read-only audit export for source provenance and effective venue sessions.
+[[nodiscard]] std::string build_venue_audit_report_json(const MarketDataSnapshot& snapshot);
+
 struct EffectiveVenueCalendarDay {
     VenueCalendarDay day;
     std::vector<std::string> applied_notice_ids;
