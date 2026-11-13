@@ -413,23 +413,24 @@ int main() {
         if(!input) throw std::runtime_error("Missing synthetic notice fixture: "+name);
         return std::string(std::istreambuf_iterator<char>(input),std::istreambuf_iterator<char>());
     };
-    const auto final_session_text=read_fixture("xetra_final_session_2026.synthetic.txt");
-    VenueSessionNotice pdf_notice_metadata;
-    pdf_notice_metadata.notice_id="xetra-2026-final-session-pdf";
-    pdf_notice_metadata.revision=1U;
-    pdf_notice_metadata.calendar_id="XETRA-2026";
-    pdf_notice_metadata.venue="XETRA";
-    pdf_notice_metadata.effective_date=parse_date("2026-12-30");
-    pdf_notice_metadata.source_object_id="sha256:"+sha256_hex(final_session_text);
-    pdf_notice_metadata.source_uri=source().source_uri;
-    pdf_notice_metadata.attribution="Deutsche Börse Cash Market";
-    const auto parsed_pdf_notice=parse_xetra_session_notice_text(final_session_text,pdf_notice_metadata);
-    require(parsed_pdf_notice.kind==VenueSessionNoticeKind::SessionOverride &&
-            parsed_pdf_notice.day_status==VenueDayStatus::Trading &&
-            parsed_pdf_notice.product_sessions.empty() &&
-            parsed_pdf_notice.phase_events.size()==9U,
-            "PDF text parser creates a phase-only session override with all nine official milestones");
-    const auto& phase_events=parsed_pdf_notice.phase_events;
+    const auto layout_text=read_fixture("xetra_final_session_2026.layout.synthetic.txt");
+    VenueSessionNotice layout_notice_metadata;
+    layout_notice_metadata.notice_id="xetra-2026-layout-fixture";
+    layout_notice_metadata.revision=1U;
+    layout_notice_metadata.calendar_id="XETRA-2026";
+    layout_notice_metadata.venue="XETRA";
+    layout_notice_metadata.effective_date=parse_date("2026-12-30");
+    layout_notice_metadata.source_object_id="sha256:"+sha256_hex(layout_text);
+    layout_notice_metadata.source_uri="https://cashmarket.deutsche-boerse.com/resource/blob/5673886/22764993c4b1617c5f465186066344e6/data/Final%20trading%20session%202026.pdf";
+    layout_notice_metadata.attribution="Synthetic parser fixture; source reference: Deutsche Börse Cash Market";
+    const auto parsed_layout_notice=parse_xetra_session_notice_text(layout_text,layout_notice_metadata);
+    require(parsed_layout_notice.kind==VenueSessionNoticeKind::SessionOverride &&
+            parsed_layout_notice.day_status==VenueDayStatus::Trading &&
+            parsed_layout_notice.product_sessions.empty() &&
+            parsed_layout_notice.parser_version=="xetra-pdf-text-notice-v2" &&
+            parsed_layout_notice.phase_events.size()==9U,
+            "PDF text parser creates a phase-only override with all nine expected milestones");
+    const auto& phase_events=parsed_layout_notice.phase_events;
     require(phase_events.at(0).kind==VenueSessionPhaseEventKind::PreTradingStart &&
             phase_events.at(0).at.hour==7U,"PDF pre-trading event is 07:00");
     require(phase_events.at(1).kind==VenueSessionPhaseEventKind::RetailEarlyStart &&
@@ -452,38 +453,28 @@ int main() {
     require(phase_events.at(6).scope=="DAX, MDAX, SDAX" &&
             phase_events.at(7).scope=="TES OTC, TES LIS, Xetra EnLight",
             "PDF parser preserves product and service scopes for final-session events");
-    auto wrong_mic_text=final_session_text;
-    wrong_mic_text.replace(wrong_mic_text.find("MIC: XETR"),9U,"MIC: XEUR");
-    throws([&]{(void)parse_xetra_session_notice_text(wrong_mic_text,pdf_notice_metadata);},
+    auto wrong_mic_text=layout_text;
+    const auto market_mic=wrong_mic_text.find("MIC: XETR");
+    require(market_mic!=std::string::npos,"layout fixture has the main Xetra MIC");
+    wrong_mic_text.replace(market_mic,9U,"MIC: XEUR");
+    throws([&]{(void)parse_xetra_session_notice_text(wrong_mic_text,layout_notice_metadata);},
            "reject a PDF notice whose market MIC is not XETR");
-    auto missing_phase_text=final_session_text;
-    const auto missing_phase_line=std::string("from 1.00 p.m. Start of intraday auction call");
-    missing_phase_text.erase(missing_phase_text.find(missing_phase_line),missing_phase_line.size());
-    throws([&]{(void)parse_xetra_session_notice_text(missing_phase_text,pdf_notice_metadata);},
+    auto missing_phase_text=layout_text;
+    const auto missing_phase_line=std::string("from 1.00 p.m. intraday auction call");
+    const auto missing_phase_at=missing_phase_text.find(missing_phase_line);
+    require(missing_phase_at!=std::string::npos,"layout fixture has the intraday auction event");
+    missing_phase_text.erase(missing_phase_at,missing_phase_line.size());
+    throws([&]{(void)parse_xetra_session_notice_text(missing_phase_text,layout_notice_metadata);},
            "reject a PDF notice with an incomplete phase schedule");
-    auto wrong_notice_date=pdf_notice_metadata;
+    auto wrong_notice_date=layout_notice_metadata;
     wrong_notice_date.effective_date=parse_date("2026-12-31");
-    throws([&]{(void)parse_xetra_session_notice_text(final_session_text,wrong_notice_date);},
+    throws([&]{(void)parse_xetra_session_notice_text(layout_text,wrong_notice_date);},
            "reject a PDF notice whose date differs from the expected session date");
-
-    const auto layout_text=read_fixture("xetra_final_session_2026.layout.synthetic.txt");
-    auto layout_notice_metadata=pdf_notice_metadata;
-    layout_notice_metadata.notice_id="xetra-2026-layout-fixture";
-    layout_notice_metadata.source_object_id="sha256:"+sha256_hex(layout_text);
-    layout_notice_metadata.source_uri="https://cashmarket.deutsche-boerse.com/resource/blob/5673886/22764993c4b1617c5f465186066344e6/data/Final%20trading%20session%202026.pdf";
-    const auto parsed_official_notice=parse_xetra_session_notice_text(layout_text,layout_notice_metadata);
-    require(parsed_official_notice.parser_version=="xetra-pdf-text-notice-v2" &&
-            parsed_official_notice.phase_events.size()==9U &&
-            parsed_official_notice.phase_events.at(6).at.hour==14U &&
-            parsed_official_notice.phase_events.at(6).at.minute==10U &&
-            parsed_official_notice.phase_events.at(7).at.hour==14U &&
-            parsed_official_notice.phase_events.at(7).at.minute==59U,
-            "parser v2 handles a synthetic layout with Trade-at-Close and off-book details in separate sections");
     auto wrong_offbook_mic=layout_text;
     const auto xetra_offbook_marker=wrong_offbook_mic.find("b) Market Deutsche Boerse Xetra");
-    require(xetra_offbook_marker!=std::string::npos,"layout fixture has separate Xetra off-book subsection");
+    require(xetra_offbook_marker!=std::string::npos,"layout fixture has a separate Xetra off-book subsection");
     const auto offbook_mic=wrong_offbook_mic.find("MIC: XETR",xetra_offbook_marker);
-    require(offbook_mic!=std::string::npos,"layout fixture has Xetra off-book MIC");
+    require(offbook_mic!=std::string::npos,"layout fixture has the Xetra off-book MIC");
     wrong_offbook_mic.replace(offbook_mic,9U,"MIC: XFRA");
     throws([&]{(void)parse_xetra_session_notice_text(wrong_offbook_mic,layout_notice_metadata);},
            "reject an off-book section whose market MIC is not XETR");
