@@ -1,0 +1,26 @@
+# Synthetic parser fixture for the section order and semantic markers of the 2026 Xetra notice.
+# This is an independently written test sample, not a transcript or copy of the source PDF.
+Final trading session
+Effective date: 30 December 2026
+
+1. Market Deutsche Boerse Frankfurt (electronic trading system T7 - MIC: XFRA)
+from 7.00 a.m. pre-trading
+from 8.00 a.m. continuous auctions
+from 2.00 p.m. start of post-trading
+from 3.00 p.m. end of post-trading
+
+2. Market Deutsche Boerse Xetra (electronic trading system T7 - MIC: XETR)
+from 7.00 a.m. pre-trading
+from 8.00 a.m. retail early
+from 8.55 a.m. opening auction call
+from 1.00 p.m. intraday auction call
+from 2.00 p.m. closing auction call
+no earlier than 2.05 p.m. closing auction price
+Trade-at-Close ends at 2.10 p.m. for DAX, MDAX and SDAX
+from 3.00 p.m. end of post-trading
+
+3. Availability of off-book services
+a) Market Deutsche Boerse Frankfurt (electronic trading system - MIC: XFRA)
+TES OTC and TES LIS may be used until 2.59 p.m. on 30 December 2026
+b) Market Deutsche Boerse Xetra (electronic trading system T7 - MIC: XETR)
+TES OTC and TES LIS with Xetra EnLight may be used until 2.59 p.m. on 30 December 2026
