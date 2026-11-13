@@ -835,3 +835,9 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 - Kompilacja i uruchomienie wskaźnika w TradingView Pine Editor pozostają niewykonane. CI C++ nie może być traktowane jako potwierdzenie składni lub zachowania Pine. Porównanie wyników na identycznym zestawie danych nadal wymaga ręcznej weryfikacji w Pine Editor.
 - Korekta numeracji: w `docs/next-implementation-audit.md` Etap 12 to MariaDB i skalowanie; prace C++/Pine są osobną walidacją regresji. Etapów planu MariaDB nie rozpoczynano ani nie oznaczano jako ukończonych.
 - Etapy 15D i 19B pozostają zamknięte; Etap 19A pozostaje otwarty z powodu braku oryginalnych bajtów PDF i ich zweryfikowanych metadanych.
+### Korekta implementacji centrowania Pine — 2026-11-13
+
+- Dodatkowy przegląd kodu po commicie `2974e990590d8081a81c6d791d535caedb00b88c` wykazał, że zastosowanie `math.sum(src - anchor, length)` mieszałoby wartości centrowane względem różnych historycznych kotwic, ponieważ każda historyczna wartość wyrażenia ma kotwicę z własnego baru. Nie uznano tej wersji za gotową do walidacji numerycznej.
+- Poprawka `2af1e4c73b81dbd4a12253b3a4b2c4e8e7fa1844` wykonuje jawne sumowanie w pętli, odejmując od każdej próbki `src[i]` tę samą bieżącą kotwicę `src[length - 1]`. Dzięki temu wszystkie obserwacje w oknie są w tym samym układzie odniesienia. Zachowano wzór SSE i dotychczasowe mianowniki.
+- CI dla poprzedniego commitu Pine [#373](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43400349801) oraz dokumentacji [#374](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43400431316) zakończył się success, CTest 9/9. Te przebiegi nie kompilują Pine Script i nie potwierdzają semantycznej poprawności wskaźnika.
+- Nowy commit Pine wymaga osobnego CI C++ oraz ręcznej kompilacji i porównania w Pine Editor. Nie oznaczać walidacji C++/Pine jako ukończonej przed tymi czynnościami.
