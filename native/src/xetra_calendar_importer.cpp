@@ -239,7 +239,13 @@ VenueSessionCalendar parse_xetra_html_calendar(
         throw std::invalid_argument("Brak semantycznej informacji o handlu w święta wybranego roku.");
     std::vector<xmlNode*> list_items;
     collect_elements(xmlDocGetRootElement(parsed.get()), "li", list_items);
+    // Deutsche Börse's published list varies by calendar year. The three
+    // recurring holiday sessions are mandatory; German Unity Day is an
+    // additional, explicitly published trading holiday in years such as 2025.
     const std::set<std::string> named_trading{
+        "ascension day","whit monday","corpus christi","day of german unity"
+    };
+    const std::set<std::string> required_trading{
         "ascension day","whit monday","corpus christi"
     };
     std::map<std::string,CivilDate> actual_trading;
@@ -257,8 +263,11 @@ VenueSessionCalendar parse_xetra_html_calendar(
                 throw std::invalid_argument("Data święta z handlem jest powtórzona.");
         }
     }
-    if(actual_trading.size()!=named_trading.size())
-        throw std::invalid_argument("Lista świąt z handlem Xetra jest niekompletna lub nieznana.");
+    if(!std::all_of(required_trading.begin(),required_trading.end(),
+        [&](const std::string& name){return actual_trading.contains(name);}))
+        throw std::invalid_argument("Lista podstawowych świąt z handlem Xetra jest niekompletna.");
+    // Optional named exceptions are included only when the official page
+    // explicitly lists them for the selected year; never infer them from law.
 
     SourceCalendarDocument source = document;
     std::set<std::string> extraordinary_notice_dates;
