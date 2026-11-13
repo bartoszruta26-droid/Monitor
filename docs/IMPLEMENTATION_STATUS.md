@@ -8,9 +8,9 @@
 ## Stan repozytorium przy audycie
 
 - Aktualny `main`: `cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06`.
-- Kontynuacja FX/XAU: gałąź `feature/fx-xau-pricing-engine`, PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1), HEAD `8a986df76b4d1017e71f487071458ad516633c13` (silnik FX/XAU, testy i odpięcie modułu Xetra od aktywnego builda).
+- Kontynuacja FX/XAU: gałąź `feature/fx-xau-pricing-engine`, PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1), HEAD `80bbb65879de8f501bff070a05e6d5f2be9b5fda` (silnik FX/XAU, testy i odpięcie modułu Xetra od aktywnego builda).
 - Ostatni zielony CI dla `main`: [CI #414 / 43411904371](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43411904371), SHA `cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06` — Configure/Build/Test success; CTest **9/9**.
-- CI PR #1 uruchomiony dla wcześniejszego SHA PR; po ostatnich zmianach oczekuje na nowy przebieg dla dokładnego HEAD. Nie oznaczać nowego etapu jako zakończonego.
+- CI PR #1: przebieg #415 dla `be0edbbe5e12be32f5eda8a9ff30d416fc43b060` — success; kolejne przebiegi #416/#417 wykryły pozostałe odwołania testu kalendarza do parsera Xetra. Usunięto wyłącznie Xetra-only blok testowy; przebiegi #418–#420 sprawdzają poprawkę i końcowy SHA. Nie oznaczać nowego etapu jako zakończonego.
 - Poprzedni przebieg dla zmiany kodu parsera Xetra 2025: [CI #382 / 43401645335](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43401645335), SHA `e055cfe5d5e61123b073c4fae4932216d0d6c249` — **success**, CTest **9/9**.
 - Gałęzie: wyłącznie `main`; otwarte pull requesty: 0; otwarte Issues: 0.
 - Poprzedni problem kompilacji testu kalendarza (brak `#include <algorithm>` w starszym SHA) został naprawiony; nie jest stanem bieżącym.
@@ -926,7 +926,7 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 - `main` HEAD: `cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06`.
 - Gałąź robocza: `feature/fx-xau-pricing-engine`; PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1), bez scalania.
 - Ostatni zielony CI dla `main`: [#414](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43411904371), dokładny SHA `cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06`; Configure/Build/Test success, CTest 9/9.
-- CI #413 również przeszedł 9/9. CI #412, #411 i wcześniejsze zakończyły się błędem w historycznym teście Xetra; późniejszy #413 naprawił tę regresję.
+- CI #413 również przeszedł 9/9. CI #412 i #411 zakończyły się błędem w historycznym teście Xetra; #413 przeszedł po korekcie historycznego parsera, lecz zgodnie z zakresem moduł Xetra jest obecnie odpinany od aktywnego builda.
 - Jedyna gałąź na `main` przed rozpoczęciem nowego etapu; brak wcześniejszych otwartych PR i Issues.
 - Po otwarciu PR #1 workflow został uruchomiony; wymagane jest sprawdzenie wyniku dla końcowego SHA PR, nie tylko dla pierwszego commitu gałęzi.
 
@@ -944,8 +944,8 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 - `value_gold()`: przelicza gram/kg/uncję na gramy, stosuje próbę jako ułamek 0..1, przyjmuje cenę jednego grama czystego złota, pokazuje wartość brutto, opłatę i wartość netto.
 - Dodano `native/tests/test_market_pricing.cpp` i test CTest `monitor-market-pricing-tests`. Przypadki obejmują kierunek pary, bid/ask, opłaty, spread, błędne kwotowanie, przekroczenie opłat, próbę i jednostki masy.
 - CMake wyłącza historyczne `xetra_calendar_importer.cpp`, `xetra_calendar_source.cpp` i `test_xetra_calendar_source.cpp` z aktywnego builda/testów. Pliki źródłowe i ich historia pozostają w repozytorium, lecz nie są już aktywną zależnością ani kryterium CI.
-- Commit/HEAD gałęzi po ostatniej zmianie: `8a986df76b4d1017e71f487071458ad516633c13`.
-- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) oczekuje na pełny CI dla końcowego SHA. Etap pozostaje w toku do potwierdzenia Configure/Build/Test.
+- Commit/HEAD gałęzi po ostatniej zmianie: `80bbb65879de8f501bff070a05e6d5f2be9b5fda`.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) oczekuje na pełny CI dla końcowego SHA. Pierwsze próby #416/#417 ujawniły, że test kalendarza nadal linkował funkcje Xetra; usunięto ten blok testowy w commicie `181136d5abb2f045f16795efb206597bc5ace003`. Dodano też ochronę przed przepełnieniem kursu środkowego i odwrotności ask w commicie `6a9e310bb553b7bd672aa9160cb2a22e258e9b62`, z testami granicznymi w `80bbb65879de8f501bff070a05e6d5f2be9b5fda`. CI #418–#420 weryfikują kolejne SHA; etap pozostaje w toku do zielonego CI dla dokładnego HEAD.
 - Nie scalać PR przed zielonym CI i przeglądem diffu.
 
 ### Następne etapy po Etapie 16
@@ -957,3 +957,11 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 
 ### Zasada dalszego monitorowania
 Przed każdym następnym etapem sprawdzić bieżący `main`, gałęzie, PR, Issues, dokładny SHA PR oraz ostatni CI. Po każdym etapie dopisać commit, wynik Configure/Build/Test, liczbę testów i ograniczenia do tego pliku. Status „zakończony” nadawać wyłącznie po zielonym CI dla dokładnego SHA.
+
+
+### Uzupełnienie monitoringu CI PR #1 — 2026-11-13
+- [CI #416](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43416419441), SHA `8a986df76b4d1017e71f487071458ad516633c13`: Configure success; Build failure. Test kalendarza NBP nadal zawierał historyczne wywołania `parse_xetra_html_calendar()`, których implementację celowo odłączono od biblioteki.
+- [CI #417](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43416489927), SHA `5f9774d0f7d27c153ec5705499adb5d8866e8c7c`: ten sam błąd linkowania; diagnoza potwierdzona w logu joba `native-linux`.
+- Poprawka: commit `181136d5abb2f045f16795efb206597bc5ace003` usunął z `test_market_data_calendar.cpp` 97-wierszowy blok testów wyłącznie Xetra. Testy okien publikacji NBP, świąt RP i IANA TZ/DST pozostają aktywne.
+- Dodatkowa kontrola numeryczna: commit `6a9e310bb553b7bd672aa9160cb2a22e258e9b62` stabilizuje wyliczanie mid przy dużych wartościach i odrzuca nieskończoną odwrotność ask; commit `80bbb65879de8f501bff070a05e6d5f2be9b5fda` dodaje testy tych granic.
+- Przebiegi #418 (SHA `181136d5...`), #419 (SHA `6a9e310...`) i #420 (SHA `80bbb658...`) były w toku przy zapisie. Nie deklarować ich jako sukcesu bez ponownego odczytu GitHub Actions.
