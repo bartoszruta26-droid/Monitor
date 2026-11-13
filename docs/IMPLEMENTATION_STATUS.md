@@ -825,3 +825,13 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 - Kompilacja Pine Script w TradingView Pine Editor i porównanie wartości na wykresie nie zostały wykonane; nie deklarujemy ich jako zaliczonych. Po zielonym CI C++ należy przeprowadzić ręczną kompilację w Pine Editor oraz porównanie wartości dla fixture o dużym przesunięciu poziomu cen.
 - Korekta planu: `docs/next-implementation-audit.md` definiuje **Etap 12 jako MariaDB i skalowanie**. Porównanie C++/Pine jest odrębnym zadaniem walidacji regresji i nie zmienia numeracji etapów.
 - Etap 19A (oryginalny PDF) pozostaje otwarty; etapy 15D i 19B pozostają zamknięte na podstawie wcześniejszych potwierdzonych wyników. Brak zmian w MIC XETR, testach negatywnych XFRA ani parserze Xetra.
+### Wyniki weryfikacji Etapu porównania C++/Pine — CI #372–#374 — 2026-11-13
+
+- [CI #372](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43400345065), SHA `0c7deab3c58d117f37178b54f0ebf2f2cdf5566d`: Configure success, Build success, Test success; CTest **9/9**, w tym `monitor-core-tests` z nowym testem niezmienniczości SSE przy przesunięciu `1e12`. Logi nie zawierają błędów.
+- [CI #373](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43400349801), SHA `2974e990590d8081a81c6d791d535caedb00b88c`: Configure success, Build success, Test success; CTest **9/9**. Logi nie zawierają błędów. Ten przebieg potwierdza C++ build po zmianie pliku Pine, ale nie kompiluje Pine Script.
+- [CI #374](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43400431316), SHA `726fc20d22b10104a55846db5aa3885d01c4b120`: Configure success, Build success, Test success; CTest **9/9**. Jest to zweryfikowany CI dla commitu dokumentującego powyższe zmiany i aktualny HEAD przed następnym wpisem.
+- Wszystkie trzy przebiegi zakończyły się `success`; brak nieudanych kroków i brak logów błędów.
+- Zmiana C++ to test regresyjny stabilności numerycznej; zmiana Pine centruje ceny względem najstarszej obserwacji okna przed obliczeniem momentów. Nie zmieniono mianowników metod DGT/LonesomeTheBlue, sygnałów ani walidacji MIC XETR.
+- Kompilacja i uruchomienie wskaźnika w TradingView Pine Editor pozostają niewykonane. CI C++ nie może być traktowane jako potwierdzenie składni lub zachowania Pine. Porównanie wyników na identycznym zestawie danych nadal wymaga ręcznej weryfikacji w Pine Editor.
+- Korekta numeracji: w `docs/next-implementation-audit.md` Etap 12 to MariaDB i skalowanie; prace C++/Pine są osobną walidacją regresji. Etapów planu MariaDB nie rozpoczynano ani nie oznaczano jako ukończonych.
+- Etapy 15D i 19B pozostają zamknięte; Etap 19A pozostaje otwarty z powodu braku oryginalnych bajtów PDF i ich zweryfikowanych metadanych.
