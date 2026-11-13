@@ -364,9 +364,11 @@ VenueSessionNotice parse_xetra_session_notice_text(
     if(offbook_xetra==std::string::npos)
         throw std::invalid_argument("Ogłoszenie PDF nie zawiera podsekcji dostępności usług Xetra.");
     const std::string offbook_section=text.substr(offbook_xetra);
-    if(offbook_section.find("xetr")==std::string::npos ||
+    if((offbook_section.find("mic: xetr")==std::string::npos &&
+        offbook_section.find("mic xetr")==std::string::npos) ||
        offbook_section.find("tes otc")==std::string::npos)
-        throw std::invalid_argument("Podsekcja off-book nie potwierdza usług Xetra/MIC XETR.");
+        throw std::invalid_argument("Podsekcja off-book nie potwierdza MIC XETR i usług TES OTC: "+
+            offbook_section.substr(0,500));
     if(offbook_section.find("mic: xetr")==std::string::npos &&
        offbook_section.find("mic xetr")==std::string::npos)
         throw std::invalid_argument("Podsekcja usług off-book nie potwierdza MIC XETR.");
