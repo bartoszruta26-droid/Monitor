@@ -949,11 +949,11 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 - Nie scalać PR przed zielonym CI i przeglądem diffu.
 
 ### Następne etapy po Etapie 16
-1. Po zielonym CI przeprowadzić przegląd API kalkulacyjnego i dodać kontrolę semantyki walut oraz skrajnych wartości liczbowych.
-2. Dodać model transakcji FX/XAU: strona kupna/sprzedaży, ilość, waluta rozliczenia, kurs wykonania, spread, opłaty, czas i pochodzenie oferty.
-3. Dodać portfel walutowo-złotowy, koszt nabycia oraz wynik zrealizowany/niezrealizowany.
-4. Podłączyć wycenę XAU do kursu FX w celu prezentacji wartości w PLN i innych walutach, z zachowaniem obu źródeł i czasu obserwacji.
-5. Dopiero potem rozpocząć API i klientów; nie rozwijać funkcji akcyjnych ani kalendarzy sesji giełdowych.
+1. Etap 17 — model transakcji FX/XAU, portfel FIFO, koszt nabycia i wynik zrealizowany/niezrealizowany (implementacja w gałęzi roboczej; oczekuje na końcową weryfikację CI po aktualizacji rejestru).
+2. Etap 18 — trwały zapis/odczyt transakcji i portfela w istniejącym repozytorium, z migracją i zgodnością dotychczasowych plików JSON.
+3. Etap 19 — przeliczanie wartości portfela XAU/FX do PLN i innych walut na podstawie źródeł wraz z czasem obserwacji i statusem jakości.
+4. Etap 20 — integracja API i klientów dopiero po stabilizacji modelu oraz trwałości danych.
+5. Nie rozwijać funkcji akcyjnych ani kalendarzy sesji giełdowych.
 
 ### Zasada dalszego monitorowania
 Przed każdym następnym etapem sprawdzić bieżący `main`, gałęzie, PR, Issues, dokładny SHA PR oraz ostatni CI. Po każdym etapie dopisać commit, wynik Configure/Build/Test, liczbę testów i ograniczenia do tego pliku. Status „zakończony” nadawać wyłącznie po zielonym CI dla dokładnego SHA.
@@ -975,3 +975,35 @@ Przed każdym następnym etapem sprawdzić bieżący `main`, gałęzie, PR, Issu
 - PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) ma status open, mergeable=true, merged=false. Nie scalono go bez polecenia; `main` pozostaje na SHA `cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06`.
 - Codex Review nie dostarczył recenzji merytorycznej z powodu limitu użycia usługi; przegląd zmian wykonano ręcznie, ale nie należy przedstawiać go jako niezależnej recenzji.
 - Następny etap po scaleniu: model transakcji FX/XAU i portfel z kosztem nabycia oraz wynikiem zrealizowanym/niezrealizowanym. Nie rozwijać funkcji akcyjnych ani kalendarzy giełdowych.
+
+
+## 46. Etap 17 — model transakcji i portfel FX/XAU (2026-11-13)
+
+### Zakres implementacji
+- Dodano `native/include/monitor/portfolio.hpp`, `native/src/portfolio.cpp` i `native/tests/test_portfolio.cpp`.
+- `PortfolioTransaction` przechowuje identyfikator, kod aktywa (kod waluty ISO 4217 albo XAU), rodzaj aktywa, stronę Buy/Sell, ilość, próbę, cenę jednostkową w walucie raportowania, opłatę w walucie raportowania, czas wykonania UTC (Unix) i identyfikator źródła/oferty.
+- Waluty są ewidencjonowane w jednostkach waluty; złoto w gramach brutto i gramach czystego kruszcu po zastosowaniu próby.
+- `calculate_portfolio()` wylicza pozycje i koszt nabycia metodą FIFO, przychód netto ze sprzedaży, wynik zrealizowany i niezrealizowany, wartość bieżącą oraz sumę opłat.
+- Ceny bieżące są jawnie przekazywane w walucie raportowania: za jednostkę waluty albo za gram czystego złota. Brak ceny dla otwartej pozycji jest błędem, a nie domyślną wyceną.
+- Walidacja obejmuje unikalność identyfikatorów transakcji, chronologię w obrębie aktywa, kod waluty, kod XAU, próbę, opłaty, nadmierną sprzedaż, brak ceny i wartości niefinitywne.
+- CMake rejestruje `monitor-portfolio-tests`; liczba testów CTest wzrosła z 9 do 10.
+- Testy sprawdzają FIFO dla EUR, wycenę złota próby 585, opłaty, wynik zrealizowany/niezrealizowany, zamkniętą całkowicie pozycję i walidację błędnych transakcji.
+
+### Weryfikacja CI
+- Commit kodu/testów i rejestracji CMake: `ff24b9bb1c989f1d7aa8134dde5f81c521e04006`.
+- [Native C++ checks #429](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43418422394), dokładny SHA `ff24b9bb1c989f1d7aa8134dde5f81c521e04006`: Configure — success; Build — success; Test — success; CTest **10/10 (100%)**, 1,58 s.
+- `monitor-market-pricing-tests` i `monitor-portfolio-tests` przechodzą; dotychczasowe testy danych, adapterów, repozytorium, agregacji, wykresów, regresji i kalendarza NBP również pozostają zielone.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) nadal otwarty; nie scalono go. `main` pozostaje na `cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06`.
+
+### Ograniczenia — nie oznaczać jeszcze jako pełnego przepływu transakcyjnego
+- To jest deterministyczny model obliczeniowy w pamięci; trwały zapis/odczyt i migracja JSON są kolejnym etapem.
+- Ceny bieżące dostarcza wywołujący; moduł nie pobiera samodzielnie notowań ani nie przelicza między walutami. Integracja FX z wyceną portfela nastąpi w kolejnym etapie.
+- Każda pozycja jest wyceniana w jednej, jawnej walucie raportowania. Wymiana walut powinna być odwzorowana jako osobne, sparowane zapisy nabycia i zbycia aktywów z tym samym identyfikatorem źródłowej operacji; model nie tworzy automatycznie drugiej nogi wymiany.
+- FIFO działa w obrębie pojedynczego kodu aktywa; nie stanowi jeszcze księgowego ani podatkowego systemu rozliczeń. Zasady podatkowe i szczególne metody wyceny wymagają odrębnej decyzji.
+- Niezależna automatyczna recenzja kodu nie jest dostępna z powodu limitu usługi review; nie przedstawiać zielonego CI jako substytutu niezależnego przeglądu.
+
+### Kolejne prace
+1. Etap 18 — trwała serializacja i repozytorium transakcji/portfela, wersjonowanie schematu i zgodność dotychczasowych JSON.
+2. Dodać parowanie obu nóg wymiany FX, aby ewidencja obejmowała zarówno nabytą, jak i oddaną walutę, bez podwójnego naliczania opłat.
+3. Etap 19 — pobieranie cen bieżących i przeliczanie XAU/FX do waluty raportowania ze znacznikami czasu i jakością źródeł.
+4. Etap 20 — API i klienci.
