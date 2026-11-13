@@ -45,7 +45,7 @@
 | 21 | Zintegrowana usługa wyceny i jawne odtwarzanie kopii | Zakończony | CI #462, CTest 13/13 |
 | 22 | Dokładne provenance i preferowanie świeższych krawędzi FX | Zakończony | CI #467, CTest 13/13 |
 | 23 | Odporność repozytorium na błędy i konkurencyjne procesy | Zakończony | CI #469, CTest 13/13 |
-| 24 | Szczegóły audytowe wykonania wymiany FX | W toku — implementacja i testy dodane; końcowy CI dla aktualnego SHA oczekuje | Surowe bid/ask, mid, spread, kurs brutto i efektywny, opłaty oraz provenance; JSON opcjonalny i zgodny wstecz |
+| 24 | Szczegóły audytowe wykonania wymiany FX | Zakończony — CI #479 i #480 success | Surowe bid/ask, mid, spread, kurs brutto i efektywny, opłaty oraz provenance; JSON opcjonalny i zgodny wstecz |
 
 ## Ostatnie potwierdzone commity
 
@@ -1216,3 +1216,28 @@ Przed każdym następnym etapem sprawdzić bieżący `main`, gałęzie, PR, Issu
 ### Następny zakres po zakończeniu etapu 24
 - Etap 25: spójny model historii i analizy wykonanych transakcji FX/XAU — filtrowanie po parach/aktywach, źródle i czasie; jawne rozróżnienie kursu referencyjnego, kwotowania i kursu faktycznego wykonania.
 - Następnie integracja API i klientów dopiero po ustabilizowaniu kontraktu danych; bez funkcji akcyjnych, zleceń giełdowych i kalendarzy sesji.
+
+
+## 54. Etap 25 — historia i analiza transakcji FX/XAU (2026-11-13)
+
+### Zakres implementacji
+- Rozszerzono `portfolio_service.hpp/.cpp` o model zapytania historii: kod aktywa, para FX, źródło, identyfikator operacji oraz inkluzywny zakres czasu wykonania.
+- `build_portfolio_history()` zwraca wpisy historii w deterministycznym porządku czasu; dla nóg tej samej wymiany zachowuje kolejność sprzedaż waluty oddawanej → zakup waluty otrzymywanej.
+- Wpisy wymiany są łączone w parę BASE/QUOTE na podstawie wspólnego `operation_id`; filtr pary akceptuje również orientację odwrotną, ale raport zachowuje oryginalną orientację transakcji.
+- Raport zawiera aktywność per aktywo: liczbę transakcji, sumę ilości kupionych i sprzedanych oraz opłaty w walucie raportowania; agreguje także łączną liczbę wpisów, operacji z audytem kwotowania i opłaty.
+- Każdy wpis rozróżnia zwykły zapis transakcji od wykonania z zachowanym audytem pierwotnego kwotowania. Dane bid/ask i rzeczywistego wykonania pochodzą z audytu FX; ceny referencyjne/spot pozostają odrębnymi obserwacjami rynku i nie są przedstawiane jako cena wykonania.
+- Dodano testy filtrowania po aktywie, parze w obu orientacjach, źródle, dokładnym przedziale czasu, kolejności nóg i oznaczenia wykonania z audytem. Test odrzuca odwrócony przedział czasu.
+- Test historii korzysta z osobnego repozytorium z prawidłowo zasilonym stanem USD, aby nie wprowadzać sprzedaży waluty bez wcześniejszego stanu do testu usługi wyceny.
+
+### Monitoring CI
+- #481, SHA `ef280efe6066ad0cbbfce085548d36fa6159df9c`: Configure/Build/Test success (13/13) — po dodaniu kontraktu historii.
+- #482, SHA `d57c144a78f4f44fc6dbfa9ae788c0da4ca4ff5a`: Configure/Build/Test success (13/13) — implementacja filtrowania.
+- #483, SHA `36166b6c4d086a62c521218bcd3d2f6f9102edf3`: Test failure — test używał repozytorium portfela z niekompletnym stanem początkowym.
+- #484, SHA `71fe17dd32d9609f794eed6fed90a15d4fbf41d5`: Test failure — log wykazał błędną asercję przypisującą audyt do nogi debetowej zamiast kredytowej.
+- #485, SHA `caf770c25b3dd5bf9f21ec0d1a96dd0c6fc1442f`: poprawiono deterministyczne sortowanie nóg, ale przebieg wymagał jeszcze korekty asercji testowej.
+- #486, SHA `6350293924f9ce4fe0837b83debe362148ef8f51`: przebieg CI uruchomiony po poprawie asercji; wynik końcowy do potwierdzenia.
+- Etap 25 pozostaje w toku do zielonego CI dla aktualnego SHA. Nie uznawać wcześniejszych #481/#482 za potwierdzenie końcowej wersji.
+
+### Następny etap
+- Etap 26: stabilne, wersjonowane API odczytu historii i portfela FX/XAU, z paginacją, walidacją filtrów i zachowaniem metadanych audytowych; dopiero potem klient GUI/Web/TUI/Android.
+- Poza zakresem pozostają akcje, papiery wartościowe, zlecenia giełdowe i kalendarze sesji.
