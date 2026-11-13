@@ -83,9 +83,9 @@ Adaptery dostawców C++20 są zaimplementowane. Magazyn JSON C++20 jest zaimplem
 
 ## Status
 
-Obecnie w repozytorium działa natywny rdzeń C++20: regresja, model danych rynkowych v1, walidacja, testy, CLI, transport HTTP libcurl i adaptery NBP, Frankfurter, World Bank Pink Sheet oraz XAUS. Adaptery są budowane w monitor_core i objęte testami bez dostępu do sieci. Magazyn JSON jest zaimplementowany i zweryfikowany w CI; MariaDB, serwer, API i interfejsy pozostają do implementacji.
+Obecnie w repozytorium działa natywny rdzeń C++20: regresja, model danych rynkowych v1, walidacja, transport HTTP libcurl, adaptery NBP/Frankfurter/World Bank/XAUS, repozytorium JSON danych rynkowych, silnik kalkulacji FX/XAU, ewidencja transakcji i portfel FIFO, repozytorium JSON portfela oraz budowanie price book z obserwacji FX/XAU. Moduły są objęte testami offline. MariaDB, serwer, API i interfejsy pozostają do implementacji.
 
-Wspólny model danych rynkowych opisano w [docs/market-data-model.md](market-data-model.md), a adaptery w [docs/cpp-provider-adapters.md](cpp-provider-adapters.md). Typy domenowe znajdują się w native/include/monitor/market_data.hpp, a kontrakt adapterów i transport HTTP w native/include/monitor/market_data_adapters.hpp. Adaptery zwracają rekordy domenowe. Warstwa repozytorium udostępnia atomowy zapis partii wyników do JSON; adaptery nie zapisują bezpośrednio plików.
+Wspólny model danych rynkowych opisano w [docs/market-data-model.md](market-data-model.md), a adaptery w [docs/cpp-provider-adapters.md](cpp-provider-adapters.md). Typy domenowe znajdują się w native/include/monitor/market_data.hpp, kontrakt adapterów i transport HTTP w native/include/monitor/market_data_adapters.hpp, a transakcje i wycena portfela w native/include/monitor/portfolio.hpp oraz native/include/monitor/portfolio_valuation.hpp. Adaptery zwracają rekordy domenowe. Warstwa repozytorium udostępnia atomowy zapis partii wyników do JSON; adaptery nie zapisują bezpośrednio plików.
 
 
 ## Integracja z Nextcloud — kierunek przyszły
