@@ -141,6 +141,7 @@ PortfolioSnapshot JsonPortfolioRepository::load_unlocked() const {
 PortfolioSnapshot JsonPortfolioRepository::load() const {
     auto parent=file_path_.parent_path();
     if(parent.empty()) parent=".";
+    if(config_.create_parent_directories) std::filesystem::create_directories(parent);
     FileLock lock(file_path_.string()+".lock",LOCK_SH);
     return load_unlocked();
 }
@@ -160,9 +161,12 @@ void JsonPortfolioRepository::write_unlocked(const PortfolioSnapshot& snapshot) 
     while(offset<bytes.size()) {
         const auto count=::write(fd,bytes.data()+offset,bytes.size()-offset);
         if(count<0) { if(errno==EINTR) continue; ::close(fd); ::unlink(temp.c_str()); throw std::runtime_error("Błąd zapisu portfela."); }
+        if(count==0) { ::close(fd); ::unlink(temp.c_str()); throw std::runtime_error("Niepełny zapis dokumentu portfela."); }
         offset+=static_cast<std::size_t>(count);
     }
-    if(::fsync(fd)!=0 || ::close(fd)!=0) {
+    const int sync_result=::fsync(fd);
+    const int close_result=::close(fd);
+    if(sync_result!=0 || close_result!=0) {
         ::unlink(temp.c_str());
         throw std::runtime_error("Nie można utrwalić pliku portfela.");
     }
