@@ -705,3 +705,9 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 2. Po zielonym CI zamknąć 15D w trackerze, jeśli testy raportu obejmują zarówno kalendarze, jak i komunikaty.
 3. Etap 19B: dodać audytowy eksport źródeł i efektywnych sesji: identyfikatory i rewizje, URI, data pobrania, atrybucja/licencja, SHA-256, długość/MIME, wersja parsera, referencje komunikatów i dni nierozstrzygnięte. Eksport ma być deterministyczny i tylko do odczytu.
 4. Nie oznaczać źródła PDF jako binarnie zarchiwizowanego: w repozytorium znajduje się transkrypcja oficjalnego układu, nie oryginalny plik PDF i nie ma potwierdzonego hash oryginału.
+
+
+### Uzupełnienie naprawy parsera PDF — 2026-11-13
+- CI [43385176559](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43385176559) wykazał, że samo uelastycznienie nagłówka nie rozwiązało problemu: `pdftotext` rozdziela elementy nagłówka/podsekcji na linie, więc detekcja wymagająca wszystkich słów w jednym wierszu nadal zawodziła.
+- Commit `2a2f13fbd63ef5fa277b47fe23751657e308b41a` zmienia wykrywanie podsekcji: wyszukiwanie odbywa się na całym znormalizowanym tekście, a Xetra subsection jest wybierana dopiero po nagłówku dostępności. Weryfikacja MIC XETR pozostaje obowiązkowa.
+- CI dla tego commitu oraz dla raportu audytowego jest monitorowane; Etap 19A nadal otwarty.
