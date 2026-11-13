@@ -687,3 +687,21 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 2. Ustalić, czy warunki licencji pozwalają umieścić oryginalny PDF jako fixture; jeśli nie, zachować wyłącznie tekstową transkrypcję i metadane źródła.
 3. Jeśli dostęp do pliku binarnego będzie możliwy, zarchiwizować oryginalne bajty przez `import_pdf_notice`, aby rejestr obiektów zawierał rzeczywisty SHA-256.
 4. Dopiero wtedy oznaczyć Etap 19A jako zweryfikowany.
+
+## 63. Audyt ciągłości — Etap 15D i naprawa regresji parsera PDF
+
+### Wynik audytu
+- HEAD przed poprawką: `48cf44aaa06434085f66cc65fe4f03b619e0f80c`.
+- Etap 15D jest zaimplementowany jako `find_orphaned_source_objects(snapshot)`; raport uwzględnia odwołania zarówno z rewizji kalendarzy venue, jak i komunikatów sesyjnych. Nie usuwa plików ani rekordów.
+- Poprzednia korekta 15D wymagała ponownego sprawdzenia CI. Najnowszy pełny przebieg [43328474350](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43328474350) dla SHA `48cf44a` zakończył się niepowodzeniem w teście `monitor-xetra-calendar-source-tests`; kompilacja i pozostałe 8/9 grup testowych przeszły.
+- Przyczyna: parser tekstu PDF nie rozpoznał podsekcji usług off-book w tekście zwróconym przez `pdftotext`. Test zakończył się wyjątkiem „Ogłoszenie PDF nie zawiera podsekcji dostępności usług Xetra”.
+
+### Poprawka
+- Commit `5b8024d234b95d9078f92f1d4ed1186066d9e5cc`: wykrywanie nagłówków sekcji rynku i usług off-book opiera się na stabilnych tokenach semantycznych, a nie na jednym dokładnym zapisie łącznika/diakrytyki. Pozostawiono obowiązkową kontrolę MIC XETR, więc tolerancja formatowania nie dopuszcza sekcji XFRA.
+- Oczekuje na pełny CI dla nowego SHA. Etap 19A pozostaje otwarty do zielonego Configure/Build/Test.
+
+### Kolejne prace
+1. Potwierdzić test parsera PDF w CI i dodać fixture wariantów podziału linii/łącznika, jeżeli aktualny przebieg ujawni dalsze różnice ekstrakcji.
+2. Po zielonym CI zamknąć 15D w trackerze, jeśli testy raportu obejmują zarówno kalendarze, jak i komunikaty.
+3. Etap 19B: dodać audytowy eksport źródeł i efektywnych sesji: identyfikatory i rewizje, URI, data pobrania, atrybucja/licencja, SHA-256, długość/MIME, wersja parsera, referencje komunikatów i dni nierozstrzygnięte. Eksport ma być deterministyczny i tylko do odczytu.
+4. Nie oznaczać źródła PDF jako binarnie zarchiwizowanego: w repozytorium znajduje się transkrypcja oficjalnego układu, nie oryginalny plik PDF i nie ma potwierdzonego hash oryginału.
