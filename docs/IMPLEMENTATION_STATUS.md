@@ -873,3 +873,12 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 - Etap 11 pozostaje **w toku**. Dane 2025–2028 w fixture są syntetycznym odwzorowaniem; nadal brakuje archiwizacji dozwolonych do przechowywania oryginalnych bajtów źródła, ich rzeczywistego SHA-256, długości, MIME i czasu pobrania oraz potwierdzenia warunków ponownego wykorzystania.
 - Etap 19A pozostaje **otwarty**: zielony test syntetycznego PDF nie zastępuje importu i archiwizacji oryginalnego PDF komunikatu końcoworocznego. Nie wpisano fikcyjnych metadanych źródła.
 - CI nie wykrył konkretnej usterki, więc nie tworzono poprawki kodu ani nie scalano zmian. Żaden etap nie został zamknięty na podstawie samego commita.NaN
+
+### Etap 11 — odporność importera Xetra na wielkość liter nagłówków HTTP — 2026-11-13
+
+- Audyt wykazał, że importer HTML i PDF wyszukiwał nagłówek `content-type` przez dokładne porównanie nazwy klucza. Nazwy nagłówków HTTP są niewrażliwe na wielkość liter; poprawne odpowiedzi z `Content-Type` lub `CONTENT-TYPE` mogły więc zostać odrzucone.
+- Commit `2ec7c28e073b4b40dc4d117b57f126fd3d2c76d5` wprowadził wspólną funkcję wyszukiwania nagłówka bez rozróżniania wielkości liter. CI [#390](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43409267724) — **failure na Build**; po zmianie odczytu nagłówka pozostały dwa odwołania do usuniętego iteratora.
+- Commit `79bfdc3b900ff2d77daf7105f0df744a8a1f18aa` dodał testy z nazwami `Content-Type` i `CONTENT-TYPE`. CI [#391](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43409271970) — **failure na Build** z tej samej przyczyny.
+- Commit `0b988b3932e11db98d613a86f18f65b879eb02fa` poprawił obsługę PDF: zachowuje oryginalną wartość nagłówka do metadanych archiwum, a znormalizowaną wykorzystuje wyłącznie do walidacji typu MIME. CI [#392](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43409381755) — **w toku**; Configure zakończony sukcesem, Build w toku, Test oczekuje.
+- Zmiana pozostaje **niezamknięta** do uzyskania zielonego CI dla dokładnego SHA. Testy wykorzystują atrapy HTTP; nie stanowią dowodu rzeczywistego pobrania bieżącej strony Deutsche Börse.
+- Następny krok po zielonym CI: zapisać końcowy wynik i kontynuować niezależną weryfikację oryginalnych bajtów oficjalnych źródeł oraz statusu praw do ich archiwizacji. Etap 11 i etap 19A pozostają otwarte.
