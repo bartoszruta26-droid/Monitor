@@ -468,6 +468,28 @@ int main(){
     require(venue_repo.upsert_batch(phase_batch)==12U,
             "PDF source object and phase-only notice commit atomically");
     const auto phase_snapshot=venue_repo.load();
+    const auto audit_report=build_venue_audit_report_json(phase_snapshot);
+    const auto audit_json=nlohmann::json::parse(audit_report);
+    require(audit_json.at("report_schema")=="monitor.venue_audit.v1" &&
+            audit_json.at("source_objects").size()==phase_snapshot.source_objects.size() &&
+            audit_json.at("notices").size()==phase_snapshot.venue_session_notices.size(),
+            "audit export contains schema, source object manifest and complete notice history");
+    require(audit_json.at("calendars").size()==1U &&
+            audit_json.at("calendars").front().at("effective_days").size()==365U &&
+            audit_json.at("calendars").front().at("unresolved_official_notice_dates").empty(),
+            "audit export contains all effective days and unresolved-date report");
+    const auto audit_phase_day=std::find_if(
+        audit_json.at("calendars").front().at("effective_days").begin(),
+        audit_json.at("calendars").front().at("effective_days").end(),
+        [](const auto& day){return day.at("date")=="2026-12-30";});
+    require(audit_phase_day!=audit_json.at("calendars").front().at("effective_days").end() &&
+            audit_phase_day->at("phase_events").size()==9U &&
+            audit_phase_day->at("applied_notice_ids").size()==1U,
+            "audit export includes the effective official phase schedule and applied notice reference");
+    require(build_venue_audit_report_json(phase_snapshot)==audit_report,
+            "audit export is deterministic for an unchanged repository snapshot");
+    require(audit_json.at("orphaned_source_object_ids").empty(),
+            "audit export distinguishes referenced source objects from orphans");
     const auto phase_round_trip=std::find_if(phase_snapshot.venue_session_notices.begin(),
         phase_snapshot.venue_session_notices.end(),[&](const VenueSessionNotice& item) {
             return item.notice_id==phase_notice.notice_id;
