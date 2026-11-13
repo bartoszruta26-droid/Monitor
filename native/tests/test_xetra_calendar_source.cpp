@@ -156,12 +156,12 @@ int main() {
             live_wording_parsed.days.at(1).product_sessions.front().closes_at.minute==30U,
             "parser accepts current official regular-hours wording");
     const auto christmas_eve_2026=std::find_if(live_wording_parsed.days.begin(),live_wording_parsed.days.end(),
-        [&](const VenueCalendarDay& day){return date_is(day.date,2026,12U,24U);});
+        [&](const VenueCalendarDay& day){return format_date(day.date)=="2026-12-24";});
     require(christmas_eve_2026!=live_wording_parsed.days.end() &&
             christmas_eve_2026->status==VenueDayStatus::SettlementOnly,
             "parser ignores footnote stars on settlement-only holiday labels");
     const auto ascension_2026=std::find_if(live_wording_parsed.days.begin(),live_wording_parsed.days.end(),
-        [&](const VenueCalendarDay& day){return date_is(day.date,2026,5U,14U);});
+        [&](const VenueCalendarDay& day){return format_date(day.date)=="2026-05-14";});
     require(ascension_2026!=live_wording_parsed.days.end() &&
             ascension_2026->product_sessions.size()==2U &&
             ascension_2026->product_sessions[0].closes_at.hour==20U &&
