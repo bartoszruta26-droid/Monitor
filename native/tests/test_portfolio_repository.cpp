@@ -56,6 +56,21 @@ int main(){
     {std::ofstream out(corrupt);out<<"{broken";}
     JsonPortfolioRepository corrupt_repo(corrupt,"PLN");
     throws([&]{(void)corrupt_repo.load();},"corrupt JSON is never treated as empty");
+    const auto paired_file=dir/"paired.json";
+    JsonPortfolioRepository paired_repo(paired_file,"PLN");
+    require(paired_repo.append(PortfolioTransaction{"pln-cash","PLN",PortfolioAssetKind::Currency,
+        TradeSide::Buy,1000,1,1,0,10,"cash"},0)==1,"opening reporting-currency balance");
+    const auto pair=make_fx_exchange_transactions(
+        {"repo-exchange-1","PLN","EUR",434,100,4.32,2,20,"kantor"});
+    require(paired_repo.append_batch(pair,1)==2,"paired FX legs commit in one revision");
+    const auto paired_loaded=paired_repo.load();
+    require(paired_loaded.transactions.size()==3 &&
+            paired_loaded.transactions[1].operation_id=="repo-exchange-1" &&
+            paired_loaded.transactions[2].operation_id=="repo-exchange-1",
+            "paired operation id survives JSON round trip");
+    throws([&]{(void)paired_repo.append_batch({pair.front()},2);},
+           "incomplete FX pair rejected atomically");
+    require(paired_repo.load().revision==2,"failed FX batch leaves revision unchanged");
     std::filesystem::remove_all(dir);
     std::cout<<"All portfolio repository tests passed.\n";
 }
