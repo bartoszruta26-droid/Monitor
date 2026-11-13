@@ -23,6 +23,21 @@ int main() {
     require(near(fit.fitted_last, 10), "wartość dopasowana");
     require(near(fit.sse, 0), "SSE linii idealnej");
     const std::vector<double> noisy{1,2,2,4,5};
+    // Translating a series by a large constant must not change its residual
+    // statistics. This catches cancellation in sum-of-squares implementations.
+    const std::vector<double> low_level{0.0, 0.02, -0.01, 0.03, -0.02, 0.015, -0.005};
+    std::vector<double> high_level;
+    high_level.reserve(low_level.size());
+    for (double value : low_level) high_level.push_back(1.0e12 + value);
+    std::vector<double> recovered;
+    recovered.reserve(high_level.size());
+    for (double value : high_level) recovered.push_back(value - 1.0e12);
+    const auto low_fit = monitor::linear_regression(recovered, monitor::WidthMethod::PopulationRms);
+    const auto high_fit = monitor::linear_regression(high_level, monitor::WidthMethod::PopulationRms);
+    require(near(high_fit.slope, low_fit.slope, 1e-9),
+            "nachylenie nie zależy od dużego przesunięcia poziomu cen");
+    require(near(high_fit.sse, low_fit.sse, 1e-9),
+            "SSE zachowuje precyzję po dużym przesunięciu poziomu cen");
     const auto sample = monitor::linear_regression(noisy, monitor::WidthMethod::SampleSd);
     const auto population = monitor::linear_regression(noisy, monitor::WidthMethod::PopulationRms);
     const auto n_minus_2 = monitor::linear_regression(noisy, monitor::WidthMethod::ResidualStandardErrorNMinus2);
