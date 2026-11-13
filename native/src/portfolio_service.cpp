@@ -1,5 +1,7 @@
 #include "monitor/portfolio_service.hpp"
 
+#include <utility>
+
 namespace monitor::market {
 
 PortfolioValuationReport value_saved_portfolio(
