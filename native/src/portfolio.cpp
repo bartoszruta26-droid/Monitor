@@ -4,6 +4,7 @@
 #include <cmath>
 #include <map>
 #include <stdexcept>
+#include <set>
 #include <utility>
 
 namespace monitor::market {
@@ -62,7 +63,7 @@ PortfolioSummary calculate_portfolio(
     std::map<std::string, double> realized;
     std::map<std::string, double> fees;
     std::map<std::string, std::int64_t> last_execution;
-    std::map<std::string, std::string> last_id;
+    std::set<std::string> transaction_ids;
     double total_fees{};
 
     for (const auto& tx : transactions) {
@@ -74,10 +75,9 @@ PortfolioSummary calculate_portfolio(
         if (last_execution.contains(tx.asset_code) &&
             tx.executed_at_unix < last_execution[tx.asset_code])
             throw std::invalid_argument("Transakcje aktywa muszą być chronologiczne.");
-        if (last_id[tx.asset_code] == tx.id)
+        if (!transaction_ids.insert(tx.id).second)
             throw std::invalid_argument("Powtórzony identyfikator transakcji.");
         last_execution[tx.asset_code] = tx.executed_at_unix;
-        last_id[tx.asset_code] = tx.id;
         fees[tx.asset_code] += tx.fee_reporting;
         total_fees += tx.fee_reporting;
         if (!std::isfinite(fees[tx.asset_code]) || !std::isfinite(total_fees))
@@ -145,7 +145,10 @@ PortfolioSummary calculate_portfolio(
         result.total_cost_basis_reporting += cost_basis;
         result.total_market_value_reporting += market_value;
         result.total_unrealized_pnl_reporting += unrealized;
-        result.total_realized_pnl_reporting += realized[asset];
+    }
+    for (const auto& [asset, value] : realized) {
+        (void)asset;
+        result.total_realized_pnl_reporting += value;
     }
     if (!std::isfinite(result.total_cost_basis_reporting) ||
         !std::isfinite(result.total_market_value_reporting) ||
