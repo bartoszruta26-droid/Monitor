@@ -897,7 +897,7 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 - Odczytany [Disclaimer Deutsche Börse](https://www.cashmarket.deutsche-boerse.com/cash-en/disclaimer) nie zawierał wyraźnej licencji ani zgody na ponowne rozpowszechnianie dokumentów. Przed umieszczeniem oryginalnych bajtów PDF/HTML w publicznym repozytorium wymagana jest osobna ocena praw do ponownego wykorzystania i atrybucji.
 - Etap 11 pozostaje **w toku**: fixture 2025–2028 jest syntetyczny; brakuje archiwizacji dozwolonych oryginalnych bajtów HTML i ich rzeczywistych metadanych (SHA-256, długość, MIME, czas pobrania). Dla lat 2027–2032 nie dopowiadać nieopublikowanych wyjątków świątecznych.
 - Etap 19A pozostaje **otwarty**: brak oryginalnych bajtów PDF w archiwum projektu oraz ich zweryfikowanego SHA-256, długości, MIME i czasu pobrania. Tekst PDF i syntetyczny fixture nie zastępują importu oryginalnego pliku.
-- Następny bezpieczny zakres: w środowisku z bezpośrednim dostępem pobrać oryginalne HTML/PDF, obliczyć metadane z rzeczywistych bajtów, ocenić licencję, uruchomić importer na oryginalnym PDF i sprawdzić dziewięć faz oraz obie walidacje MIC XETR. Dopiero po tym i zielonym CI dla dokładnego SHA można zamykać odpowiednie podzakresy.
+- Historyczny zakres Xetra/PDF: opisane powyżej pobieranie oryginalnych HTML/PDF, walidacje MIC i dalsze prace nad kalendarzem giełdowym nie są już zadaniami bieżącego produktu. Zachowano je jako zapis poprzednich prac; nie kontynuować ich ani nie uzależniać od nich odbioru funkcji FX i złota.
 
 
 ## Decyzja zakresowa produktu — 2026-11-13
