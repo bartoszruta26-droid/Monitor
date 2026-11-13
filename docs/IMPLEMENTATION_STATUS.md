@@ -1,17 +1,17 @@
 # Rejestr etapów prac — Monitor
 
 **Repozytorium:** `bartoszruta26-droid/Monitor`  
-**Gałąź:** `main`  
-**Ostatnia weryfikacja:** 2026-11-13 15:15 Europe/Warsaw
+**Gałąź:** `feature/fx-xau-pricing-engine`  
+**Ostatnia weryfikacja:** 2026-11-13 22:34 Europe/Warsaw
 **Zasada prowadzenia:** status etapu zmienia się na „zakończony” dopiero po sprawdzeniu kodu, testów i CI dla konkretnego SHA. Ten plik jest bieżącym rejestrem wykonania; szczegóły techniczne pozostają w dokumentach etapów.
 
-## Bieżący stan repozytorium — 2026-11-13 13:27 Europe/Warsaw
+## Bieżący stan repozytorium — 2026-11-13 22:34 Europe/Warsaw
 
 - Główna gałąź: main, HEAD cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06.
 - Gałąź prac FX/XAU: feature/fx-xau-pricing-engine; aktualny SHA gałęzi jest widoczny w nagłówku PR #1.
 - PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) jest otwarty, mergeable=true, merged=false. Nie scalono zmian; main pozostaje bez zmian.
-- Ostatni zielony CI dla kodu FX/XAU: [#469](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43420958912), SHA 309b42b08a1400387a24024977d85fc9c7781389 — Configure/Build/Test success, CTest 13/13.
-- Dla bieżącego kodu ostatni zielony przebieg to #469; kolejne commity w tej gałęzi po #469 zmieniały wyłącznie dokumentację i rejestr etapów. Każdy taki commit nadal jest sprawdzany przez workflow CI.
+- Ostatni zielony CI dla kodu FX/XAU: [#489](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43444067165), SHA `f03603dcc24642485b3eade2e5eed4979ff040bd` — Configure/Build/Test success, CTest 13/13. Najnowszy CI gałęzi [#490](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43444240322), SHA `098c6692f28b6f877c7e78ac01674eed0276ada1` — success, CTest 13/13.
+- Etapy 24 i 25 są potwierdzone zielonym CI dla właściwych SHA. Najnowszy commit gałęzi został zbudowany i przetestowany w CI #490.
 - Ostatni zielony CI main: [#414](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43411904371), SHA cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06 — CTest 9/9.
 - Gałęzie: main oraz feature/fx-xau-pricing-engine. Otwarte Issues: 0.
 - Zakres wiążący: wymiana walut FX i zakup/sprzedaż/wycena złota XAU. Akcje, papiery wartościowe, brokerzy akcyjni, zlecenia giełdowe i kalendarze Xetra/Frankfurt są poza zakresem.
@@ -46,7 +46,7 @@
 | 22 | Dokładne provenance i preferowanie świeższych krawędzi FX | Zakończony | CI #467, CTest 13/13 |
 | 23 | Odporność repozytorium na błędy i konkurencyjne procesy | Zakończony | CI #469, CTest 13/13 |
 | 24 | Szczegóły audytowe wykonania wymiany FX | Zakończony — CI #479 i #480 success | Surowe bid/ask, mid, spread, kurs brutto i efektywny, opłaty oraz provenance; JSON opcjonalny i zgodny wstecz |
-| 25 | Historia i analiza transakcji FX/XAU | W toku — implementacja i testy dodane; CI #486 oczekuje na wynik | Filtry aktywa, pary, źródła, operacji i czasu; aktywność, opłaty i klasyfikacja audytu wykonania |
+| 25 | Historia i analiza transakcji FX/XAU | Zakończony | CI #489 dla kodu `f03603d…` oraz CI #490 dla aktualnego SHA gałęzi; oba CTest 13/13. Filtry aktywa, pary (obie orientacje), źródła, operacji i czasu; aktywność, opłaty i rozróżnienie audytu wykonania |
 
 ## Ostatnie potwierdzone commity
 
@@ -1238,10 +1238,25 @@ Przed każdym następnym etapem sprawdzić bieżący `main`, gałęzie, PR, Issu
 - #485, SHA `caf770c25b3dd5bf9f21ec0d1a96dd0c6fc1442f`: poprawiono deterministyczne sortowanie nóg, ale przebieg wymagał jeszcze korekty asercji testowej.
 - #486, SHA `6350293924f9ce4fe0837b83debe362148ef8f51`: Test failure — filtr pary nie dopasował orientacji BASE/QUOTE; log potwierdził błąd asercji filtra.
 - #487, SHA `e1d784de7de929c6644739003d4dbefedfde4078`: Test failure — commit dokumentacyjny uruchomił ponownie zestaw z tym samym błędem.
-- Poprawka w commicie `f03603dcc24642485b3eade2e5eed4979ff040bd`: para jest teraz budowana zgodnie z kolejnością nogi debetowej (waluta bazowa) i kredytowej (waluta kwotowana), niezależnie od sortowania identyfikatorów. CI #489 dla dokładnego SHA jest w toku.
-- CI #488 dla dokumentacyjnego SHA `fd53b29271fd5bc46a99fdabffe416673f69c10f` jest w toku.
-- Etap 25 pozostaje w toku do zielonego CI dla aktualnego SHA. Nie uznawać wcześniejszych #481/#482 za potwierdzenie końcowej wersji.
+- Poprawka w commicie `f03603dcc24642485b3eade2e5eed4979ff040bd`: para jest budowana zgodnie z kolejnością nogi debetowej (waluta bazowa) i kredytowej (waluta kwotowana), niezależnie od sortowania identyfikatorów.
+- CI [#489](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43444067165), dokładny SHA `f03603dcc24642485b3eade2e5eed4979ff040bd`: Configure/Build/Test success, CTest **13/13 (100%)**.
+- CI [#490](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43444240322), aktualny SHA `098c6692f28b6f877c7e78ac01674eed0276ada1`: Configure/Build/Test success, CTest **13/13 (100%)**.
+- Weryfikacja PR: #1 open, mergeable=true, merged=false. `main` bez zmian, SHA `cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06`.
+- Etap 25 jest zakończony. Przebiegi #483–#488 zakończyły się niepowodzeniem na wcześniejszych wersjach; ich przyczyny i poprawki zachowano powyżej dla pełnej historii audytowej.
 
 ### Następny etap
 - Etap 26: stabilne, wersjonowane API odczytu historii i portfela FX/XAU, z paginacją, walidacją filtrów i zachowaniem metadanych audytowych; dopiero potem klient GUI/Web/TUI/Android.
 - Poza zakresem pozostają akcje, papiery wartościowe, zlecenia giełdowe i kalendarze sesji.
+
+
+## 55. Etap 26 — wersjonowany kontrakt odczytu historii i portfela FX/XAU (rozpoczęcie 2026-11-13)
+
+### Zakres
+- Kontrakt odczytu historii w wersji API v1, niezależny od transportu HTTP i konkretnego klienta.
+- Paginacja stabilna względem rewizji migawki portfela, z kursorem opartym na znaczniku czasu i identyfikatorze transakcji.
+- Walidacja wersji API, limitu strony, kursora, rewizji i filtrów historii.
+- Zachowanie pełnych danych transakcji, w tym `FxExecutionAudit`; brak utożsamiania ceny referencyjnej/spot z ceną wykonanego zlecenia.
+- Zakres wyłącznie FX/XAU; bez akcji, zleceń giełdowych i kalendarzy sesji.
+
+### Status
+- Etap rozpoczęty. Implementacja i testy są w toku; nie oznaczać jako zakończonego przed CI dla dokładnego SHA.
