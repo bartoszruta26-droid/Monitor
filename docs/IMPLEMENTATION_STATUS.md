@@ -734,3 +734,12 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 1. Potwierdzić pełny CI aktualnego HEAD; rozdzielić błędy parsera PDF od testów raportu.
 2. Jeżeli parser nadal nie przejdzie, pobrać tekst z syntetycznego PDF w samym CI lub dodać test diagnostyczny ekstrakcji, a następnie naprawić fixture/parser na podstawie rzeczywistego tekstu.
 3. Po zielonym CI zamknąć 19B i 19A tylko w zakresie, który rzeczywiście przeszedł. Oryginalny PDF nadal nie jest zarchiwizowany binarnie.
+
+
+### Wyniki CI — korekty raportu i diagnostyka ekstrakcji PDF
+- CI [43385526577](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43385526577) dla SHA `a5cfcef` potwierdził kompilację, ale wykrył dwa błędy testowe:
+  1. raport JSON kończył się dosłownymi znakami `\\n`, przez co parser JSON zgłaszał dodatkowe dane po zamknięciu dokumentu;
+  2. syntetyczny PDF importowany przez `pdftotext` nie ujawnił oczekiwanej podsekcji Xetra w postaci zakładanej przez parser.
+- Commit `48fadaa15cf9ec555a84baf0bd85cf0b5fc6b2fc` poprawia zakończenie raportu rzeczywistym znakiem nowej linii.
+- Commit `3749922b6a99f5e031bfa108e93f32c8b5bc335d` dodaje ograniczony fragment tekstu ekstrakcji do błędu brakującej podsekcji. To diagnostyka, nie obejście kontroli rynku; jawny MIC XETR pozostaje wymagany.
+- Następny przebieg CI musi potwierdzić raport i dostarczyć dokładny fragment tekstu PDF. Etapy 19A i 19B pozostają otwarte.
