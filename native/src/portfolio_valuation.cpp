@@ -146,36 +146,36 @@ PortfolioPriceBook build_portfolio_price_book(const MarketDataSnapshot& snapshot
         book.provenance.push_back(std::move(provenance));
     }
 
-    const MarketObservation* selected_gold=nullptr;
-    const Instrument* selected_gold_instrument=nullptr;
+    std::vector<std::pair<const MarketObservation*,const Instrument*>> gold_candidates;
     for(const auto& [id,instrument_ptr]:instruments) {
         const auto& instrument=*instrument_ptr;
         if(instrument.asset_class!=AssetClass::PreciousMetal||instrument.symbol!="XAU") continue;
         for(const auto kind:{PriceKind::Spot,PriceKind::Reference,PriceKind::Average}) {
             const auto it=latest.find({id,kind});
-            if(it==latest.end()) continue;
-            if(!selected_gold||better(*it->second,*selected_gold)) {
-                selected_gold=it->second;
-                selected_gold_instrument=&instrument;
-            }
+            if(it!=latest.end()) gold_candidates.emplace_back(it->second,&instrument);
         }
     }
-    if(selected_gold&&selected_gold_instrument) {
-        const double grams_per_unit=convert_quantity(1.0,selected_gold_instrument->quantity_unit,Unit::Gram);
-        const double price_per_gram=selected_gold->value/grams_per_unit;
-        const auto fx=find_route(selected_gold_instrument->quote_currency,reporting_currency,graph);
-        if(fx) {
-            const double price=price_per_gram*fx->rate;
-            if(!std::isfinite(price)||price<=0.0)
-                throw std::overflow_error("Cena złota w walucie raportowania przekracza zakres.");
-            PortfolioPriceProvenance provenance;
-            provenance.asset_code="XAU";
-            provenance.price_per_unit_reporting=price;
-            add_provenance(provenance,*selected_gold,selected_gold_instrument->id);
-            for(const auto* edge:fx->edges) add_provenance(provenance,*edge->observation,edge->instrument_id);
-            book.prices.emplace_back("XAU",price);
-            book.provenance.push_back(std::move(provenance));
-        }
+    std::stable_sort(gold_candidates.begin(),gold_candidates.end(),[](const auto& a,const auto& b){
+        if(a.first->observed_at.unix_seconds!=b.first->observed_at.unix_seconds)
+            return a.first->observed_at.unix_seconds>b.first->observed_at.unix_seconds;
+        return a.first->received_at.unix_seconds>b.first->received_at.unix_seconds;
+    });
+    for(const auto& [gold_observation,gold_instrument]:gold_candidates) {
+        const double grams_per_unit=convert_quantity(1.0,gold_instrument->quantity_unit,Unit::Gram);
+        const double price_per_gram=gold_observation->value/grams_per_unit;
+        const auto fx=find_route(gold_instrument->quote_currency,reporting_currency,graph);
+        if(!fx) continue;
+        const double price=price_per_gram*fx->rate;
+        if(!std::isfinite(price)||price<=0.0)
+            throw std::overflow_error("Cena złota w walucie raportowania przekracza zakres.");
+        PortfolioPriceProvenance provenance;
+        provenance.asset_code="XAU";
+        provenance.price_per_unit_reporting=price;
+        add_provenance(provenance,*gold_observation,gold_instrument->id);
+        for(const auto* edge:fx->edges) add_provenance(provenance,*edge->observation,edge->instrument_id);
+        book.prices.emplace_back("XAU",price);
+        book.provenance.push_back(std::move(provenance));
+        break;
     }
     std::sort(book.prices.begin(),book.prices.end(),[](const auto& a,const auto& b){return a.first<b.first;});
     std::sort(book.provenance.begin(),book.provenance.end(),[](const auto& a,const auto& b){return a.asset_code<b.asset_code;});
