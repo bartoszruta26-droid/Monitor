@@ -5,20 +5,18 @@
 **Ostatnia weryfikacja:** 2026-11-13 12:22 Europe/Warsaw
 **Zasada prowadzenia:** status etapu zmienia się na „zakończony” dopiero po sprawdzeniu kodu, testów i CI dla konkretnego SHA. Ten plik jest bieżącym rejestrem wykonania; szczegóły techniczne pozostają w dokumentach etapów.
 
-## Stan repozytorium przy audycie
+## Bieżący stan repozytorium — 2026-11-13 13:27 Europe/Warsaw
 
-- Aktualny `main`: `cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06`.
-- Kontynuacja FX/XAU: gałąź `feature/fx-xau-pricing-engine`, PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1), HEAD `80bbb65879de8f501bff070a05e6d5f2be9b5fda` (silnik FX/XAU, testy i odpięcie modułu Xetra od aktywnego builda).
-- Ostatni zielony CI dla `main`: [CI #414 / 43411904371](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43411904371), SHA `cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06` — Configure/Build/Test success; CTest **9/9**.
-- CI PR #1: przebieg #415 dla `be0edbbe5e12be32f5eda8a9ff30d416fc43b060` — success; kolejne przebiegi #416/#417 wykryły pozostałe odwołania testu kalendarza do parsera Xetra. Usunięto wyłącznie Xetra-only blok testowy; przebiegi #418–#420 sprawdzają poprawkę i końcowy SHA. Nie oznaczać nowego etapu jako zakończonego.
-- Poprzedni przebieg dla zmiany kodu parsera Xetra 2025: [CI #382 / 43401645335](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43401645335), SHA `e055cfe5d5e61123b073c4fae4932216d0d6c249` — **success**, CTest **9/9**.
-- Gałęzie: wyłącznie `main`; otwarte pull requesty: 0; otwarte Issues: 0.
-- Poprzedni problem kompilacji testu kalendarza (brak `#include <algorithm>` w starszym SHA) został naprawiony; nie jest stanem bieżącym.
-- Poprzednie przebiegi obejmują jeden nieudany CI dla wcześniejszego SHA `aa3b7eb`, po którym późniejszy commit przeszedł poprawnie. Nie traktować błędu jako aktualnego, ale zachować go w historii.
-- Gałęzie: wyłącznie `main`.
-- Otwarte pull requesty: 0.
-- Otwarte Issues: 0.
-- Aktywny build: C++20, CMake, Bash i CTest. Python nie jest częścią aktywnego procesu budowania/testowania.
+- Główna gałąź: main, HEAD ce bdaba6194d3e8cb4ebe65f6251b5fc6126ae06.
+- Gałąź prac FX/XAU: feature/fx-xau-pricing-engine, HEAD f008559964a80f4b62f3c58e56b400479a8181fe.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) jest otwarty, mergeable=true, merged=false. Nie scalono zmian; main pozostaje bez zmian.
+- Ostatni zielony CI dla kodu FX/XAU: [#469](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43420958912), SHA 309b42b08a1400387a24024977d85fc9c7781389 — Configure/Build/Test success, CTest 13/13.
+- Dla bieżącego SHA gałęzi po aktualizacji dokumentacji działa [CI #471](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43421192960); w chwili zapisu Configure zakończony, Build w toku, Test oczekuje. Kod nie zmienił się po zielonym #469; jest to przebieg obejmujący najnowszą dokumentację.
+- Ostatni zielony CI main: [#414](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43411904371), SHA cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06 — CTest 9/9.
+- Gałęzie: main oraz feature/fx-xau-pricing-engine. Otwarte Issues: 0.
+- Zakres wiążący: wymiana walut FX i zakup/sprzedaż/wycena złota XAU. Akcje, papiery wartościowe, brokerzy akcyjni, zlecenia giełdowe i kalendarze Xetra/Frankfurt są poza zakresem.
+- Aktywny build: C++20, CMake, Bash i CTest. Testy adapterów są offline; nie potwierdzają dostępności usług zewnętrznych.
+- Etapy 16–23 opisane poniżej zostały zaimplementowane i przeszły CI na wskazanych SHA. Etapy API, klienci i MariaDB pozostają do wykonania.
 
 ## Rejestr etapów
 
@@ -38,7 +36,16 @@
 | 12 | Wspólne fixture i porównanie C++/Pine | Do wykonania | Pine Editor niezweryfikowany; brak potwierdzonej kompilacji TradingView |
 | 13 | Serwer API, autoryzacja, REST/JSON i WebSocket | Do wykonania | Brak aktywnego modułu serwera |
 | 14 | Klienci Linux GUI, WebUI, TUI i Android | Do wykonania | Brak aktywnych modułów klientów |
-| 15 | Opcjonalny adapter MariaDB | Do wykonania | Brak implementacji |
+| 15 | Opcjonalny adapter MariaDB | Do wykonania | Brak implementacji; niższy priorytet niż kompletna ścieżka FX/XAU |
+| 16 | Silnik kalkulacji wymiany FX i wyceny złota XAU | Zakończony | CI #421, CTest 9/9; bid/ask, spread, opłaty, masa i próba |
+| 17 | Portfel FIFO i wynik zrealizowany/niezrealizowany | Zakończony | CI #429, CTest 10/10 |
+| 18 | Trwałe repozytorium JSON transakcji portfela | Zakończony | CI #435, CTest 11/11; rewizje, atomowy zapis, kopia |
+| 19 | Price book z obserwacji FX/XAU | Zakończony | CI #443, CTest 12/12; kursy krzyżowe i świeżość |
+| 20 | Sparowane nogi wymiany FX i atomowy zapis | Zakończony | CI #454, CTest 12/12 |
+| 21 | Zintegrowana usługa wyceny i jawne odtwarzanie kopii | Zakończony | CI #462, CTest 13/13 |
+| 22 | Dokładne provenance i preferowanie świeższych krawędzi FX | Zakończony | CI #467, CTest 13/13 |
+| 23 | Odporność repozytorium na błędy i konkurencyjne procesy | Zakończony | CI #469, CTest 13/13 |
+| 24 | Szczegóły audytowe wykonania wymiany FX | Do wykonania | Zachować surowe bid/ask, kurs wykonania, spread, opłaty i źródło |
 
 ## Ostatnie potwierdzone commity
 
