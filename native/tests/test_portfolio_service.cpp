@@ -51,7 +51,7 @@ int main(){
             "history counts a quote-audited execution once per operation");
     require(all_history.entries[3].transaction.id=="fx-history-1:debit" &&
             all_history.entries[4].transaction.id=="fx-history-1:credit" &&
-            all_history.entries[3].price_evidence==PortfolioPriceEvidence::ExecutedWithQuoteAudit,
+            all_history.entries[4].price_evidence==PortfolioPriceEvidence::ExecutedWithQuoteAudit,
             "history is chronological and distinguishes executed quote evidence");
     PortfolioHistoryFilter pair_filter;pair_filter.fx_pair="USD/EUR";
     const auto pair_history=build_portfolio_history(history_snapshot,pair_filter);
