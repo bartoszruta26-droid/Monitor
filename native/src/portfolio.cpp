@@ -29,7 +29,7 @@ void validate_transaction(const PortfolioTransaction& tx) {
         throw std::invalid_argument("Nieprawidłowa transakcja portfela.");
     }
     if (tx.asset_kind == PortfolioAssetKind::Currency) {
-        if (!currency_code(tx.asset_code) || tx.purity != 1.0)
+        if (!currency_code(tx.asset_code) || tx.asset_code == "XAU" || tx.purity != 1.0)
             throw std::invalid_argument("Waluta wymaga kodu ISO 4217 i próby 1.");
     } else if (tx.asset_kind == PortfolioAssetKind::Gold) {
         if (tx.asset_code != "XAU")
@@ -46,7 +46,7 @@ PortfolioSummary calculate_portfolio(
     const std::string& reporting_currency,
     const std::vector<PortfolioTransaction>& transactions,
     const std::vector<std::pair<std::string, double>>& current_prices) {
-    if (!currency_code(reporting_currency))
+    if (!currency_code(reporting_currency) || reporting_currency == "XAU")
         throw std::invalid_argument("Nieprawidłowa waluta raportowania.");
 
     std::map<std::string, double> prices;
@@ -99,7 +99,7 @@ PortfolioSummary calculate_portfolio(
         double remaining_fine = fine_quantity;
         double allocated_cost{};
         for (auto& lot : asset_lots) {
-            if (remaining_fine <= 1e-12) break;
+            if (remaining_fine <= 0.0) break;
             if (lot.fine_remaining <= 0.0) continue;
             const double take = std::min(remaining_fine, lot.fine_remaining);
             const double fraction = take / lot.fine_remaining;
@@ -109,7 +109,7 @@ PortfolioSummary calculate_portfolio(
             lot.fine_remaining -= take;
             remaining_fine -= take;
         }
-        if (remaining_fine > 1e-9 * std::max(1.0, fine_quantity))
+        if (remaining_fine > 0.0)
             throw std::invalid_argument("Sprzedaż przekracza stan posiadania aktywa.");
         const double proceeds = gross_value - tx.fee_reporting;
         if (!std::isfinite(proceeds) || proceeds < 0.0)
@@ -131,12 +131,13 @@ PortfolioSummary calculate_portfolio(
             fine_quantity += lot.fine_remaining;
             cost_basis += lot.cost_remaining;
         }
-        if (fine_quantity <= 1e-12) continue;
+        if (fine_quantity <= 0.0) continue;
         const auto price = prices.find(asset);
         if (price == prices.end())
             throw std::invalid_argument("Brak bieżącej ceny dla aktywa " + asset + ".");
         const double market_value = fine_quantity * price->second;
-        if (!std::isfinite(market_value) || !std::isfinite(cost_basis))
+        if (!std::isfinite(gross_quantity) || !std::isfinite(fine_quantity) ||
+            !std::isfinite(market_value) || !std::isfinite(cost_basis))
             throw std::overflow_error("Wycena portfela przekracza zakres liczbowy.");
         const double unrealized = market_value - cost_basis;
         result.positions.push_back({asset, kinds.at(asset), gross_quantity,
