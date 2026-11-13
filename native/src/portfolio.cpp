@@ -135,7 +135,8 @@ PortfolioSummary calculate_portfolio(
         }
         if(!debit||!credit||debit->asset_code==credit->asset_code||
            debit->executed_at_unix!=credit->executed_at_unix||
-           debit->source_id!=credit->source_id||debit->fee_reporting!=0.0)
+           debit->source_id!=credit->source_id||debit->fee_reporting!=0.0||
+           debit->fx_audit.has_value())
             throw std::invalid_argument("Niespójne nogi operacji wymiany FX.");
         const double debit_value=debit->quantity*debit->unit_price_reporting;
         const double credit_value=credit->quantity*credit->unit_price_reporting+credit->fee_reporting;
@@ -143,6 +144,35 @@ PortfolioSummary calculate_portfolio(
         if(!std::isfinite(debit_value)||!std::isfinite(credit_value)||
            std::abs(debit_value-credit_value)>tolerance)
             throw std::invalid_argument("Nogi wymiany FX nie bilansują się w walucie raportowania.");
+        if (credit->fx_audit) {
+            const auto& audit=*credit->fx_audit;
+            const bool direct=audit.base_currency==debit->asset_code &&
+                              audit.quote_currency==credit->asset_code;
+            const bool inverse=audit.base_currency==credit->asset_code &&
+                               audit.quote_currency==debit->asset_code;
+            const double expected_mid=audit.bid+(audit.ask-audit.bid)/2.0;
+            const double expected_spread=(audit.ask-audit.bid)/expected_mid*10000.0;
+            const double expected_gross=direct?audit.bid:(inverse?1.0/audit.ask:0.0);
+            const double expected_effective=credit->quantity/debit->quantity;
+            const auto close=[](double a,double b) {
+                return std::isfinite(a)&&std::isfinite(b)&&
+                    std::abs(a-b)<=1e-8*std::max({1.0,std::abs(a),std::abs(b)});
+            };
+            if ((!direct&&!inverse) || !std::isfinite(audit.bid) ||
+                !std::isfinite(audit.ask) || audit.bid<=0.0 || audit.ask<audit.bid ||
+                !std::isfinite(audit.mid) || audit.mid<=0.0 ||
+                !close(audit.mid,expected_mid) ||
+                !close(audit.spread_basis_points,expected_spread) ||
+                !close(audit.gross_execution_rate,expected_gross) ||
+                !close(audit.effective_execution_rate,expected_effective) ||
+                !std::isfinite(audit.fee_percent) || audit.fee_percent<0.0 ||
+                audit.fee_percent>100.0 || !std::isfinite(audit.fixed_fee_output) ||
+                audit.fixed_fee_output<0.0 || audit.fee_currency!=credit->asset_code ||
+                audit.provider_id.empty() || audit.observation_id.empty() ||
+                audit.source_uri.empty() || audit.observed_at_unix<0 ||
+                audit.observed_at_unix>credit->executed_at_unix)
+                throw std::invalid_argument("Nieprawidłowe dane audytowe wykonania FX.");
+        }
     }
 
     PortfolioSummary result;
@@ -208,7 +238,7 @@ std::vector<PortfolioTransaction> make_fx_exchange_transactions(
     PortfolioTransaction credit{execution.operation_id+":credit",execution.to_currency,
         PortfolioAssetKind::Currency,TradeSide::Buy,execution.to_amount,1.0,
         execution.to_unit_price_reporting,execution.fee_reporting,execution.executed_at_unix,
-        execution.source_id,execution.operation_id};
+        execution.source_id,execution.operation_id,execution.audit};
     return {std::move(debit),std::move(credit)};
 }
 
