@@ -701,9 +701,9 @@ int main() {
                 phase_matches(4U,VenueSessionPhaseEventKind::ClosingAuctionCall,14U,0U,"") &&
                 phase_matches(5U,VenueSessionPhaseEventKind::ClosingAuctionPriceDeterminationNotBefore,14U,5U,"") &&
                 phase_matches(6U,VenueSessionPhaseEventKind::TradeAtCloseEnd,14U,10U,"DAX, MDAX, SDAX") &&
-                phase_matches(7U,VenueSessionPhaseEventKind::OffBookServicesEnd,14U,59U,
-                              "TES OTC, TES LIS, Xetra EnLight") &&
-                phase_matches(8U,VenueSessionPhaseEventKind::PostTradingEnd,15U,0U,""),
+                phase_matches(7U,VenueSessionPhaseEventKind::PostTradingEnd,15U,0U,"") &&
+                phase_matches(8U,VenueSessionPhaseEventKind::OffBookServicesEnd,14U,59U,
+                              "TES OTC, TES LIS, Xetra EnLight"),
                 "PDF parser preserves all nine official Xetra phase times and their service scopes");
         const auto pdf_hash=sha256_hex(pdf_bytes);
         const auto pdf_object=std::find_if(pdf_snapshot.source_objects.begin(),pdf_snapshot.source_objects.end(),
