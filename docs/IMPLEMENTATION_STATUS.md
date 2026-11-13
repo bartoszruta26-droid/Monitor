@@ -944,8 +944,8 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 - `value_gold()`: przelicza gram/kg/uncję na gramy, stosuje próbę jako ułamek 0..1, przyjmuje cenę jednego grama czystego złota, pokazuje wartość brutto, opłatę i wartość netto.
 - Dodano `native/tests/test_market_pricing.cpp` i test CTest `monitor-market-pricing-tests`. Przypadki obejmują kierunek pary, bid/ask, opłaty, spread, błędne kwotowanie, przekroczenie opłat, próbę i jednostki masy.
 - CMake wyłącza historyczne `xetra_calendar_importer.cpp`, `xetra_calendar_source.cpp` i `test_xetra_calendar_source.cpp` z aktywnego builda/testów. Pliki źródłowe i ich historia pozostają w repozytorium, lecz nie są już aktywną zależnością ani kryterium CI.
-- Commit/HEAD gałęzi po ostatniej zmianie: `80bbb65879de8f501bff070a05e6d5f2be9b5fda`.
-- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) oczekuje na pełny CI dla końcowego SHA. Pierwsze próby #416/#417 ujawniły, że test kalendarza nadal linkował funkcje Xetra; usunięto ten blok testowy w commicie `181136d5abb2f045f16795efb206597bc5ace003`. Dodano też ochronę przed przepełnieniem kursu środkowego i odwrotności ask w commicie `6a9e310bb553b7bd672aa9160cb2a22e258e9b62`, z testami granicznymi w `80bbb65879de8f501bff070a05e6d5f2be9b5fda`. CI #418–#420 weryfikują kolejne SHA; etap pozostaje w toku do zielonego CI dla dokładnego HEAD.
+- Commit/HEAD gałęzi po ostatniej zmianie: `ca033af001649a6fc95bf700b86cf491222cd7d2`.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) oczekuje na pełny CI dla końcowego SHA. Pierwsze próby #416/#417 ujawniły, że test kalendarza nadal linkował funkcje Xetra; usunięto ten blok testowy w commicie `181136d5abb2f045f16795efb206597bc5ace003`. Dodano też ochronę przed przepełnieniem kursu środkowego i odwrotności ask w commicie `6a9e310bb553b7bd672aa9160cb2a22e258e9b62`, z testami granicznymi w `80bbb65879de8f501bff070a05e6d5f2be9b5fda`. CI #418, #419, #420 oraz #421 zakończyły się sukcesem. Dla końcowego SHA PR `ca033af001649a6fc95bf700b86cf491222cd7d2` przebieg [#421](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43416755404) potwierdził Configure/Build/Test success i CTest 9/9. PR pozostaje otwarty i nie został scalony; etap oczekuje na decyzję o scaleniu.
 - Nie scalać PR przed zielonym CI i przeglądem diffu.
 
 ### Następne etapy po Etapie 16
@@ -965,3 +965,13 @@ Przed każdym następnym etapem sprawdzić bieżący `main`, gałęzie, PR, Issu
 - Poprawka: commit `181136d5abb2f045f16795efb206597bc5ace003` usunął z `test_market_data_calendar.cpp` 97-wierszowy blok testów wyłącznie Xetra. Testy okien publikacji NBP, świąt RP i IANA TZ/DST pozostają aktywne.
 - Dodatkowa kontrola numeryczna: commit `6a9e310bb553b7bd672aa9160cb2a22e258e9b62` stabilizuje wyliczanie mid przy dużych wartościach i odrzuca nieskończoną odwrotność ask; commit `80bbb65879de8f501bff070a05e6d5f2be9b5fda` dodaje testy tych granic.
 - Przebiegi #418 (SHA `181136d5...`), #419 (SHA `6a9e310...`) i #420 (SHA `80bbb658...`) były w toku przy zapisie. Nie deklarować ich jako sukcesu bez ponownego odczytu GitHub Actions.
+
+
+### Końcowa weryfikacja etapu 16 — 2026-11-13
+- Końcowy SHA PR: `ca033af001649a6fc95bf700b86cf491222cd7d2`.
+- [Native C++ checks #421](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43416755404): Configure — success; Build — success; Test — success; CTest **9/9 (100%)**, 1,55 s.
+- Test `monitor-market-pricing-tests` jest włączony i przeszedł. Aktywny zestaw nie kompiluje ani nie uruchamia historycznego modułu/testów Xetra.
+- Poprawki po nieudanych #416/#417 potwierdzone: odłączenie implementacji Xetra wymagało usunięcia jej historycznych przypadków z ogólnego testu kalendarza. Testy NBP i IANA pozostały zielone.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) ma status open, mergeable=true, merged=false. Nie scalono go bez polecenia; `main` pozostaje na SHA `cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06`.
+- Codex Review nie dostarczył recenzji merytorycznej z powodu limitu użycia usługi; przegląd zmian wykonano ręcznie, ale nie należy przedstawiać go jako niezależnej recenzji.
+- Następny etap po scaleniu: model transakcji FX/XAU i portfel z kosztem nabycia oraz wynikiem zrealizowanym/niezrealizowanym. Nie rozwijać funkcji akcyjnych ani kalendarzy giełdowych.
