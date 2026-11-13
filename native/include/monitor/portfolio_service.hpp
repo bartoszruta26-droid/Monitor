@@ -56,6 +56,29 @@ struct PortfolioHistoryReport {
     const PortfolioSnapshot& portfolio,
     const PortfolioHistoryFilter& filter = {});
 
+inline constexpr std::uint32_t portfolio_history_api_version = 1;
+
+struct PortfolioHistoryPageRequest {
+    std::uint32_t api_version{portfolio_history_api_version};
+    PortfolioHistoryFilter filter;
+    std::size_t page_size{100};
+    std::optional<std::string> cursor;
+};
+
+struct PortfolioHistoryPage {
+    std::uint32_t api_version{portfolio_history_api_version};
+    std::uint64_t snapshot_revision{};
+    std::size_t total_matching{};
+    std::vector<PortfolioHistoryEntry> entries;
+    std::optional<std::string> next_cursor;
+};
+
+// Versioned, transport-neutral read contract. Cursors are bound to the
+// snapshot revision and remain stable across pages of the same snapshot.
+[[nodiscard]] PortfolioHistoryPage get_portfolio_history_page(
+    const PortfolioSnapshot& portfolio,
+    const PortfolioHistoryPageRequest& request = {});
+
 // Loads the persisted ledger, constructs a provenance-preserving price book,
 // and calculates the portfolio as one deterministic domain operation.
 [[nodiscard]] PortfolioValuationReport value_saved_portfolio(
