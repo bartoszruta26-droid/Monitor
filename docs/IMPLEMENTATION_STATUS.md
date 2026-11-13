@@ -2,15 +2,15 @@
 
 **Repozytorium:** `bartoszruta26-droid/Monitor`  
 **Gałąź:** `main`  
-**Ostatnia weryfikacja:** 2026-11-13 10:12 Europe/Warsaw
+**Ostatnia weryfikacja:** 2026-11-13 10:32 Europe/Warsaw
 **Zasada prowadzenia:** status etapu zmienia się na „zakończony” dopiero po sprawdzeniu kodu, testów i CI dla konkretnego SHA. Ten plik jest bieżącym rejestrem wykonania; szczegóły techniczne pozostają w dokumentach etapów.
 
 ## Stan repozytorium przy audycie
 
-- HEAD `main` przed zapisem tego wpisu: `f24805a0669ffd5ac2a756f03e18dbaf53edd08b`.
-- Najnowszy potwierdzony zielony CI obejmujący kod i testy importera NBP: [CI 43311044110](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43311044110), commit `ae9ccf2`; Configure, Build i Test przeszły.
-- CI dla zmiany czasu odbioru per odpowiedź: [43310994641](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43310994641) — sukces.
-- CI dla dokumentacji Xetra i rejestru: [43311190718](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43311190718) było w toku w chwili zapisu; nie zmienia ono kodu produkcyjnego.
+- HEAD `main` przed zapisem tego wpisu: `9a947e5a483683e14fce232991af6fa4478a81d4`.
+- Najnowszy przebieg `Native C++ checks` dla dokładnego SHA: [CI #383 / 43401833422](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43401833422) — **success**; Configure, Build i Test zakończone powodzeniem; CTest **9/9**.
+- Poprzedni przebieg dla zmiany kodu parsera Xetra 2025: [CI #382 / 43401645335](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43401645335), SHA `e055cfe5d5e61123b073c4fae4932216d0d6c249` — **success**, CTest **9/9**.
+- Gałęzie: wyłącznie `main`; otwarte pull requesty: 0; otwarte Issues: 0.
 - Poprzedni problem kompilacji testu kalendarza (brak `#include <algorithm>` w starszym SHA) został naprawiony; nie jest stanem bieżącym.
 - Poprzednie przebiegi obejmują jeden nieudany CI dla wcześniejszego SHA `aa3b7eb`, po którym późniejszy commit przeszedł poprawnie. Nie traktować błędu jako aktualnego, ale zachować go w historii.
 - Gałęzie: wyłącznie `main`.
@@ -860,3 +860,16 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 - Weryfikacja obejmuje obecnie parser 2025 oraz istniejące przypadki 2026, 2027 i 2028 (w tym rok przestępny 2028). Dane 2025–2028 w testach pochodzą z jawnie syntetycznego fixture; nie stanowią archiwizacji oryginalnego HTML ani potwierdzenia sumy SHA-256 oficjalnej strony.
 - Aktualny HEAD po tych zmianach: `e055cfe5d5e61123b073c4fae4932216d0d6c249`; CI dla dokładnego SHA [#382](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43401645335) zakończył się sukcesem, CTest **9/9**.
 - Etap 11 pozostaje **w toku**: potrzebne jest archiwizowanie dokładnych bajtów kolejnych wersji oficjalnego źródła, kontrola zmian semantycznych i potwierdzenie warunków ponownego wykorzystania. Nie należy utożsamiać syntetycznego fixture z oryginalnym dokumentem.
+
+
+### Kontrola ciągłości i CI #383 — 2026-11-13 10:32 Europe/Warsaw
+
+- Odczytany HEAD `main`: `9a947e5a483683e14fce232991af6fa4478a81d4`. Jedyna gałąź to `main`; otwarte PR: 0; otwarte Issues: 0.
+- Commit `9a947e5a483683e14fce232991af6fa4478a81d4` (`docs: record Xetra 2025 calendar parser coverage`) przeszedł [Native C++ checks #383](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43401833422): **Configure — success; Build — success; Test — success; CTest 9/9 (100%)**. Wszystkie kroki joba `native-linux` zakończyły się powodzeniem. Logi nie zawierają błędów kompilacji ani testów; jedyne ostrzeżenie dotyczy przyszłego wycofania Node.js 20 w `actions/checkout@v4`.
+- Testy #383 obejmują m.in. `monitor-xetra-calendar-source-tests`; wynik 9/9 potwierdza aktualny kod na dokładnym SHA. Commit #383 zmienia wyłącznie dokumentację.
+- Ostatnia zmiana kodu parsera Xetra, commit `e055cfe5d5e61123b073c4fae4932216d0d6c249`, przeszła [CI #382](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43401645335), CTest 9/9. Test 2025 potwierdza zamknięcie w Wielki Piątek, handel 3 października z osobnymi godzinami dla akcji/ETP i produktów strukturyzowanych oraz odrzucenie kalendarza bez jednego z trzech wymaganych świąt z handlem.
+- Ponowny przegląd `native/src/xetra_calendar_importer.cpp` i `native/tests/test_xetra_calendar_source.cpp` potwierdził, że kontrola MIC pozostaje jawna: główna sekcja i podsekcja off-book wymagają MIC XETR; testy negatywne odrzucają zamianę MIC głównego rynku na XEUR oraz MIC podsekcji off-book na XFRA. Nie zmieniano parsera PDF, walidacji MIC ani tych testów.
+- Dodatkowa kontrola oficjalnej strony Deutsche Börse: tabela dni bez handlu obejmuje obecnie lata 2026–2032, w tym 2029, lecz blok jawnych świąt z handlem na tej samej stronie dotyczy wyłącznie 2026. Operator zastrzega też, że przyszły przegląd ma charakter informacyjny i może ulec zmianie. Źródło: https://www.cashmarket.deutsche-boerse.com/cash-en/trading/trading-calendar-and-trading-hours. Nie wolno przenosić wyjątków z 2026 na 2029–2032 ani publikować pełnego kalendarza tych lat bez jawnych danych o sesjach świątecznych. Parser zachowuje zachowanie fail-closed.
+- Etap 11 pozostaje **w toku**. Dane 2025–2028 w fixture są syntetycznym odwzorowaniem; nadal brakuje archiwizacji dozwolonych do przechowywania oryginalnych bajtów źródła, ich rzeczywistego SHA-256, długości, MIME i czasu pobrania oraz potwierdzenia warunków ponownego wykorzystania.
+- Etap 19A pozostaje **otwarty**: zielony test syntetycznego PDF nie zastępuje importu i archiwizacji oryginalnego PDF komunikatu końcoworocznego. Nie wpisano fikcyjnych metadanych źródła.
+- CI nie wykrył konkretnej usterki, więc nie tworzono poprawki kodu ani nie scalano zmian. Żaden etap nie został zamknięty na podstawie samego commita.
