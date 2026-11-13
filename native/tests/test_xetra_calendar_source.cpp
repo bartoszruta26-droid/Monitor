@@ -603,7 +603,7 @@ int main() {
     std::filesystem::create_directories(notice_import_folder);
     JsonMarketDataRepository notice_repository(notice_import_folder/"calendar.json");
     transport.response.status_code=200;
-    transport.response.headers={{"content-type","text/html"}};
+    transport.response.headers={{"cOnTeNt-TyPe","text/html"}};
     transport.response.body=html;
     require(adapter.import(notice_repository,source(),"XETRA-2026",1U)==1U,
             "notice import test starts from a persisted base calendar");
@@ -656,7 +656,7 @@ int main() {
         std::filesystem::create_directories(pdf_import_folder);
         JsonMarketDataRepository pdf_repository(pdf_import_folder/"calendar.json");
         transport.response.status_code=200;
-        transport.response.headers={{"content-type","text/html"}};
+        transport.response.headers={{"cOnTeNt-TyPe","text/html"}};
         transport.response.body=html;
         require(adapter.import(pdf_repository,source(),"XETRA-2026",1U)==1U,
                 "PDF import test starts from a persisted base calendar");
