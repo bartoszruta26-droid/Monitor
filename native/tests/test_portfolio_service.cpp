@@ -28,6 +28,42 @@ int main(){
         TradeSide::Buy,100,1,4.2,0,10,"bank"},0)==1,"persist EUR acquisition");
     require(repo.append(PortfolioTransaction{"gold-buy","XAU",PortfolioAssetKind::Gold,
         TradeSide::Buy,2,0.585,300,0,20,"dealer"},1)==2,"persist gold acquisition");
+    const FxExecutionAudit execution_audit{
+        "USD","EUR",0.92,0.94,0.93,(0.94-0.92)/0.93*10000.0,
+        0.92,0.92,0.0,0.0,"EUR","bank-provider",
+        "usd-eur-quote-1","https://bank.example/quotes/1",29};
+    const auto fx_legs=make_fx_exchange_transactions(
+        {"fx-history-1","USD","EUR",100,92,4.0,0.0,30,"bank-provider",execution_audit});
+    require(repo.append_batch(fx_legs,2)==3,"persist audited FX exchange atomically");
+
+    const auto history_snapshot=repo.load();
+    const auto all_history=build_portfolio_history(history_snapshot);
+    require(all_history.transaction_count==4&&all_history.entries.size()==4,
+            "history returns all persisted FX and XAU ledger entries");
+    require(all_history.audited_fx_execution_count==1,
+            "history counts a quote-audited execution once per operation");
+    require(all_history.entries[2].transaction.id=="fx-history-1:debit" &&
+            all_history.entries[3].transaction.id=="fx-history-1:credit" &&
+            all_history.entries[3].price_evidence==PortfolioPriceEvidence::ExecutedWithQuoteAudit,
+            "history is chronological and distinguishes executed quote evidence");
+    PortfolioHistoryFilter pair_filter;pair_filter.fx_pair="USD/EUR";
+    const auto pair_history=build_portfolio_history(history_snapshot,pair_filter);
+    require(pair_history.transaction_count==2&&pair_history.entries[0].fx_pair=="USD/EUR",
+            "FX pair filter returns both linked exchange legs");
+    pair_filter.fx_pair="EUR/USD";
+    require(build_portfolio_history(history_snapshot,pair_filter).transaction_count==2,
+            "FX pair filter accepts inverse pair orientation");
+    PortfolioHistoryFilter source_filter;source_filter.source_id="bank-provider";
+    source_filter.executed_from_unix=30;source_filter.executed_to_unix=30;
+    const auto source_history=build_portfolio_history(history_snapshot,source_filter);
+    require(source_history.transaction_count==2&&source_history.total_fees_reporting==0.0,
+            "source and inclusive execution-time filters compose");
+    PortfolioHistoryFilter asset_filter;asset_filter.asset_code="EUR";
+    require(build_portfolio_history(history_snapshot,asset_filter).transaction_count==2,
+            "asset filter returns EUR acquisitions and exchange credits");
+    PortfolioHistoryFilter invalid_time;invalid_time.executed_from_unix=31;invalid_time.executed_to_unix=30;
+    throws([&]{(void)build_portfolio_history(history_snapshot,invalid_time);},
+           "reversed history time range rejected");
 
     MarketDataSnapshot market;
     market.instruments={
