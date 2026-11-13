@@ -841,3 +841,12 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 - Poprawka `2af1e4c73b81dbd4a12253b3a4b2c4e8e7fa1844` wykonuje jawne sumowanie w pętli, odejmując od każdej próbki `src[i]` tę samą bieżącą kotwicę `src[length - 1]`. Dzięki temu wszystkie obserwacje w oknie są w tym samym układzie odniesienia. Zachowano wzór SSE i dotychczasowe mianowniki.
 - CI dla poprzedniego commitu Pine [#373](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43400349801) oraz dokumentacji [#374](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43400431316) zakończył się success, CTest 9/9. Te przebiegi nie kompilują Pine Script i nie potwierdzają semantycznej poprawności wskaźnika.
 - Nowy commit Pine wymaga osobnego CI C++ oraz ręcznej kompilacji i porównania w Pine Editor. Nie oznaczać walidacji C++/Pine jako ukończonej przed tymi czynnościami.
+
+### Weryfikacja korekty centrowania Pine — CI #376/#377 — 2026-11-13
+
+- Commit Pine `2af1e4c73b81dbd4a12253b3a4b2c4e8e7fa1844`: [CI #376](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43400653858) — Configure, Build i Test zakończone sukcesem; CTest **9/9**.
+- Bieżący HEAD `0c8c021457ef012c12c3508647017104cab8642a`: [CI #377](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43400672756) — Configure, Build i Test zakończone sukcesem; CTest **9/9**. Log potwierdza wszystkie dziewięć zestawów testowych, w tym testy regresji, kalendarzy i źródła Xetra. Brak błędów kompilacji i testów.
+- Zmiana Pine używa jednej kotwicy `src[length - 1]` dla wszystkich próbek bieżącego okna i jawnej pętli; usuwa błąd mieszania historycznych układów odniesienia. Nie jest to jednak kompilacja Pine Script: workflow #376/#377 buduje wyłącznie C++.
+- Status walidacji: stabilność numeryczna C++ — potwierdzona testami; poprawka Pine — zapisana i objęta CI repozytorium; kompilacja w TradingView Pine Editor oraz porównanie wyników C++/Pine na identycznym fixture — nadal **oczekują na niezależną weryfikację**.
+- Nie zamykam walidacji C++/Pine na podstawie zielonego CI C++. Nie zmieniono sygnałów, mianowników DGT/LonesomeTheBlue, walidacji MIC XETR ani testu negatywnego XFRA.
+- Następny zakres Etapu 11: rozszerzyć pokrycie wersji rocznych oficjalnego kalendarza Xetra i testy parsera na niezależne lata/zmiany układu; zachować osobne kalendarze źródeł i instrumentów. Etap 11 pozostaje w toku. Etap 19A pozostaje otwarty do potwierdzenia oryginalnych bajtów PDF i ich rzeczywistych metadanych.
