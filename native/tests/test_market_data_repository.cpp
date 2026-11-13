@@ -486,7 +486,9 @@ int main(){
         [](const auto& day){return day.at("date")=="2026-12-30";});
     require(audit_phase_day!=audit_json.at("calendars").front().at("effective_days").end() &&
             audit_phase_day->at("phase_events").size()==9U &&
-            audit_phase_day->at("applied_notice_ids").size()==1U,
+            std::find(audit_phase_day->at("applied_notice_ids").begin(),
+                audit_phase_day->at("applied_notice_ids").end(),phase_notice.notice_id)!=
+                audit_phase_day->at("applied_notice_ids").end(),
             "audit export includes the effective official phase schedule and applied notice reference");
     require(build_venue_audit_report_json(phase_snapshot)==audit_report,
             "audit export is deterministic for an unchanged repository snapshot");
