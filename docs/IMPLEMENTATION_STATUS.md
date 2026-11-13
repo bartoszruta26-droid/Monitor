@@ -46,6 +46,7 @@
 | 22 | Dokładne provenance i preferowanie świeższych krawędzi FX | Zakończony | CI #467, CTest 13/13 |
 | 23 | Odporność repozytorium na błędy i konkurencyjne procesy | Zakończony | CI #469, CTest 13/13 |
 | 24 | Szczegóły audytowe wykonania wymiany FX | Zakończony — CI #479 i #480 success | Surowe bid/ask, mid, spread, kurs brutto i efektywny, opłaty oraz provenance; JSON opcjonalny i zgodny wstecz |
+| 25 | Historia i analiza transakcji FX/XAU | W toku — implementacja i testy dodane; CI #486 oczekuje na wynik | Filtry aktywa, pary, źródła, operacji i czasu; aktywność, opłaty i klasyfikacja audytu wykonania |
 
 ## Ostatnie potwierdzone commity
 
