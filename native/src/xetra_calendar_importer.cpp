@@ -444,7 +444,7 @@ VenueSessionNotice parse_xetra_session_notice_text(
     events.push_back({VenueSessionPhaseEventKind::OffBookServicesEnd,
         extract_time(offbook_section,R"(tes otc[\s\S]{0,240}?(?:until|up to)[^0-9]{0,40}([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.))","TES OTC/LIS and Xetra EnLight"),"TES OTC, TES LIS, Xetra EnLight"});
     events.push_back({VenueSessionPhaseEventKind::PostTradingEnd,
-        extract_time(market_section,R"(from\s+([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.).{0,100}end of post-trading)","post-trading"),{}});
+        extract_time(market_section,R"(from\s+([0-9]{1,2})\.([0-9]{2})\s*(a\.m\.|p\.m\.)\s*end of post-trading)","post-trading"),{}});
     std::sort(events.begin(),events.end(),[](const auto& a,const auto& b) {
         return std::tie(a.at.hour,a.at.minute,a.at.second)<std::tie(b.at.hour,b.at.minute,b.at.second);
     });
