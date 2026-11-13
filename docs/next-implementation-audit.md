@@ -1,5 +1,8 @@
 # Audyt kolejnych etapów prac — Monitor Rynków
 
+**Zakres produktu:** [docs/PRODUCT_SCOPE.md](PRODUCT_SCOPE.md) — FX i złoto; akcje i funkcje giełdowe są wyłączone.
+
+
 **Data audytu:** 2026-11-12  
 **Repozytorium:** `bartoszruta26-droid/Monitor`  
 **Gałąź docelowa:** `main`  
