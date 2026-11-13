@@ -58,20 +58,48 @@ PortfolioAssetKind parse_kind(const std::string& value) {
     if (value == "gold") return PortfolioAssetKind::Gold;
     throw std::invalid_argument("Nieznany rodzaj aktywa w JSON.");
 }
+json encode_audit(const FxExecutionAudit& a) {
+    return {{"base_currency",a.base_currency},{"quote_currency",a.quote_currency},
+        {"bid",a.bid},{"ask",a.ask},{"mid",a.mid},
+        {"spread_basis_points",a.spread_basis_points},
+        {"gross_execution_rate",a.gross_execution_rate},
+        {"effective_execution_rate",a.effective_execution_rate},
+        {"fee_percent",a.fee_percent},{"fixed_fee_output",a.fixed_fee_output},
+        {"fee_currency",a.fee_currency},{"provider_id",a.provider_id},
+        {"observation_id",a.observation_id},{"source_uri",a.source_uri},
+        {"observed_at_unix",a.observed_at_unix}};
+}
+FxExecutionAudit decode_audit(const json& j) {
+    return {j.at("base_currency").get<std::string>(),
+        j.at("quote_currency").get<std::string>(),j.at("bid").get<double>(),
+        j.at("ask").get<double>(),j.at("mid").get<double>(),
+        j.at("spread_basis_points").get<double>(),
+        j.at("gross_execution_rate").get<double>(),
+        j.at("effective_execution_rate").get<double>(),
+        j.at("fee_percent").get<double>(),j.at("fixed_fee_output").get<double>(),
+        j.at("fee_currency").get<std::string>(),j.at("provider_id").get<std::string>(),
+        j.at("observation_id").get<std::string>(),j.at("source_uri").get<std::string>(),
+        j.at("observed_at_unix").get<std::int64_t>()};
+}
 json encode(const PortfolioTransaction& tx) {
-    return {{"id",tx.id},{"asset_code",tx.asset_code},{"asset_kind",kind_name(tx.asset_kind)},
+    json result={{"id",tx.id},{"asset_code",tx.asset_code},{"asset_kind",kind_name(tx.asset_kind)},
         {"side",side_name(tx.side)},{"quantity",tx.quantity},{"purity",tx.purity},
         {"unit_price_reporting",tx.unit_price_reporting},{"fee_reporting",tx.fee_reporting},
         {"executed_at_unix",tx.executed_at_unix},{"source_id",tx.source_id},
         {"operation_id",tx.operation_id}};
+    if(tx.fx_audit) result["fx_audit"]=encode_audit(*tx.fx_audit);
+    return result;
 }
 PortfolioTransaction decode(const json& j) {
-    return {j.at("id").get<std::string>(),j.at("asset_code").get<std::string>(),
+    PortfolioTransaction tx{j.at("id").get<std::string>(),j.at("asset_code").get<std::string>(),
         parse_kind(j.at("asset_kind").get<std::string>()),parse_side(j.at("side").get<std::string>()),
         j.at("quantity").get<double>(),j.at("purity").get<double>(),
         j.at("unit_price_reporting").get<double>(),j.at("fee_reporting").get<double>(),
         j.at("executed_at_unix").get<std::int64_t>(),j.at("source_id").get<std::string>(),
         j.value("operation_id",std::string{})};
+    if(j.contains("fx_audit")&&!j.at("fx_audit").is_null())
+        tx.fx_audit=decode_audit(j.at("fx_audit"));
+    return tx;
 }
 bool valid_currency(const std::string& code) {
     if (code.size()!=3U || code=="XAU") return false;
