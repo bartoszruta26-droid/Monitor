@@ -42,6 +42,20 @@ struct PortfolioTransaction {
     std::string source_id;
     std::string operation_id; // shared id for paired FX debit/credit legs
     std::optional<FxExecutionAudit> fx_audit; // present on acquired leg only
+
+    PortfolioTransaction() = default;
+    PortfolioTransaction(std::string transaction_id, std::string code,
+        PortfolioAssetKind kind, TradeSide transaction_side, double amount,
+        double asset_purity, double price_reporting, double fee,
+        std::int64_t execution_time, std::string source,
+        std::string operation = {},
+        std::optional<FxExecutionAudit> audit = {})
+        : id(std::move(transaction_id)), asset_code(std::move(code)),
+          asset_kind(kind), side(transaction_side), quantity(amount),
+          purity(asset_purity), unit_price_reporting(price_reporting),
+          fee_reporting(fee), executed_at_unix(execution_time),
+          source_id(std::move(source)), operation_id(std::move(operation)),
+          fx_audit(std::move(audit)) {}
 };
 
 struct FxExchangeExecution {
