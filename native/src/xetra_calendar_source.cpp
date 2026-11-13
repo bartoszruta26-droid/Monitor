@@ -445,7 +445,7 @@ std::uint64_t XetraCalendarSourceAdapter::import_notice(
             });
         if(existing_object==existing_snapshot.source_objects.end() ||
            existing_object->content_length_bytes!=static_cast<std::uint64_t>(response.body.size()) ||
-           existing_object->content_type!=type_it->second)
+           existing_object->content_type!=raw_content_type)
             throw std::invalid_argument("Metadane obiektu źródłowego komunikatu nie zgadzają się z ponownym pobraniem.");
         return existing_snapshot.revision;
     }
@@ -462,7 +462,7 @@ std::uint64_t XetraCalendarSourceAdapter::import_notice(
     source_object.content_sha256=hash;
     source_object.archive_relative_path=relative_archive.generic_string();
     source_object.content_length_bytes=static_cast<std::uint64_t>(response.body.size());
-    source_object.content_type=type_it->second;
+    source_object.content_type=raw_content_type;
 
     MarketDataBatch batch;
     batch.source_objects.push_back(std::move(source_object));
@@ -485,7 +485,8 @@ std::uint64_t XetraCalendarSourceAdapter::import_pdf_notice(
         throw std::runtime_error("Oficjalne źródło PDF Xetra zwróciło HTTP "+std::to_string(response.status_code)+".");
     if(response.body.empty() || response.body.size()>request.max_response_bytes)
         throw std::runtime_error("Odpowiedź PDF Xetra jest pusta lub przekracza limit.");
-    const auto content_type=lower(header_value(response,"content-type"));
+    const auto raw_content_type=header_value(response,"content-type");
+    const auto content_type=lower(raw_content_type);
     if(content_type!="application/pdf" && content_type.rfind("application/pdf;",0)!=0)
         throw std::runtime_error("Źródło komunikatu Xetra nie zwróciło application/pdf.");
 
