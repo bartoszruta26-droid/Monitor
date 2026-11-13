@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <algorithm>
 #include <stdexcept>
 
 namespace {
@@ -44,6 +45,29 @@ int main(){
     require(near(find("XAU"),(2400.0/31.1034768)*0.92*4.30),
             "gold USD per troy ounce converts to PLN per fine gram");
     require(book.provenance.size()==3,"provenance is present for converted assets");
+    const auto eur_provenance=std::find_if(book.provenance.begin(),book.provenance.end(),
+        [](const auto& p){return p.asset_code=="EUR";});
+    require(eur_provenance!=book.provenance.end() &&
+            eur_provenance->observation_ids.size()==1 &&
+            eur_provenance->observation_ids.front()=="eur-bid",
+            "provenance identifies the exact bid observation used");
+    auto competing=s;
+    competing.instruments.push_back({"FX:EUR/PLN:ALT","EUR/PLN","Euro/złoty alternate",
+        AssetClass::Currency,"EUR","PLN",Unit::CurrencyUnit,false});
+    competing.observations.push_back(obs("eur-alt-bid","FX:EUR/PLN:ALT","provider-alt",
+        1015,4.31,PriceKind::Bid));
+    competing.observations.push_back(obs("eur-alt-ask","FX:EUR/PLN:ALT","provider-alt",
+        1015,4.35,PriceKind::Ask));
+    const auto fresher=build_portfolio_price_book(competing,"PLN",{1020},120);
+    const auto fresher_eur=std::find_if(fresher.prices.begin(),fresher.prices.end(),
+        [](const auto& p){return p.first=="EUR";});
+    require(fresher_eur!=fresher.prices.end() && near(fresher_eur->second,4.31),
+            "same-length direct FX routes prefer the freshest observation");
+    const auto fresher_provenance=std::find_if(fresher.provenance.begin(),fresher.provenance.end(),
+        [](const auto& p){return p.asset_code=="EUR";});
+    require(fresher_provenance!=fresher.provenance.end() &&
+            fresher_provenance->observation_ids.front()=="eur-alt-bid",
+            "selected route provenance records the fresher observation id");
     const auto stale=build_portfolio_price_book(s,"PLN",{1200},100);
     require(stale.prices.size()==1,"stale market observations are excluded");
     auto suspect=s;suspect.observations.front().quality=QualityStatus::Suspect;
