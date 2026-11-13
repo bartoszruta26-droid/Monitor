@@ -72,7 +72,7 @@ std::string make_pdf_notice_fixture() {
         "TES OTC and TES LIS trades in combination with clearing and settlement may be",
         "entered, and Xetra EnLight may be used, until 2.59 p.m. on 30 December 2026."
     };
-    std::string stream="BT\n/F1 10 Tf\n50 750 Td\n";
+    std::string stream;
     const auto escape=[](const std::string& value) {
         std::string result;
         for(char ch:value) {
@@ -81,11 +81,13 @@ std::string make_pdf_notice_fixture() {
         }
         return result;
     };
+    // Separate text objects with absolute baselines are more robust across
+    // Poppler versions than one long text object with repeated relative Td.
     for(std::size_t i=0;i<lines.size();++i) {
-        if(i>0U) stream+="0 -14 Td\n";
-        stream+="("+escape(lines[i])+") Tj\n";
+        const auto baseline=750U-static_cast<unsigned>(i)*14U;
+        stream+="BT /F1 10 Tf 50 "+std::to_string(baseline)+" Td ("+
+            escape(lines[i])+") Tj ET\n";
     }
-    stream+="ET\n";
     const std::vector<std::string> objects{
         "<< /Type /Catalog /Pages 2 0 R >>",
         "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
