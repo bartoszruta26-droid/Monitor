@@ -687,6 +687,24 @@ int main() {
                 pdf_snapshot.venue_session_notices.front().phase_events.size()==9U &&
                 pdf_snapshot.source_objects.size()==2U,
                 "PDF import persists all phase events and the content-addressed PDF object");
+        const auto& pdf_events=pdf_snapshot.venue_session_notices.front().phase_events;
+        const auto phase_matches=[&](std::size_t index,VenueSessionPhaseEventKind kind,
+                                     unsigned hour,unsigned minute,std::string_view scope) {
+            const auto& event=pdf_events.at(index);
+            return event.kind==kind && event.at.hour==hour && event.at.minute==minute &&
+                   event.at.second==0U && event.scope==scope;
+        };
+        require(phase_matches(0U,VenueSessionPhaseEventKind::PreTradingStart,7U,0U,"") &&
+                phase_matches(1U,VenueSessionPhaseEventKind::RetailEarlyStart,8U,0U,"") &&
+                phase_matches(2U,VenueSessionPhaseEventKind::OpeningAuctionCall,8U,55U,"") &&
+                phase_matches(3U,VenueSessionPhaseEventKind::IntradayAuctionCall,13U,0U,"") &&
+                phase_matches(4U,VenueSessionPhaseEventKind::ClosingAuctionCall,14U,0U,"") &&
+                phase_matches(5U,VenueSessionPhaseEventKind::ClosingAuctionPriceDeterminationNotBefore,14U,5U,"") &&
+                phase_matches(6U,VenueSessionPhaseEventKind::TradeAtCloseEnd,14U,10U,"DAX, MDAX, SDAX") &&
+                phase_matches(7U,VenueSessionPhaseEventKind::OffBookServicesEnd,14U,59U,
+                              "TES OTC, TES LIS, Xetra EnLight") &&
+                phase_matches(8U,VenueSessionPhaseEventKind::PostTradingEnd,15U,0U,""),
+                "PDF parser preserves all nine official Xetra phase times and their service scopes");
         const auto pdf_hash=sha256_hex(pdf_bytes);
         const auto pdf_object=std::find_if(pdf_snapshot.source_objects.begin(),pdf_snapshot.source_objects.end(),
             [&](const SourceArchiveObject& object){return object.content_sha256==pdf_hash;});
