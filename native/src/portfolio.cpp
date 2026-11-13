@@ -64,10 +64,12 @@ PortfolioSummary calculate_portfolio(
     std::map<std::string, double> fees;
     std::map<std::string, std::int64_t> last_execution;
     std::set<std::string> transaction_ids;
+    std::map<std::string, std::vector<const PortfolioTransaction*>> operations;
     double total_fees{};
 
     for (const auto& tx : transactions) {
         validate_transaction(tx);
+        if(!tx.operation_id.empty()) operations[tx.operation_id].push_back(&tx);
         const auto kind = kinds.find(tx.asset_code);
         if (kind != kinds.end() && kind->second != tx.asset_kind)
             throw std::invalid_argument("Kod aktywa użyty z różnymi rodzajami.");
@@ -119,6 +121,30 @@ PortfolioSummary calculate_portfolio(
             throw std::overflow_error("Wynik zrealizowany przekracza zakres.");
     }
 
+    for(const auto& [operation_id,legs]:operations) {
+        (void)operation_id;
+        if(legs.size()!=2U)
+            throw std::invalid_argument("Operacja wymiany FX musi zawierać dokładnie dwie nogi.");
+        const PortfolioTransaction* debit=nullptr;
+        const PortfolioTransaction* credit=nullptr;
+        for(const auto* leg:legs) {
+            if(leg->asset_kind!=PortfolioAssetKind::Currency)
+                throw std::invalid_argument("Sparowana operacja FX może obejmować wyłącznie waluty.");
+            if(leg->side==TradeSide::Sell) debit=leg;
+            else if(leg->side==TradeSide::Buy) credit=leg;
+        }
+        if(!debit||!credit||debit->asset_code==credit->asset_code||
+           debit->executed_at_unix!=credit->executed_at_unix||
+           debit->source_id!=credit->source_id||debit->fee_reporting!=0.0)
+            throw std::invalid_argument("Niespójne nogi operacji wymiany FX.");
+        const double debit_value=debit->quantity*debit->unit_price_reporting;
+        const double credit_value=credit->quantity*credit->unit_price_reporting+credit->fee_reporting;
+        const double tolerance=1e-8*std::max({1.0,std::abs(debit_value),std::abs(credit_value)});
+        if(!std::isfinite(debit_value)||!std::isfinite(credit_value)||
+           std::abs(debit_value-credit_value)>tolerance)
+            throw std::invalid_argument("Nogi wymiany FX nie bilansują się w walucie raportowania.");
+    }
+
     PortfolioSummary result;
     result.reporting_currency = reporting_currency;
     result.total_fees_reporting = total_fees;
@@ -157,6 +183,33 @@ PortfolioSummary calculate_portfolio(
         !std::isfinite(result.total_realized_pnl_reporting))
         throw std::overflow_error("Podsumowanie portfela przekracza zakres liczbowy.");
     return result;
+}
+
+std::vector<PortfolioTransaction> make_fx_exchange_transactions(
+    const FxExchangeExecution& execution) {
+    if(execution.operation_id.empty() ||
+       !currency_code(execution.from_currency) || !currency_code(execution.to_currency) ||
+       execution.from_currency==execution.to_currency ||
+       !std::isfinite(execution.from_amount) || execution.from_amount<=0.0 ||
+       !std::isfinite(execution.to_amount) || execution.to_amount<=0.0 ||
+       !std::isfinite(execution.to_unit_price_reporting) || execution.to_unit_price_reporting<=0.0 ||
+       !std::isfinite(execution.fee_reporting) || execution.fee_reporting<0.0 ||
+       execution.executed_at_unix<0)
+        throw std::invalid_argument("Nieprawidłowe dane wykonanej wymiany FX.");
+    const double gross_reporting=execution.to_amount*execution.to_unit_price_reporting+
+                                 execution.fee_reporting;
+    const double from_unit_price=gross_reporting/execution.from_amount;
+    if(!std::isfinite(gross_reporting)||gross_reporting<=0.0||
+       !std::isfinite(from_unit_price)||from_unit_price<=0.0)
+        throw std::overflow_error("Wartość wymiany FX przekracza zakres liczbowy.");
+    PortfolioTransaction debit{execution.operation_id+":debit",execution.from_currency,
+        PortfolioAssetKind::Currency,TradeSide::Sell,execution.from_amount,1.0,
+        from_unit_price,0.0,execution.executed_at_unix,execution.source_id,execution.operation_id};
+    PortfolioTransaction credit{execution.operation_id+":credit",execution.to_currency,
+        PortfolioAssetKind::Currency,TradeSide::Buy,execution.to_amount,1.0,
+        execution.to_unit_price_reporting,execution.fee_reporting,execution.executed_at_unix,
+        execution.source_id,execution.operation_id};
+    return {std::move(debit),std::move(credit)};
 }
 
 } // namespace monitor::market
