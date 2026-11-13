@@ -5,6 +5,8 @@
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
+#include <sys/wait.h>
+#include <vector>
 #include <unistd.h>
 
 namespace {
@@ -87,6 +89,51 @@ int main(){
     require(recovered.revision==2 && recovered.transactions.size()==1 &&
             recovery.load().transactions.size()==1,
             "explicit backup recovery restores prior valid snapshot and advances revision");
+    {std::ofstream out(recovery.backup_path(),std::ios::trunc);out<<"{broken-backup";}
+    throws([&]{(void)recovery.restore_backup();},"corrupt backup is rejected");
+    require(recovery.load().revision==2,"failed backup recovery leaves valid primary unchanged");
+
+    const auto tiny_file=dir/"tiny.json";
+    PortfolioRepositoryConfig tiny_config;tiny_config.max_document_bytes=8;
+    JsonPortfolioRepository tiny(tiny_file,"PLN",tiny_config);
+    throws([&]{(void)tiny.append(PortfolioTransaction{"tiny","EUR",PortfolioAssetKind::Currency,
+        TradeSide::Buy,1,1,4,0,1,"test"},0);},"oversized document write rejected");
+    require(!tiny.exists()&&tiny.load().revision==0,
+            "failed atomic write does not create a partial primary document");
+
+    const auto concurrent_file=dir/"concurrent.json";
+    JsonPortfolioRepository concurrent(concurrent_file,"PLN");
+    std::vector<pid_t> children;
+    for(int index=0;index<2;++index) {
+        const pid_t pid=::fork();
+        if(pid==0) {
+            try {
+                JsonPortfolioRepository child_repo(concurrent_file,"PLN");
+                const auto id=index==0?"parallel-eur":"parallel-usd";
+                const auto asset=index==0?"EUR":"USD";
+                (void)child_repo.append(PortfolioTransaction{id,asset,PortfolioAssetKind::Currency,
+                    TradeSide::Buy,1,1,4,0,100,"parallel-test"},0);
+                ::_exit(0);
+            } catch(const std::exception&) { ::_exit(1); }
+            catch(...) { ::_exit(2); }
+        }
+        if(pid<0) throw std::runtime_error("fork failed");
+        children.push_back(pid);
+    }
+    int successful_writers{};
+    int conflicted_writers{};
+    for(const auto pid:children) {
+        int status{};
+        if(::waitpid(pid,&status,0)<0||!WIFEXITED(status))
+            throw std::runtime_error("parallel portfolio writer did not exit normally");
+        if(WEXITSTATUS(status)==0) ++successful_writers;
+        else if(WEXITSTATUS(status)==1) ++conflicted_writers;
+        else throw std::runtime_error("parallel portfolio writer failed unexpectedly");
+    }
+    const auto concurrent_snapshot=concurrent.load();
+    require(successful_writers==1&&conflicted_writers==1&&
+            concurrent_snapshot.revision==1&&concurrent_snapshot.transactions.size()==1,
+            "file lock and expected revision prevent concurrent lost updates");
     std::filesystem::remove_all(dir);
     std::cout<<"All portfolio repository tests passed.\n";
 }
