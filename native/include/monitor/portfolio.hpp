@@ -21,7 +21,25 @@ struct PortfolioTransaction {
     double fee_reporting{}; // fee expressed in portfolio reporting currency
     std::int64_t executed_at_unix{};
     std::string source_id;
+    std::string operation_id; // shared id for paired FX debit/credit legs
 };
+
+struct FxExchangeExecution {
+    std::string operation_id;
+    std::string from_currency;
+    std::string to_currency;
+    double from_amount{};
+    double to_amount{}; // net amount received after withholding fees
+    double to_unit_price_reporting{}; // reporting currency per received currency unit
+    double fee_reporting{};
+    std::int64_t executed_at_unix{};
+    std::string source_id;
+};
+
+// Creates a balanced debit/credit pair. The fee is booked once on the
+// acquired leg; both legs share operation_id and one execution timestamp.
+[[nodiscard]] std::vector<PortfolioTransaction> make_fx_exchange_transactions(
+    const FxExchangeExecution& execution);
 
 struct PortfolioPosition {
     std::string asset_code;
