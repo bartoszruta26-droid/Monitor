@@ -48,8 +48,9 @@ int main(){
     require(stale.prices.size()==1,"stale market observations are excluded");
     auto suspect=s;suspect.observations.front().quality=QualityStatus::Suspect;
     const auto without_bid=build_portfolio_price_book(suspect,"PLN",{1020},120);
-    require(without_bid.prices.size()==1 && near(without_bid.prices.front().second,1.0),
-            "suspect bid is excluded; ask alone cannot value a currency liquidation");
+    require(without_bid.prices.size()==2 && near(find("PLN"),1.0) &&
+            near([&](){for(const auto& p:without_bid.prices)if(p.first=="XAU")return p.second;return 0.0;}(),300.0),
+            "suspect bid is excluded and the older convertible NBP gold source is used");
     throws([&]{(void)build_portfolio_price_book(s,"PL",{1020},120);},"invalid reporting currency");
     throws([&]{(void)build_portfolio_price_book(s,"PLN",{1020},-1);},"negative max age");
     std::cout<<"All portfolio valuation tests passed.\n";
