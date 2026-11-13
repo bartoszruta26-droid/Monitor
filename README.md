@@ -12,7 +12,7 @@
 
 ## 1. Cel i zakres systemu
 
-Monitor Rynków jest jedną platformą, która gromadzi, wymienia, przechowuje, analizuje i prezentuje dane rynkowe oraz dane portfela. Obsługuje waluty, złoto, srebro, inne metale i aktywa wyceniane indywidualnie.
+Monitor Rynków jest platformą do wymiany walut (FX) oraz zakupu, sprzedaży i wymiany złota. Gromadzi, przechowuje, analizuje i prezentuje kursy walutowe, ceny złota, historię operacji i portfel walutowo-złotowy. Srebro i inne metale pozostają funkcjami drugorzędnymi, bez priorytetu rozwoju.
 
 System ma cztery równorzędne interfejsy użytkownika:
 
@@ -22,6 +22,20 @@ System ma cztery równorzędne interfejsy użytkownika:
 4. **Android App** — aplikacja mobilna.
 
 Wszystkie interfejsy korzystają z tego samego modelu danych, reguł biznesowych i silnika analitycznego. Wymianę danych pomiędzy usługami, adapterami źródeł i klientami zapewnia odrębny **serwer wymiany danych**.
+
+
+
+## Obowiązujący zakres produktu — decyzja 2026-11-13
+
+**Priorytetem Monitora są wymiana walut (FX) oraz zakup, sprzedaż i wymiana złota.** Cały rozwój funkcjonalny, modelowanie domenowe, źródła danych, wykresy, analizy, portfel i transakcje należy podporządkować tym dwóm zastosowaniom.
+
+Zakres obejmuje pary walutowe, kursy referencyjne i dostępne kwotowania bid/ask, przeliczanie walut z jawnym spreadem i opłatami, wycenę złota (XAU) w różnych walutach i jednostkach (gram, kilogram, uncja trojańska), ewidencję fizycznego złota oraz rozróżnienie ceny referencyjnej/spot od rzeczywistej ceny kupna lub sprzedaży.
+
+**Poza zakresem są akcje spółek, instrumenty udziałowe, giełdowe zlecenia kupna/sprzedaży akcji, arkusze zleceń, brokerzy akcyjni oraz funkcje i kalendarze sesji giełd papierów wartościowych.** Nie planować, nie rozwijać ani nie testować tych funkcji. W szczególności dalsze prace nad Xetra/Frankfurt, MIC XETR/XFRA, aukcjami giełdowymi i kalendarzami sesji akcji są wyłączone. Istniejący kod i historia Xetra pozostają w repozytorium wyłącznie jako zapis wcześniejszych prac; nie są kryterium ukończenia produktu ani zależnością kolejnych etapów.
+
+Srebro i inne surowce nie są priorytetem bieżącej realizacji. Można zachować istniejące, współdzielone typy lub adaptery bez rozbudowy; nowe prace nad nimi wymagają osobnej decyzji. Nie wolno przez nie opóźniać funkcji FX i złota.
+
+Wskaźniki regresji i Pine/TradingView mogą być rozwijane wyłącznie jako narzędzia analizy szeregów walutowych i złota. Nie stanowią uzasadnienia do przywracania zakresu akcji ani giełdowego obrotu papierami wartościowymi.
 
 ## 2. Architektura docelowa
 
