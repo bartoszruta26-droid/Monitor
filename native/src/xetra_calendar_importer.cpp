@@ -352,27 +352,22 @@ VenueSessionNotice parse_xetra_session_notice_text(
        market_section.find("mic xetr")==std::string::npos)
         throw std::invalid_argument("Sekcja ogłoszenia nie potwierdza MIC XETR.");
 
-    std::vector<std::string> offbook_lines;
-    bool in_offbook=false;
-    bool in_xetra_offbook=false;
-    std::istringstream offbook_input{std::string(extracted_text)};
-    while(std::getline(offbook_input,raw_line)) {
-        const auto line=normalized(raw_line);
-        if(line.find("availability")!=std::string::npos &&
-           line.find("off")!=std::string::npos &&
-           line.find("book")!=std::string::npos &&
-           line.find("services")!=std::string::npos) {
-            in_offbook=true;
-            continue;
-        }
-        if(!in_offbook) continue;
-        if(has_market_marker(line)) in_xetra_offbook=true;
-        if(in_xetra_offbook) offbook_lines.push_back(line);
-    }
-    if(offbook_lines.empty())
+    // pdftotext can split the section heading and the Xetra subsection over
+    // physical lines. Search the normalized document as a whole, preserving
+    // the semantic boundary between the Frankfurt and Xetra service blocks.
+    const auto offbook_heading=text.find("availability");
+    if(offbook_heading==std::string::npos)
+        throw std::invalid_argument("Ogłoszenie PDF nie zawiera sekcji dostępności usług off-book.");
+    const auto offbook_xetra_borse=text.find("market deutsche börse xetra",offbook_heading);
+    const auto offbook_xetra_ascii=text.find("market deutsche boerse xetra",offbook_heading);
+    std::size_t offbook_xetra=std::string::npos;
+    if(offbook_xetra_borse!=std::string::npos) offbook_xetra=offbook_xetra_borse;
+    if(offbook_xetra_ascii!=std::string::npos &&
+       (offbook_xetra==std::string::npos || offbook_xetra_ascii<offbook_xetra))
+        offbook_xetra=offbook_xetra_ascii;
+    if(offbook_xetra==std::string::npos)
         throw std::invalid_argument("Ogłoszenie PDF nie zawiera podsekcji dostępności usług Xetra.");
-    std::string offbook_section;
-    for(const auto& line:offbook_lines) offbook_section+=line+"\n";
+    const std::string offbook_section=text.substr(offbook_xetra);
     if(offbook_section.find("mic: xetr")==std::string::npos &&
        offbook_section.find("mic xetr")==std::string::npos)
         throw std::invalid_argument("Podsekcja usług off-book nie potwierdza MIC XETR.");
