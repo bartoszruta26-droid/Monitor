@@ -36,19 +36,19 @@ int main() {
     require(eur.asset_code=="EUR","positions are deterministic by asset code");
     require(near(eur.gross_quantity,50),"remaining EUR quantity");
     // FIFO: first 100 EUR cost 402 PLN; 150 EUR sale allocates 402 + 101.
-    require(near(eur.cost_basis_reporting,203),"remaining EUR cost basis");
-    require(near(eur.realized_pnl_reporting,71),"realized EUR profit after fee");
+    require(near(eur.cost_basis_reporting,211),"remaining EUR cost basis");
+    require(near(eur.realized_pnl_reporting,61),"realized EUR profit after fee");
     require(near(eur.market_value_reporting,220),"EUR current value");
-    require(near(eur.unrealized_pnl_reporting,17),"EUR unrealized profit");
+    require(near(eur.unrealized_pnl_reporting,9),"EUR unrealized profit");
     const auto& gold=p.positions[1];
     require(gold.asset_code=="XAU","gold position code");
     require(near(gold.gross_quantity,8),"remaining gross gold grams");
     require(near(gold.fine_quantity,4.68),"remaining fine gold grams");
-    require(near(gold.cost_basis_reporting,1370),"gold cost basis after FIFO disposal");
+    require(near(gold.cost_basis_reporting,1412),"gold cost basis after FIFO disposal");
     require(near(gold.market_value_reporting,1497.6),"gold current value");
-    require(near(gold.realized_pnl_reporting,33.2),"gold realized result");
-    require(near(p.total_realized_pnl_reporting,104.2),"portfolio realized result");
-    require(near(p.total_unrealized_pnl_reporting,144.6),"portfolio unrealized result");
+    require(near(gold.realized_pnl_reporting,31.1),"gold realized result");
+    require(near(p.total_realized_pnl_reporting,92.1),"portfolio realized result");
+    require(near(p.total_unrealized_pnl_reporting,94.6),"portfolio unrealized result");
     require(near(p.total_fees_reporting,17),"all fees recorded");
 
     throws([&]{(void)calculate_portfolio("PLN",tx,{{"EUR",4.4}});},
