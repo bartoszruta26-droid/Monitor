@@ -2,7 +2,7 @@
 
 **Repozytorium:** `bartoszruta26-droid/Monitor`  
 **Gałąź:** `main`  
-**Ostatnia weryfikacja:** 2026-11-12 23:5x Europe/Warsaw
+**Ostatnia weryfikacja:** 2026-11-13 09:31 Europe/Warsaw
 **Zasada prowadzenia:** status etapu zmienia się na „zakończony” dopiero po sprawdzeniu kodu, testów i CI dla konkretnego SHA. Ten plik jest bieżącym rejestrem wykonania; szczegóły techniczne pozostają w dokumentach etapów.
 
 ## Stan repozytorium przy audycie
@@ -789,3 +789,15 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 - Commit `0d60d4683b864942b9cdfa45924fdac76965f919` usuwa redundantny, starszy fixture tekstowy. Bieżący test używa jednego syntetycznego pliku układu, bez transkrypcji źródłowej.
 - CI [43390332363](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43390332363) dla dokładnego SHA `0d60d4683b864942b9cdfa45924fdac76965f919` — Configure, Build i Test success; 9/9. Ten SHA jest zweryfikowanym HEAD `main` przed niniejszym wpisem dokumentacyjnym.
 - Etapy 15D i 19B pozostają zamknięte. Etap 19A nadal wymaga kontrolowanego importu oryginalnych bajtów PDF; syntetyczny test nie zastępuje tej weryfikacji.
+
+
+### Audyt kontynuacyjny — poprawka hosta oficjalnego PDF Xetra — 2026-11-13
+
+- Stan przed poprawką: HEAD `0feb473a03810790c64541ffa8a34a9002f55d7f`; CI [#368 / 43390480137](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43390480137) — Configure, Build i Test: success; CTest **9/9**.
+- Przegląd ścieżki `import_pdf_notice` ujawnił rozbieżność w allowliście hostów. Kod dopuszczał `www.cashmarket.deutsche-boerse.com` i `www.eurexgroup.com`, ale odrzucał dokładny host `cashmarket.deutsche-boerse.com` zapisany w referencji oficjalnego PDF w dokumentacji i fixture. Odrzucenie następowało przed wysłaniem żądania HTTP.
+- Oficjalna strona okólnika 049/2026 wskazuje Trading Calendar, a strona Trading Calendar publikuje link „Announcement final trading session 2026”; oficjalny dokument jest dostępny pod hostem Deutsche Börse. Referencje: [okólnik 049/2026](https://cashmarket.deutsche-boerse.com/cash-en/Stay-Informed/circulars-newsletters/deutsche-boerse-circulars/Final-trading-session-2026-5668166), [kalendarz sesyjny](https://www.cashmarket.deutsche-boerse.com/cash-en/trading/trading-calendar-and-trading-hours), [oficjalny PDF](https://www.cashmarket.deutsche-boerse.com/resource/blob/5673886/22764993c4b1617c5f465186066344e6/data/Final%20trading%20session%202026.pdf).
+- Commit `4608ac02f2892a5a2c12b5ca3b5eceec3eb9a7a7` (`fix: allow official Xetra PDF apex hostname`) dodaje wyłącznie dokładny host `cashmarket.deutsche-boerse.com`. Nie zastosowano dopasowania sufiksowego ani wildcard. Test używa pełnego oficjalnego URL PDF i potwierdza, że podobny host `cashmarket.deutsche-boerse.com.attacker.example` jest odrzucany przed żądaniem HTTP.
+- CI [#369 / 43393787470](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43393787470) dla dokładnego SHA `4608ac02f2892a5a2c12b5ca3b5eceec3eb9a7a7`: Configure — success; Build — success; Test — success; CTest **9/9**. Test `monitor-xetra-calendar-source-tests` przeszedł. W logach brak błędów kompilacji i testów; występuje jedynie ostrzeżenie GitHub Actions o wycofywaniu Node.js 20 w używanej akcji checkout.
+- Zmiana nie dotyka parsera faz, semantyki sesji ani walidacji MIC. Obowiązkowe MIC XETR w sekcji rynku i podsekcji off-book oraz negatywny test XFRA pozostają bez zmian.
+- Etap 19A pozostaje **otwarty**: ten commit naprawia dopuszczenie oficjalnego hosta, ale nie stanowi dowodu zarchiwizowania oryginalnych bajtów PDF. Próba pobrania binarnego PDF do środowiska roboczego w tym przebiegu nie powiodła się; nie zapisano fikcyjnego SHA-256, długości ani MIME. Nie dodano pliku binarnego do publicznego repozytorium.
+- Następny krok 19A: w środowisku z dostępnym pobieraniem wykonać import oryginalnego PDF przez `import_pdf_notice`, zapisać rzeczywisty SHA-256, długość, MIME, URL i czas pobrania, a następnie porównać dziewięć faz z wynikiem parsera. Przed publicznym udostępnieniem binarnego dokumentu wymagana jest odrębna ocena warunków licencyjnych.
