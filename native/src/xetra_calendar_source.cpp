@@ -30,6 +30,7 @@ bool allowed_xetra_url(const std::string& url) {
     const auto host=url.substr(prefix.size(),end==std::string::npos
         ? std::string::npos : end-prefix.size());
     return (host=="www.cashmarket.deutsche-boerse.com" ||
+            host=="cashmarket.deutsche-boerse.com" ||
             host=="www.eurexgroup.com") &&
            url.find('@')==std::string::npos &&
            url.find('#')==std::string::npos;

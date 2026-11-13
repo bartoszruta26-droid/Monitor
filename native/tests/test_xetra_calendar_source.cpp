@@ -608,8 +608,17 @@ int main() {
         pdf_notice.venue="XETRA";
         pdf_notice.effective_date=parse_date("2026-12-30");
         pdf_notice.attribution="Deutsche Börse Cash Market";
-        require(adapter.import_pdf_notice(pdf_repository,pdf_notice,notice_url)==2U,
-                "PDF adapter extracts official phase text and publishes the archived PDF notice");
+        const std::string pdf_notice_url=
+            "https://cashmarket.deutsche-boerse.com/resource/blob/5673886/"
+            "22764993c4b1617c5f465186066344e6/data/Final%20trading%20session%202026.pdf";
+        const auto calls_before_lookalike=transport.calls;
+        throws([&]{(void)adapter.import_pdf_notice(pdf_repository,pdf_notice,
+            "https://cashmarket.deutsche-boerse.com.attacker.example/fake.pdf");},
+            "reject a lookalike official PDF hostname");
+        require(transport.calls==calls_before_lookalike,
+                "reject a lookalike PDF hostname before making an HTTP request");
+        require(adapter.import_pdf_notice(pdf_repository,pdf_notice,pdf_notice_url)==2U,
+                "PDF adapter accepts the exact official apex host and archives the PDF notice");
         const auto pdf_snapshot=pdf_repository.load();
         require(pdf_snapshot.venue_session_notices.size()==1U &&
                 pdf_snapshot.venue_session_notices.front().phase_events.size()==9U &&
@@ -623,7 +632,7 @@ int main() {
                 std::filesystem::exists(pdf_import_folder/"calendar.json.sources"/"objects"/(pdf_hash+".pdf")),
                 "raw PDF bytes are archived exactly as a SHA-256 object");
         const auto pdf_revision_before_replay=pdf_repository.load().revision;
-        require(adapter.import_pdf_notice(pdf_repository,pdf_notice,notice_url)==pdf_revision_before_replay &&
+        require(adapter.import_pdf_notice(pdf_repository,pdf_notice,pdf_notice_url)==pdf_revision_before_replay &&
                 pdf_repository.load().venue_session_notices.size()==1U,
                 "re-importing an identical PDF notice revision is idempotent");
         VenueSessionNotice reparsed_notice;
@@ -644,7 +653,7 @@ int main() {
                 pdf_repository.load().venue_session_notices.size()==2U,
                 "replaying an archived notice revision is idempotent");
         transport.response.body=pdf_bytes+"\n";
-        throws([&]{(void)adapter.import_pdf_notice(pdf_repository,pdf_notice,notice_url);},
+        throws([&]{(void)adapter.import_pdf_notice(pdf_repository,pdf_notice,pdf_notice_url);},
                "changed PDF bytes cannot replace an already published notice revision");
         require(pdf_repository.load().revision==revision_after_reparse &&
                 pdf_repository.load().source_objects.size()==2U,
@@ -652,7 +661,7 @@ int main() {
         auto invalid_pdf_notice=pdf_notice;
         invalid_pdf_notice.notice_id="xetra-2026-invalid-pdf";
         transport.response.body="not a PDF document";
-        throws([&]{(void)adapter.import_pdf_notice(pdf_repository,invalid_pdf_notice,notice_url);},
+        throws([&]{(void)adapter.import_pdf_notice(pdf_repository,invalid_pdf_notice,pdf_notice_url);},
                "invalid PDF source is rejected before archive publication");
         require(pdf_repository.load().revision==revision_after_reparse,
                 "invalid PDF notice leaves the repository unchanged");
