@@ -4,6 +4,12 @@
 Model jest niezależnym kontraktem domenowym C++20. Nie zależy od dostawców, HTTP, JSON, SQLite, MariaDB ani interfejsów. Adapter mapuje dane źródłowe do modelu; magazyn i API zostaną zbudowane później na tych typach.
 Implementacja: native/include/monitor/market_data.hpp oraz native/src/market_data.cpp. Wersja kontraktu: schema_version = 1.
 
+## Zakres domenowy
+
+Model jest używany w pierwszej kolejności dla par walutowych FX oraz złota XAU. Waluty wymagają jawnej orientacji pary (waluta bazowa/kwotowana), a złoto — jednostki masy i waluty wyceny. Zachowujemy rozróżnienie kursu referencyjnego, bid, ask, mid, spot i ceny rzeczywiście wykonanej transakcji. Cena referencyjna NBP/Frankfurter ani orientacyjny spot nie mogą być przedstawiane jako gwarantowana cena, po której użytkownik kupi lub sprzeda walutę albo złoto.
+
+Akcje, udziały, papiery wartościowe i giełdowe instrumenty udziałowe są poza zakresem produktu. Ogólne typy modelu nie stanowią zobowiązania do ich obsługi.
+
 ## Instrumenty i ceny
 Instrument przechowuje stabilny identyfikator, symbol, nazwę, klasę aktywa, opcjonalną walutę bazową, walutę wyceny, jednostkę ilościową i jawne zezwolenie na ujemne ceny.
 Para walutowa ma dwie różne waluty. Kurs EUR/PLN = 4,25 oznacza 4,25 PLN za 1 EUR. Dla metali i surowców waluta bazowa jest pusta, a waluta wyceny określa mianownik ceny: np. XAU w USD za uncję trojańską albo złoto NBP w PLN za gram.
