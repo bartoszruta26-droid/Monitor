@@ -1160,3 +1160,27 @@ Przed każdym następnym etapem sprawdzić bieżący `main`, gałęzie, PR, Issu
 1. Etap 23 — testy odporności repozytorium na przerwanie zapisu, błędy systemu plików, równoległe procesy i uszkodzenie kopii zapasowej.
 2. Dodać pełniejszy model audytowy wymiany FX, w tym przechowanie pierwotnego bid/ask, kursu wykonania, spreadu i opłaty obok sparowanych nóg.
 3. Następnie API i klient portfela FX/XAU; nie wprowadzać funkcji akcyjnych.
+
+
+## 52. Etap 23 — odporność repozytorium portfela (2026-11-13)
+
+### Zakres testów
+- Rozszerzono native/tests/test_portfolio_repository.cpp o test odrzucenia uszkodzonej kopii zapasowej. Poprawny dokument główny pozostaje nietknięty, gdy jawne odtworzenie z błędnego .bak kończy się błędem.
+- Dodano test limitu rozmiaru dokumentu: zbyt duży zapis zostaje odrzucony przed podmianą, plik główny nie powstaje częściowo, a repozytorium nadal zwraca pustą rewizję.
+- Dodano test dwóch procesów zapisujących równolegle z tą samą oczekiwaną rewizją. Blokada plikowa i kontrola rewizji pozwalają zatwierdzić dokładnie jeden zapis; drugi otrzymuje konflikt, bez utraty danych.
+- Zachowano test odtwarzania poprawnej kopii po uszkodzeniu dokumentu głównego, test atomowego odrzucenia niepełnej pary FX oraz testy wersji schematu i uszkodzonego JSON.
+
+### Weryfikacja CI
+- Końcowy SHA etapu: 309b42b08a1400387a24024977d85fc9c7781389.
+- [Native C++ checks #469](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43420958912), dokładny SHA 309b42b08a1400387a24024977d85fc9c7781389: Configure — success; Build — success; Test — success; CTest **13/13 (100%)**, 1,22 s.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) nadal otwarty i nie scalony.
+
+### Granice testów
+- Test współbieżności obejmuje dwa procesy i wspólną rewizję; nie jest testem obciążeniowym dla wielu dziesiątek writerów.
+- Test limitu rozmiaru sprawdza odrzucenie przed zapisem, ale nie symuluje fizycznego braku miejsca w systemie plików.
+- Nie ma wstrzykiwania awarii fsync/rename ani twardego zakończenia procesu w każdej fazie zapisu; takie testy wymagają kontrolowanego punktu wstrzyknięcia awarii.
+
+### Następny etap
+1. Etap 24 — rozszerzenie audytowego modelu wykonania wymiany FX o pierwotne kwotowanie bid/ask, cenę wykonania, spread, opłaty, źródło, czas i identyfikator oferty.
+2. Zachować zgodność wsteczną JSON oraz walidację par operacji FX.
+3. Dopiero potem rozpocząć API i interfejs użytkownika.
