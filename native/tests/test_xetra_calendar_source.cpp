@@ -136,6 +136,27 @@ int main() {
     const auto date_is=[](const CivilDate& date,int year,unsigned month,unsigned day) {
         return date.year==year && date.month==month && date.day==day;
     };
+    auto source_2025=source();
+    source_2025.document_id="xetra-2025-synthetic-html";
+    source_2025.valid_from=parse_date("2025-01-01");
+    source_2025.valid_to_exclusive=parse_date("2026-01-01");
+    const auto parsed_2025=parse_xetra_html_calendar(html,source_2025);
+    require(parsed_2025.days.size()==365U &&
+            parsed_2025.parser_version=="xetra-html-2025-v1",
+            "dynamic parser accepts the official 2025 calendar column");
+    const auto good_friday_2025=std::find_if(parsed_2025.days.begin(),parsed_2025.days.end(),
+        [&](const VenueCalendarDay& day){return date_is(day.date,2025,4U,18U);});
+    require(good_friday_2025!=parsed_2025.days.end() &&
+            good_friday_2025->status==VenueDayStatus::Closed,
+            "2025 Good Friday is imported as a non-trading day");
+    const auto unity_day_2025=std::find_if(parsed_2025.days.begin(),parsed_2025.days.end(),
+        [&](const VenueCalendarDay& day){return date_is(day.date,2025,10U,3U);});
+    require(unity_day_2025!=parsed_2025.days.end() &&
+            unity_day_2025->status==VenueDayStatus::Trading &&
+            unity_day_2025->product_sessions.size()==2U &&
+            unity_day_2025->product_sessions[0].closes_at.hour==20U &&
+            unity_day_2025->product_sessions[1].closes_at.hour==22U,
+            "2025 German Unity Day remains a trading day with product-specific shortened hours");
     auto source_2027=source();
     source_2027.document_id="xetra-2027-synthetic-html";
     source_2027.version=1U;
@@ -187,6 +208,13 @@ int main() {
     missing_hours_html.erase(missing_hours_html.find(regular_hours_text),regular_hours_text.size());
     throws([&]{(void)parse_xetra_html_calendar(missing_hours_html,source_2027);},
            "reject a calendar fixture with missing regular session hours");
+    auto missing_required_holiday_html=html;
+    const auto required_holiday=std::string("<li>Ascension Day (6 May 2027)</li>");
+    const auto required_holiday_at=missing_required_holiday_html.find(required_holiday);
+    require(required_holiday_at!=std::string::npos,"2027 fixture has the required Ascension Day trading exception");
+    missing_required_holiday_html.erase(required_holiday_at,required_holiday.size());
+    throws([&]{(void)parse_xetra_html_calendar(missing_required_holiday_html,source_2027);},
+           "reject a calendar missing one of the three required holiday trading exceptions");
     require(parsed.source.content_sha256==sha256_hex(html),"SHA-256 computed from exact response bytes");
     require(parsed.source.retrieved_at.has_value(),"retrieval time recorded");
     require(transport.calls==1U && transport.last_request.timeout.count()==15000 &&
