@@ -59,7 +59,7 @@ Zadania:
 
 ### Etap 1 — wspólny model danych rynkowych
 
-**Cel:** zdefiniować spójny model dla walut, kruszców, surowców, notowań i źródeł.
+**Cel:** zdefiniować spójny model dla par walutowych FX, złota XAU, notowań i źródeł.
 
 Zakres:
 - stabilne identyfikatory instrumentów i symboli;
@@ -86,8 +86,8 @@ Dla metali trzeba jawnie obsłużyć gram, kilogram i uncję trojańską. Konwer
 Zakres:
 - NBP: tabele A/B, tabela C oraz referencyjna cena złota PLN/g;
 - Frankfurter: historyczne kursy referencyjne z jawną walutą bazową i kwotowaną;
-- World Bank Pink Sheet: miesięczne ceny złota i srebra w USD/uncję trojańską;
-- dodatkowy dostawca dziennych lub częstszych cen spot złota i srebra, wybrany po ocenie wiarygodności, opóźnienia, licencji, historii i jednostek.
+- World Bank Pink Sheet: miesięczne ceny złota XAU w USD/uncję trojańską;
+- dostawca dziennych lub częstszych cen spot złota XAU, wybrany po ocenie wiarygodności, opóźnienia, licencji, historii i jednostek.
 
 Implementacja:
 - C++20, libcurl i parsery właściwe dla formatów odpowiedzi;
@@ -348,7 +348,7 @@ Etap 0: audyt repozytorium
   -> Etap 4: agregacja
   -> Etap 5: wykresy
   -> Etap 6: regresja krocząca
-  -> Etap 7: portfel i transakcje
+  -> Etap 7: portfel walutowo-złotowy i transakcje
   -> Etap 8: prawdopodobieństwo i walidacja
   -> Etap 9: API
   -> Etap 10: klienci
@@ -674,7 +674,7 @@ Etap 2 można zamknąć dopiero po kompilacji w CI, przejściu testów adapteró
 ### Kolejny etap
 1. Dodać wersjonowany magazyn kalendarzy i import kalendarzy sesyjnych z plików/adapterów.
 2. Zapewnić generator terminów UTC z jawnie nazwanej strefy IANA i reguł sesji.
-3. Dodać odrębne kalendarze dla NBP, metali spot i instrumentów giełdowych; nie stosować jednego uniwersalnego kalendarza.
+3. Dodać odrębne reguły aktualizacji dla publikacji NBP, kursów FX i feedu spot złota; nie stosować kalendarza sesji giełdowych do danych FX/OTC.
 4. Zdefiniować jawne polityki jakości i ewentualne tolerancje brakujących slotów.
 5. Przygotować fixture wspólne dla C++ i Pine oraz niezależnie skompilować Pine w TradingView.
 
@@ -748,3 +748,10 @@ Dodano przeciążenie `generate_nbp_publication_windows(start, end_exclusive)`, 
 ## 29. Etap 11 — aktualny stan po CI (2026-11-12)
 
 Generator okien publikacji NBP A/B/C wraz z automatycznymi polskimi świętami ustawowymi przeszedł CI dla commitu `c76bf3dc697e93ad3f69bca82a5180e08c338feb`: [43304025796](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43304025796), 8/8 testów. Etap 11 pozostaje otwarty: należy dodać importer i wersjonowanie oficjalnych kalendarzy venue (najpierw Xetra), a także osobny model obserwowanych dat publikacji NBP. Nie mieszać tych kalendarzy z oczekiwanymi oknami publikacji.
+
+
+## Wiążąca korekta zakresu — 2026-11-13
+
+Obowiązuje zakres FX i złota określony na początku dokumentu. Wcześniejsze zapisy o Xetra/Frankfurt, MIC, aukcjach, kalendarzach giełdowych i instrumentach giełdowych są historycznym śladem audytu, a nie zadaniami do kontynuacji. Etapy kalendarzowe mają dotyczyć wyłącznie terminów publikacji/aktualizacji źródeł FX i złota oraz rzeczywistych obserwacji. Nie implementować kalendarza sesji akcji.
+
+Etap portfela i transakcji należy realizować jako portfel walutowy i złoty: wymiana walut, zakup/sprzedaż/wymiana złota, ilości i jednostki, kursy, spread, prowizje, opłaty, waluta rozliczenia, koszt nabycia, wartość bieżąca oraz wynik netto. Nie tworzyć obsługi akcji ani zleceń maklerskich.
