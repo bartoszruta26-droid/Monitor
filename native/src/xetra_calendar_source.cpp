@@ -110,7 +110,7 @@ std::string extract_pdf_text(std::string_view pdf_bytes) {
     if(child==0) {
         (void)::dup2(pipe_fds[1],STDOUT_FILENO);
         ::close(pipe_fds[0]); ::close(pipe_fds[1]);
-        ::execl(MONITOR_PDFTOTEXT_EXECUTABLE,"pdftotext","-layout",temporary_path,"-",
+        ::execl(MONITOR_PDFTOTEXT_EXECUTABLE,"pdftotext","-raw",temporary_path,"-",
                 static_cast<char*>(nullptr));
         ::_exit(127);
     }
