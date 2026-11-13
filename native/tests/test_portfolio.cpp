@@ -70,5 +70,28 @@ int main() {
            "invalid reporting currency");
     throws([&]{(void)calculate_portfolio("PLN",tx,{{"EUR",4.4},{"EUR",4.5},{"XAU",320}});},
            "duplicate price");
+    const auto fx_pair=make_fx_exchange_transactions(
+        {"exchange-001","PLN","EUR",434,100,4.32,2,600,"kantor-1"});
+    require(fx_pair.size()==2 && fx_pair[0].operation_id=="exchange-001" &&
+            fx_pair[1].operation_id=="exchange-001","FX conversion creates linked debit and credit legs");
+    require(fx_pair[0].side==TradeSide::Sell && fx_pair[1].side==TradeSide::Buy,
+            "FX conversion records both sides");
+    require(near(fx_pair[0].quantity*fx_pair[0].unit_price_reporting,434),
+            "source leg carries the balanced gross reporting value");
+    require(near(fx_pair[1].fee_reporting,2),"exchange fee is booked exactly once on acquired leg");
+    std::vector<PortfolioTransaction> paired_ledger{
+        {"pln-opening","PLN",PortfolioAssetKind::Currency,TradeSide::Buy,1000,1,1,0,500,"cash"},
+        fx_pair[0],fx_pair[1]
+    };
+    const auto paired=calculate_portfolio("PLN",paired_ledger,{{"PLN",1},{"EUR",4.32}});
+    require(near(paired.positions[0].gross_quantity,566),"source currency balance decreases by exchanged amount");
+    require(near(paired.positions[1].gross_quantity,100),"destination currency balance increases");
+    require(near(paired.total_fees_reporting,2),"paired exchange fee is counted once");
+    auto unbalanced=paired_ledger;unbalanced.back().fee_reporting=3;
+    throws([&]{(void)calculate_portfolio("PLN",unbalanced,{{"PLN",1},{"EUR",4.32}});},
+           "unbalanced paired exchange rejected");
+    auto incomplete=paired_ledger;incomplete.pop_back();
+    throws([&]{(void)calculate_portfolio("PLN",incomplete,{{"PLN",1}});},
+           "unpaired FX operation rejected");
     std::cout << "All FX/XAU portfolio tests passed.\n";
 }
