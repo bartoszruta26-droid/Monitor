@@ -4,6 +4,20 @@
 **Repozytorium:** bartoszruta26-droid/Monitor
 **Data przeglądu:** 2026-11-12
 
+
+
+## Obowiązujący zakres produktu — decyzja 2026-11-13
+
+**Priorytetem Monitora są wymiana walut (FX) oraz zakup, sprzedaż i wymiana złota.** Cały rozwój funkcjonalny, modelowanie domenowe, źródła danych, wykresy, analizy, portfel i transakcje należy podporządkować tym dwóm zastosowaniom.
+
+Zakres obejmuje pary walutowe, kursy referencyjne i dostępne kwotowania bid/ask, przeliczanie walut z jawnym spreadem i opłatami, wycenę złota (XAU) w różnych walutach i jednostkach (gram, kilogram, uncja trojańska), ewidencję fizycznego złota oraz rozróżnienie ceny referencyjnej/spot od rzeczywistej ceny kupna lub sprzedaży.
+
+**Poza zakresem są akcje spółek, instrumenty udziałowe, giełdowe zlecenia kupna/sprzedaży akcji, arkusze zleceń, brokerzy akcyjni oraz funkcje i kalendarze sesji giełd papierów wartościowych.** Nie planować, nie rozwijać ani nie testować tych funkcji. W szczególności dalsze prace nad Xetra/Frankfurt, MIC XETR/XFRA, aukcjami giełdowymi i kalendarzami sesji akcji są wyłączone. Istniejący kod i historia Xetra pozostają w repozytorium wyłącznie jako zapis wcześniejszych prac; nie są kryterium ukończenia produktu ani zależnością kolejnych etapów.
+
+Srebro i inne surowce nie są priorytetem bieżącej realizacji. Można zachować istniejące, współdzielone typy lub adaptery bez rozbudowy; nowe prace nad nimi wymagają osobnej decyzji. Nie wolno przez nie opóźniać funkcji FX i złota.
+
+Wskaźniki regresji i Pine/TradingView mogą być rozwijane wyłącznie jako narzędzia analizy szeregów walutowych i złota. Nie stanowią uzasadnienia do przywracania zakresu akcji ani giełdowego obrotu papierami wartościowymi.
+
 ## 1. Cel
 
 Etap 11 ma dostarczyć kalendarze, które poprawnie określają oczekiwane obserwacje w analizie HTF. Nie wolno utożsamiać trzech różnych pojęć:
@@ -49,7 +63,7 @@ Dokumentacja API podaje, że spot jest odświeżany ciągle, ale cache ma 60 sek
 
 To feed OTC/spot, a nie kalendarz konkretnej giełdy. W pierwszej iteracji nie wyznaczać świąt giełdowych ani nie zakładać nieprzerwanej dostępności 24/7. Kalendarz może opisywać częstotliwość obserwacji/świeżość i retencję, ale sloty oczekiwane muszą wynikać z udokumentowanego kontraktu dostawcy i realnej polityki pobierania.
 
-### Deutsche Börse — Xetra / Frankfurt
+### Deutsche Börse — Xetra / Frankfurt (archiwum historyczne, poza zakresem)
 
 Oficjalny kalendarz określa godziny Xetra i Frankfurt oraz dni bez handlu, a także wskazuje wybrane święta, w których handel jednak się odbywa, i odrębne zasady dla końca roku.
 
@@ -129,7 +143,7 @@ Fixture potwierdza wyłączenie 11 listopada 2026 r., przesunięcie tabeli B na 
 
 Commit `c76bf3dc697e93ad3f69bca82a5180e08c338feb` przeszedł [CI 43304025796](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43304025796): konfiguracja, kompilacja i CTest **8/8**. Generator bez jawnej listy świąt automatycznie stosuje polskie święta ustawowe, w tym 11 listopada oraz Wigilię od 2025 r. Wariant z dodatkową listą nadal pozwala przekazać nadzwyczajne dni wolne.
 
-Pozostałe prace etapu 11: wersjonowany rejestr źródłowych kalendarzy i wyjątków Xetra/Frankfurt oraz model kalendarza obserwowanych publikacji NBP.
+Pozostałe prace etapu 11 w bieżącym zakresie: model i weryfikacja faktycznie zaobserwowanych publikacji NBP oraz reguły świeżości/aktualizacji FX i złota. Xetra/Frankfurt nie są zadaniem do kontynuacji.
 
 
 ## 12. Pierwszy model kalendarza faktycznie zaobserwowanych publikacji
@@ -226,3 +240,8 @@ Każdy nowy import kalendarza venue zapisuje w rekordzie źródła względną ś
 Przy każdym odczycie migawki repozytorium weryfikowane są pliki wskazane przez manifest: ścieżka musi być względna i pozbawiona komponentów `.`/`..`, żaden komponent nie może być dowiązaniem symbolicznym, obiekt musi być zwykłym plikiem, a długość i SHA-256 muszą odpowiadać metadanym. Brak pliku lub rozbieżność integralności przerywa odczyt zamiast zwracać kalendarz z niepotwierdzonym pochodzeniem.
 
 Archiwum pozostaje zapisywane przed publikacją migawki JSON. Osierocone pliki są dopuszczalne po przerwanym imporcie; wpis manifestu bez pliku jest niedopuszczalny. Identyfikator źródła i wersja kalendarza pozostają obecnie wspólnym kluczem domenowym — dalsze rozdzielenie wersji dokumentu źródłowego i rewizji interpretacji kalendarza wymaga osobnej migracji modelu.
+
+
+## Decyzja zakresowa — 2026-11-13
+
+Kalendarze Xetra/Frankfurt opisane powyżej zachowano wyłącznie jako materiał historyczny. Nie implementować ani nie rozwijać ich parserów, importerów, godzin sesji, aukcji, wyjątków świątecznych ani wersjonowania dokumentów giełdowych. Dla FX i złota należy modelować wyłącznie kalendarze i okna publikacji właściwe dla dostawcy oraz obserwowaną świeżość danych. Spot FX i spot XAU nie mogą dziedziczyć godzin sesji Xetra.
