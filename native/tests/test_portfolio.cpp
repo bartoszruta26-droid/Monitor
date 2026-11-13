@@ -84,8 +84,8 @@ int main() {
         fx_pair[0],fx_pair[1]
     };
     const auto paired=calculate_portfolio("PLN",paired_ledger,{{"PLN",1},{"EUR",4.32}});
-    require(near(paired.positions[0].gross_quantity,566),"source currency balance decreases by exchanged amount");
-    require(near(paired.positions[1].gross_quantity,100),"destination currency balance increases");
+    require(near(paired.positions[1].gross_quantity,566),"source currency balance decreases by exchanged amount");
+    require(near(paired.positions[0].gross_quantity,100),"destination currency balance increases");
     require(near(paired.total_fees_reporting,2),"paired exchange fee is counted once");
     auto unbalanced=paired_ledger;unbalanced.back().fee_reporting=3;
     throws([&]{(void)calculate_portfolio("PLN",unbalanced,{{"PLN",1},{"EUR",4.32}});},
