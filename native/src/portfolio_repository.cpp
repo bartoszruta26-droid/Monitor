@@ -61,14 +61,16 @@ json encode(const PortfolioTransaction& tx) {
     return {{"id",tx.id},{"asset_code",tx.asset_code},{"asset_kind",kind_name(tx.asset_kind)},
         {"side",side_name(tx.side)},{"quantity",tx.quantity},{"purity",tx.purity},
         {"unit_price_reporting",tx.unit_price_reporting},{"fee_reporting",tx.fee_reporting},
-        {"executed_at_unix",tx.executed_at_unix},{"source_id",tx.source_id}};
+        {"executed_at_unix",tx.executed_at_unix},{"source_id",tx.source_id},
+        {"operation_id",tx.operation_id}};
 }
 PortfolioTransaction decode(const json& j) {
     return {j.at("id").get<std::string>(),j.at("asset_code").get<std::string>(),
         parse_kind(j.at("asset_kind").get<std::string>()),parse_side(j.at("side").get<std::string>()),
         j.at("quantity").get<double>(),j.at("purity").get<double>(),
         j.at("unit_price_reporting").get<double>(),j.at("fee_reporting").get<double>(),
-        j.at("executed_at_unix").get<std::int64_t>(),j.at("source_id").get<std::string>()};
+        j.at("executed_at_unix").get<std::int64_t>(),j.at("source_id").get<std::string>(),
+        j.value("operation_id",std::string{})};
 }
 bool valid_currency(const std::string& code) {
     if (code.size()!=3U || code=="XAU") return false;
@@ -200,6 +202,13 @@ std::uint64_t JsonPortfolioRepository::replace(
 
 std::uint64_t JsonPortfolioRepository::append(
     const PortfolioTransaction& transaction,std::uint64_t expected_revision) {
+    return append_batch({transaction},expected_revision);
+}
+
+std::uint64_t JsonPortfolioRepository::append_batch(
+    const std::vector<PortfolioTransaction>& transactions,std::uint64_t expected_revision) {
+    if(transactions.empty())
+        throw std::invalid_argument("Partia transakcji portfela nie może być pusta.");
     auto parent=file_path_.parent_path();
     if(parent.empty()) parent=".";
     if(config_.create_parent_directories) std::filesystem::create_directories(parent);
@@ -207,7 +216,7 @@ std::uint64_t JsonPortfolioRepository::append(
     auto next=load_unlocked();
     if(next.revision!=expected_revision)
         throw std::runtime_error("Konflikt rewizji repozytorium portfela.");
-    next.transactions.push_back(transaction);
+    next.transactions.insert(next.transactions.end(),transactions.begin(),transactions.end());
     next.revision+=1U;
     validate_snapshot(next);
     write_unlocked(next);
