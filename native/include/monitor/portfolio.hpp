@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -9,6 +10,24 @@ namespace monitor::market {
 
 enum class PortfolioAssetKind { Currency, Gold };
 enum class TradeSide { Buy, Sell };
+
+struct FxExecutionAudit {
+    std::string base_currency;
+    std::string quote_currency;
+    double bid{};
+    double ask{};
+    double mid{};
+    double spread_basis_points{};
+    double gross_execution_rate{};
+    double effective_execution_rate{};
+    double fee_percent{};
+    double fixed_fee_output{};
+    std::string fee_currency;
+    std::string provider_id;
+    std::string observation_id;
+    std::string source_uri;
+    std::int64_t observed_at_unix{};
+};
 
 struct PortfolioTransaction {
     std::string id;
@@ -22,6 +41,7 @@ struct PortfolioTransaction {
     std::int64_t executed_at_unix{};
     std::string source_id;
     std::string operation_id; // shared id for paired FX debit/credit legs
+    std::optional<FxExecutionAudit> fx_audit; // present on acquired leg only
 };
 
 struct FxExchangeExecution {
@@ -34,6 +54,7 @@ struct FxExchangeExecution {
     double fee_reporting{};
     std::int64_t executed_at_unix{};
     std::string source_id;
+    std::optional<FxExecutionAudit> audit;
 };
 
 // Creates a balanced debit/credit pair. The fee is booked once on the
