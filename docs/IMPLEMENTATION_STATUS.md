@@ -2,13 +2,15 @@
 
 **Repozytorium:** `bartoszruta26-droid/Monitor`  
 **Gałąź:** `main`  
-**Ostatnia weryfikacja:** 2026-11-13 10:32 Europe/Warsaw
+**Ostatnia weryfikacja:** 2026-11-13 12:22 Europe/Warsaw
 **Zasada prowadzenia:** status etapu zmienia się na „zakończony” dopiero po sprawdzeniu kodu, testów i CI dla konkretnego SHA. Ten plik jest bieżącym rejestrem wykonania; szczegóły techniczne pozostają w dokumentach etapów.
 
 ## Stan repozytorium przy audycie
 
-- HEAD `main` przed zapisem tego wpisu: `9a947e5a483683e14fce232991af6fa4478a81d4`.
-- Najnowszy przebieg `Native C++ checks` dla dokładnego SHA: [CI #383 / 43401833422](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43401833422) — **success**; Configure, Build i Test zakończone powodzeniem; CTest **9/9**.
+- Aktualny `main`: `cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06`.
+- Kontynuacja FX/XAU: gałąź `feature/fx-xau-pricing-engine`, PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1), HEAD `8a986df76b4d1017e71f487071458ad516633c13` (silnik FX/XAU, testy i odpięcie modułu Xetra od aktywnego builda).
+- Ostatni zielony CI dla `main`: [CI #414 / 43411904371](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43411904371), SHA `cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06` — Configure/Build/Test success; CTest **9/9**.
+- CI PR #1 uruchomiony dla wcześniejszego SHA PR; po ostatnich zmianach oczekuje na nowy przebieg dla dokładnego HEAD. Nie oznaczać nowego etapu jako zakończonego.
 - Poprzedni przebieg dla zmiany kodu parsera Xetra 2025: [CI #382 / 43401645335](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43401645335), SHA `e055cfe5d5e61123b073c4fae4932216d0d6c249` — **success**, CTest **9/9**.
 - Gałęzie: wyłącznie `main`; otwarte pull requesty: 0; otwarte Issues: 0.
 - Poprzedni problem kompilacji testu kalendarza (brak `#include <algorithm>` w starszym SHA) został naprawiony; nie jest stanem bieżącym.
@@ -916,3 +918,42 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 - Commit poprawki: `f4e79d01964a6b7ae59f68e88f47b345b4969164`. [Native C++ checks #413](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43411692239) dla dokładnego SHA: Configure — success; Build — success; Test — success; CTest **9/9 (100%)**, 1,21 s.
 - Jest to wyłącznie naprawa regresji w istniejącym, historycznym kodzie i teście, aby utrzymać zielone CI bez usuwania testów. Zgodnie z wiążącym `docs/PRODUCT_SCOPE.md` Xetra/Frankfurt, MIC i kalendarze sesji akcji pozostają poza zakresem produktu; nie planować dalszych funkcji Xetra.
 - Etap 11 pozostaje w toku dla właściwego zakresu FX/NBP/XAU. Następne prace dotyczą obserwowanych publikacji NBP, aktualności źródeł FX/XAU, poprawności bid/ask i spreadu, wyceny złota w gramach/kg/uncjach oraz portfela walutowo-złotowego. Nie oznaczono żadnego z tych zakresów jako zakończonego.
+
+
+## 45. Audyt ciągłości i nowy etap FX/XAU — 2026-11-13
+
+### Potwierdzony stan repozytorium
+- `main` HEAD: `cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06`.
+- Gałąź robocza: `feature/fx-xau-pricing-engine`; PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1), bez scalania.
+- Ostatni zielony CI dla `main`: [#414](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43411904371), dokładny SHA `cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06`; Configure/Build/Test success, CTest 9/9.
+- CI #413 również przeszedł 9/9. CI #412, #411 i wcześniejsze zakończyły się błędem w historycznym teście Xetra; późniejszy #413 naprawił tę regresję.
+- Jedyna gałąź na `main` przed rozpoczęciem nowego etapu; brak wcześniejszych otwartych PR i Issues.
+- Po otwarciu PR #1 workflow został uruchomiony; wymagane jest sprawdzenie wyniku dla końcowego SHA PR, nie tylko dla pierwszego commitu gałęzi.
+
+### Wynik audytu funkcjonalnego
+- Istniejący model `Instrument` i `MarketObservation` przechowuje waluty bazowe/kwotowane oraz typy cen Reference, Bid, Ask, Mid, Spot i Transaction.
+- Istniejące `convert_quantity()` obsługuje gram, kilogram i uncję trojańską.
+- Brakowało wydzielonego mechanizmu wykonania kalkulacji wymiany walut z wyborem bid/ask, konwersją odwrotną, spreadem i jawnymi opłatami.
+- Brakowało wyceny złota według masy, próby, ceny czystego kruszcu i opłat.
+- Adaptery źródeł oraz testy offline istnieją; testy adapterów nie potwierdzają bieżącej dostępności usług zewnętrznych.
+- Serwer API, portfel i dziennik transakcji nadal nie są zaimplementowane.
+
+### Etap 16 — silnik kalkulacji FX i wyceny złota (w toku)
+- Dodano `native/include/monitor/market_pricing.hpp` i `native/src/market_pricing.cpp`.
+- `convert_currency()`: dla sprzedaży waluty bazowej stosuje bid; dla konwersji odwrotnej stosuje odwrotność ask; wylicza kurs wykonania, mid, spread w punktach bazowych, prowizję procentową, opłatę stałą w walucie wyjściowej, kwotę brutto i netto.
+- `value_gold()`: przelicza gram/kg/uncję na gramy, stosuje próbę jako ułamek 0..1, przyjmuje cenę jednego grama czystego złota, pokazuje wartość brutto, opłatę i wartość netto.
+- Dodano `native/tests/test_market_pricing.cpp` i test CTest `monitor-market-pricing-tests`. Przypadki obejmują kierunek pary, bid/ask, opłaty, spread, błędne kwotowanie, przekroczenie opłat, próbę i jednostki masy.
+- CMake wyłącza historyczne `xetra_calendar_importer.cpp`, `xetra_calendar_source.cpp` i `test_xetra_calendar_source.cpp` z aktywnego builda/testów. Pliki źródłowe i ich historia pozostają w repozytorium, lecz nie są już aktywną zależnością ani kryterium CI.
+- Commit/HEAD gałęzi po ostatniej zmianie: `8a986df76b4d1017e71f487071458ad516633c13`.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) oczekuje na pełny CI dla końcowego SHA. Etap pozostaje w toku do potwierdzenia Configure/Build/Test.
+- Nie scalać PR przed zielonym CI i przeglądem diffu.
+
+### Następne etapy po Etapie 16
+1. Po zielonym CI przeprowadzić przegląd API kalkulacyjnego i dodać kontrolę semantyki walut oraz skrajnych wartości liczbowych.
+2. Dodać model transakcji FX/XAU: strona kupna/sprzedaży, ilość, waluta rozliczenia, kurs wykonania, spread, opłaty, czas i pochodzenie oferty.
+3. Dodać portfel walutowo-złotowy, koszt nabycia oraz wynik zrealizowany/niezrealizowany.
+4. Podłączyć wycenę XAU do kursu FX w celu prezentacji wartości w PLN i innych walutach, z zachowaniem obu źródeł i czasu obserwacji.
+5. Dopiero potem rozpocząć API i klientów; nie rozwijać funkcji akcyjnych ani kalendarzy sesji giełdowych.
+
+### Zasada dalszego monitorowania
+Przed każdym następnym etapem sprawdzić bieżący `main`, gałęzie, PR, Issues, dokładny SHA PR oraz ostatni CI. Po każdym etapie dopisać commit, wynik Configure/Build/Test, liczbę testów i ograniczenia do tego pliku. Status „zakończony” nadawać wyłącznie po zielonym CI dla dokładnego SHA.
