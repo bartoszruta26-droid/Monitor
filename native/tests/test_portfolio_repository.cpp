@@ -68,7 +68,11 @@ int main(){
             paired_loaded.transactions[1].operation_id=="repo-exchange-1" &&
             paired_loaded.transactions[2].operation_id=="repo-exchange-1",
             "paired operation id survives JSON round trip");
-    throws([&]{(void)paired_repo.append_batch({pair.front()},2);},
+    auto orphan_leg=pair.front();
+    orphan_leg.id="orphan-debit";
+    orphan_leg.operation_id="orphan-operation";
+    orphan_leg.quantity=1;
+    throws([&]{(void)paired_repo.append_batch({orphan_leg},2);},
            "incomplete FX pair rejected atomically");
     require(paired_repo.load().revision==2,"failed FX batch leaves revision unchanged");
     std::filesystem::remove_all(dir);
