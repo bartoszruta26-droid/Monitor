@@ -17,6 +17,7 @@ struct PortfolioPriceProvenance {
     std::int64_t newest_observation_unix{};
     std::int64_t oldest_received_unix{};
     std::vector<std::string> instrument_ids;
+    std::vector<std::string> observation_ids;
     std::vector<std::string> provider_ids;
     std::vector<std::string> source_uris;
     std::vector<PriceKind> price_kinds;
