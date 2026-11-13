@@ -1101,7 +1101,36 @@ Przed każdym następnym etapem sprawdzić bieżący `main`, gałęzie, PR, Issu
 - Nadal nie ma API/UI do ręcznego wprowadzania i przeglądania operacji.
 
 ### Następny etap
-1. Etap 21 — połączenie odczytu repozytorium portfela, budowania price book i kalkulacji podsumowania w jednej usłudze domenowej.
-2. Dodać jawne odtwarzanie kopii zapasowej portfela i testy przerwania/nieudanego zapisu.
-3. Rozszerzyć provenance o dokładny identyfikator wykorzystanej obserwacji dla każdej krawędzi kursu krzyżowego oraz regułę wyboru ścieżki opartą na świeżości i jakości.
+1. Etap 21 — integracja repozytorium, price book i kalkulacji w jednej usłudze domenowej oraz jawne odtwarzanie kopii zapasowej (**zakończony**, CI #462: 13/13).
+2. Etap 22 — poprawa rankingu kursów krzyżowych i dokładne wskazanie obserwacji użytych do każdej krawędzi wyceny.
+3. Etap 23 — dalsze testy odporności zapisu na awarie procesu/systemu plików i obsługa błędów kopii zapasowej.
 4. Następnie API i klienci; bez funkcji akcyjnych.
+
+
+## 50. Etap 21 — zintegrowana usługa wyceny portfela i jawne odtwarzanie kopii (2026-11-13)
+
+### Zakres implementacji
+- Dodano native/include/monitor/portfolio_service.hpp, native/src/portfolio_service.cpp i native/tests/test_portfolio_service.cpp.
+- value_saved_portfolio() wykonuje jeden deterministyczny przepływ domenowy: odczytuje PortfolioSnapshot z JsonPortfolioRepository, buduje PortfolioPriceBook z MarketDataSnapshot i oblicza PortfolioSummary.
+- Raport zwraca równocześnie rewizję i transakcje portfela, ceny użyte do wyceny, pochodzenie obserwacji oraz podsumowanie pozycji i wyników.
+- Brak świeżych notowań albo brak prawidłowego kursu dla otwartej pozycji powoduje błąd wyceny. Obserwacje Suspect nie są używane jako awaryjne ceny.
+- Dodano jawne restore_backup() w JsonPortfolioRepository. Odtworzenie wymaga wywołania funkcji; nie jest wykonywane automatycznie po błędzie odczytu. Odtworzona kopia otrzymuje nową, rosnącą rewizję, a kopia źródłowa nie jest nadpisywana kolejną kopią uszkodzonego pliku.
+- Testy sprawdzają połączenie EUR i XAU w PLN, sumę kosztu nabycia i wartości bieżącej, zachowanie provenance, odrzucanie danych starych/podejrzanych oraz jawne odtworzenie poprzedniej poprawnej rewizji z pliku .bak.
+- CMake rejestruje monitor-portfolio-service-tests; CTest ma teraz 13 testów.
+
+### Weryfikacja CI
+- Końcowy SHA etapu: 1eb27b28cc835a4f2c63e8b49fa141cbb5235136.
+- [Native C++ checks #462](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43420406551), dokładny SHA 1eb27b28cc835a4f2c63e8b49fa141cbb5235136: Configure — success; Build — success; Test — success; CTest **13/13 (100%)**, 1,26 s.
+- [PR merge-ref CI #461](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43420392194) również zakończył się sukcesem. Oba przebiegi są zielone.
+- Wcześniejszy #456 ujawnił niezgodność sygnatury write_unlocked po dodaniu opcji rotacji kopii; poprawiono definicję, a #457/#458 przeszły. Końcowy #462 obejmuje pełny kod usługi, odzyskiwanie i testy.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) pozostaje otwarty, mergeable i nie scalony. main pozostaje bez zmian.
+
+### Ograniczenia
+- Usługa przyjmuje MarketDataSnapshot od wywołującego; pobieranie i odświeżanie adapterów nie jest jeszcze orkiestracją automatyczną.
+- Raport jest dostępny jako typ domenowy C++; brak jeszcze REST API, ekranu użytkownika, synchronizacji ani powiadomień.
+- Odtwarzanie kopii jest jawne i testowane dla uszkodzonego pliku głównego oraz poprawnego .bak. Nie jest to jeszcze pełna symulacja utraty zasilania, uszkodzenia katalogu, braku miejsca i awarii fsync.
+
+### Następny etap
+1. Ranking kursów krzyżowych powinien preferować świeższe i lepszej jakości obserwacje, a w raporcie wskazywać dokładny identyfikator każdej użytej obserwacji.
+2. Rozszerzyć testy awarii zapisu, w tym konflikt kopii, brak miejsca, nieudany rename/fsync i równoległe procesy.
+3. Dopiero po stabilizacji modelu i audycie semantyki transakcji rozpocząć API i klienta.
