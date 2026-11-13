@@ -68,6 +68,45 @@ int main(){
     PortfolioHistoryFilter asset_filter;asset_filter.asset_code="EUR";
     require(build_portfolio_history(history_snapshot,asset_filter).transaction_count==2,
             "asset filter returns EUR acquisitions and exchange credits");
+    PortfolioHistoryPageRequest page_request;
+    page_request.page_size=2;
+    const auto page_one=get_portfolio_history_page(history_snapshot,page_request);
+    require(page_one.api_version==1&&page_one.snapshot_revision==4&&
+            page_one.total_matching==5&&page_one.entries.size()==2&&
+            page_one.next_cursor.has_value(),
+            "versioned history API returns first bounded page and continuation cursor");
+    page_request.cursor=page_one.next_cursor;
+    const auto page_two=get_portfolio_history_page(history_snapshot,page_request);
+    require(page_two.entries.size()==2&&page_two.next_cursor.has_value()&&
+            page_two.entries.front().transaction.id=="history-usd-buy",
+            "history cursor continues without repeating earlier entries");
+    page_request.cursor=page_two.next_cursor;
+    const auto page_three=get_portfolio_history_page(history_snapshot,page_request);
+    require(page_three.entries.size()==1&&!page_three.next_cursor&&
+            page_three.entries.front().transaction.fx_audit.has_value(),
+            "last page retains FX execution audit metadata");
+    PortfolioHistoryPageRequest unsupported_version;unsupported_version.api_version=2;
+    throws([&]{(void)get_portfolio_history_page(history_snapshot,unsupported_version);},
+           "unsupported history API version rejected");
+    PortfolioHistoryPageRequest zero_page;zero_page.page_size=0;
+    throws([&]{(void)get_portfolio_history_page(history_snapshot,zero_page);},
+           "zero history page size rejected");
+    PortfolioHistoryPageRequest oversized_page;oversized_page.page_size=501;
+    throws([&]{(void)get_portfolio_history_page(history_snapshot,oversized_page);},
+           "history page size above maximum rejected");
+    PortfolioHistoryPageRequest malformed_cursor;malformed_cursor.cursor="broken";
+    throws([&]{(void)get_portfolio_history_page(history_snapshot,malformed_cursor);},
+           "malformed history cursor rejected");
+    auto newer_snapshot=history_snapshot;++newer_snapshot.revision;
+    page_request.cursor=page_one.next_cursor;
+    throws([&]{(void)get_portfolio_history_page(newer_snapshot,page_request);},
+           "cursor from older portfolio revision rejected");
+    PortfolioHistoryPageRequest filtered_cursor;
+    filtered_cursor.filter.asset_code="XAU";
+    filtered_cursor.cursor=page_one.next_cursor;
+    throws([&]{(void)get_portfolio_history_page(history_snapshot,filtered_cursor);},
+           "cursor outside the active filter rejected");
+
     PortfolioHistoryFilter invalid_time;invalid_time.executed_from_unix=31;invalid_time.executed_to_unix=30;
     throws([&]{(void)build_portfolio_history(history_snapshot,invalid_time);},
            "reversed history time range rejected");
