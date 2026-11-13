@@ -16,8 +16,12 @@ indicator("Monitor Rynków — DGT + LonesomeTheBlue", shorttitle="Monitor LinRe
 f_channel(float src, int length, bool sampleDenominator) =>
     float mid = ta.linreg(src, length, 0)
     float slope = mid - ta.linreg(src, length, 1)
-    float sumY = math.sum(src, length)
-    float sumY2 = math.sum(src * src, length)
+    // Center prices on the oldest sample before forming moments. This
+    // avoids subtracting O(price^2) sums when the residual variance is small.
+    float anchor = src[length - 1]
+    float centeredSrc = src - anchor
+    float sumY = math.sum(centeredSrc, length)
+    float sumY2 = math.sum(centeredSrc * centeredSrc, length)
     float n = length
     float sxx = n * (n * n - 1.0) / 12.0
     float sseRaw = sumY2 - (sumY * sumY) / n - slope * slope * sxx
