@@ -2,7 +2,7 @@
 
 **Repozytorium:** `bartoszruta26-droid/Monitor`  
 **Gałąź:** `main`  
-**Ostatnia weryfikacja:** 2026-11-13 12:22 Europe/Warsaw
+**Ostatnia weryfikacja:** 2026-11-13 15:15 Europe/Warsaw
 **Zasada prowadzenia:** status etapu zmienia się na „zakończony” dopiero po sprawdzeniu kodu, testów i CI dla konkretnego SHA. Ten plik jest bieżącym rejestrem wykonania; szczegóły techniczne pozostają w dokumentach etapów.
 
 ## Bieżący stan repozytorium — 2026-11-13 13:27 Europe/Warsaw
@@ -45,7 +45,7 @@
 | 21 | Zintegrowana usługa wyceny i jawne odtwarzanie kopii | Zakończony | CI #462, CTest 13/13 |
 | 22 | Dokładne provenance i preferowanie świeższych krawędzi FX | Zakończony | CI #467, CTest 13/13 |
 | 23 | Odporność repozytorium na błędy i konkurencyjne procesy | Zakończony | CI #469, CTest 13/13 |
-| 24 | Szczegóły audytowe wykonania wymiany FX | Do wykonania | Zachować surowe bid/ask, kurs wykonania, spread, opłaty i źródło |
+| 24 | Szczegóły audytowe wykonania wymiany FX | W toku — implementacja i testy dodane; końcowy CI dla aktualnego SHA oczekuje | Surowe bid/ask, mid, spread, kurs brutto i efektywny, opłaty oraz provenance; JSON opcjonalny i zgodny wstecz |
 
 ## Ostatnie potwierdzone commity
 
@@ -1192,3 +1192,27 @@ Przed każdym następnym etapem sprawdzić bieżący `main`, gałęzie, PR, Issu
 1. Etap 24 — rozszerzenie audytowego modelu wykonania wymiany FX o pierwotne kwotowanie bid/ask, cenę wykonania, spread, opłaty, źródło, czas i identyfikator oferty.
 2. Zachować zgodność wsteczną JSON oraz walidację par operacji FX.
 3. Dopiero potem rozpocząć API i interfejs użytkownika.
+
+
+## 53. Etap 24 — audyt wykonania wymiany FX (2026-11-13)
+
+### Zakres wdrożony
+- Dodano opcjonalny model `FxExecutionAudit` do danych transakcji portfela.
+- Audyt przechowuje walutę bazową i kwotowaną, surowe bid/ask, mid, spread w punktach bazowych, kurs wykonania brutto oraz kurs efektywny wyliczony z kwoty netto i kwoty oddanej.
+- Zachowywane są parametry opłat procentowych i stałych, waluta opłaty, identyfikator dostawcy, identyfikator obserwacji, URI źródła oraz czas obserwacji.
+- Szczegóły audytowe są zapisywane wyłącznie na nodze nabywanej; obie nogi pozostają powiązane przez `operation_id`. Opłata księgowana jest nadal dokładnie raz.
+- Walidacja portfela sprawdza zgodność kierunku pary z walutami obu nóg, kursu brutto z bid (kierunek bezpośredni) lub odwrotnością ask (kierunek odwrotny), mid, spreadu, kursu efektywnego, danych opłat i chronologii obserwacji.
+- Repozytorium JSON zapisuje i odczytuje `fx_audit` jako pole opcjonalne. Starsze dokumenty bez tego pola pozostają czytelne; nie podniesiono wersji schematu.
+- Dodano testy poprawnego audytu, odrzucenia niespójnego kursu efektywnego i pełnego round-trip JSON.
+
+### Monitoring CI
+- CI #475, SHA `1d9e1b366ff09b58502ceb38f82f3d889f4a05d0`: Configure/Build/Test success.
+- CI #476, SHA `77530ba92d144fd5dd73a2fc8ec90b9dcf90cfe2`: Configure/Build/Test success.
+- CI #477, SHA `10172e7ea61adc41566027320c369a8ea175c4ff`: Configure/Build/Test success.
+- CI #478, SHA `b0a855e4758d0b0ba92bcc12f9cab8e2d49445e4`: Configure/Build/Test success; CTest 13/13. W logu wykryto ostrzeżenia o pominiętym inicjalizatorze pola opcjonalnego; dodano konstruktor z domyślnym audytem, aby usunąć ostrzeżenia bez zmiany semantyki inicjalizacji.
+- Commit porządkujący inicjalizację: `ce8a0d6d744fb7882907405d92865f68bb985f58`. Oczekuje na osobny, końcowy przebieg CI; etapu nie uznaje się jeszcze za zakończony.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) pozostaje otwarty i niescalony. `main` pozostaje bez zmian.
+
+### Następny zakres po zakończeniu etapu 24
+- Etap 25: spójny model historii i analizy wykonanych transakcji FX/XAU — filtrowanie po parach/aktywach, źródle i czasie; jawne rozróżnienie kursu referencyjnego, kwotowania i kursu faktycznego wykonania.
+- Następnie integracja API i klientów dopiero po ustabilizowaniu kontraktu danych; bez funkcji akcyjnych, zleceń giełdowych i kalendarzy sesji.
