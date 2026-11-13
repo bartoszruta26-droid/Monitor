@@ -1070,6 +1070,38 @@ Przed każdym następnym etapem sprawdzić bieżący `main`, gałęzie, PR, Issu
 
 ### Następny etap
 1. Etap 20 — transakcja wymiany FX jako atomowa para zapisów: waluta oddana i otrzymana, wspólny identyfikator operacji i jednokrotne naliczenie opłaty.
-2. Połączenie repozytorium portfela z price book w jednym przebiegu wyceny.
-3. Dodać jawne odtwarzanie kopii zapasowej portfela i testy odporności na przerwanie zapisu.
-4. Dopiero potem API i klienci.
+2. Etap 20 — sparowanie obu nóg wymiany FX i atomowy zapis jednej operacji (zakończony; szczegóły w sekcji 49).
+3. Połączenie repozytorium portfela z price book w jednym przebiegu wyceny.
+4. Dodać jawne odtwarzanie kopii zapasowej portfela i testy odporności na przerwanie zapisu.
+5. Dopiero potem API i klienci.
+
+
+## 49. Etap 20 — sparowane i atomowe operacje wymiany FX (2026-11-13)
+
+### Zakres implementacji
+- Rozszerzono PortfolioTransaction o opcjonalny operation_id, zachowując odczyt dokumentów JSON v1 bez tego pola.
+- Dodano FxExchangeExecution i make_fx_exchange_transactions(): pojedyncze wykonanie tworzy dwie powiązane nogi — sprzedaż waluty oddawanej i zakup waluty otrzymywanej.
+- Obie nogi mają wspólny operation_id, czas wykonania i source_id; identyfikatory transakcji są stabilnie rozróżnione sufiksami debit/credit.
+- Kwota to_amount oznacza kwotę netto otrzymaną po potrąceniu opłaty. Opłata w walucie raportowania jest księgowana dokładnie raz na nodze nabycia. Wartość brutto nogi sprzedaży jest wyliczana tak, aby bilansowała koszt nogi nabycia wraz z opłatą.
+- calculate_portfolio() sprawdza kompletność pary, przeciwne strony, różne kody walut, wspólny czas i źródło, jednokrotne naliczenie opłaty oraz zgodność wartości w walucie raportowania. Niekompletne lub niezbilansowane operacje są odrzucane.
+- JsonPortfolioRepository otrzymało append_batch(); dwie nogi wymiany są walidowane i zapisywane w jednej rewizji w ramach jednego atomowego zapisu JSON.
+- Pole operation_id jest zapisywane w JSON; dekoder zachowuje zgodność wsteczną i przy braku pola przypisuje pustą wartość.
+- Testy obejmują wygenerowanie obu nóg, saldo waluty oddanej i otrzymanej, jednorazową opłatę, niezbilansowaną i niekompletną parę oraz round-trip JSON i atomowe odrzucenie niepełnej partii.
+
+### Weryfikacja CI
+- Końcowy SHA etapu: a30c8d8d79b21bdf68ec8db454289d76b2955f7a.
+- [Native C++ checks #454](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43419992623), dokładny SHA a30c8d8d79b21bdf68ec8db454289d76b2955f7a: Configure — success; Build — success; Test — success; CTest **12/12 (100%)**, 1,80 s.
+- Wcześniejsze #449 wykazało błędne założenie testu co do kolejności pozycji (wynik jest sortowany według kodu aktywa). Poprawiono asercję, aby sprawdzała jawny porządek EUR/PLN; #454 potwierdził cały zestaw testów.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) pozostaje otwarty, mergeable i nie scalony; main nie został zmieniony.
+
+### Ograniczenia
+- Operacja wymiany jest atomowa w obrębie repozytorium portfela, ale nie stanowi jeszcze integracji z zewnętrznym kantorem ani potwierdzenia rzeczywistego wykonania. Dane wykonania przekazuje klient.
+- Opłata jest modelowana w walucie raportowania i księgowana na nodze nabycia; inne sposoby pobierania opłat wymagają jawnego rozszerzenia kontraktu.
+- Wartość jednostkowa waluty oddawanej jest wyprowadzana z kwoty netto waluty otrzymanej, jej ceny w walucie raportowania i opłaty. Zachowuje to bilans księgowy, ale nie zastępuje archiwizacji oryginalnego kwotowania bid/ask; źródło i identyfikator operacji pozostają w transakcji.
+- Nadal nie ma API/UI do ręcznego wprowadzania i przeglądania operacji.
+
+### Następny etap
+1. Etap 21 — połączenie odczytu repozytorium portfela, budowania price book i kalkulacji podsumowania w jednej usłudze domenowej.
+2. Dodać jawne odtwarzanie kopii zapasowej portfela i testy przerwania/nieudanego zapisu.
+3. Rozszerzyć provenance o dokładny identyfikator wykorzystanej obserwacji dla każdej krawędzi kursu krzyżowego oraz regułę wyboru ścieżki opartą na świeżości i jakości.
+4. Następnie API i klienci; bez funkcji akcyjnych.
