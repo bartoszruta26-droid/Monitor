@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <fstream>
 #include <map>
+#include <limits>
 #include <set>
 #include <stdexcept>
 #include <string_view>
@@ -148,7 +149,7 @@ PortfolioSnapshot JsonPortfolioRepository::load() const {
     return load_unlocked();
 }
 
-void JsonPortfolioRepository::write_unlocked(const PortfolioSnapshot& snapshot) const {
+void JsonPortfolioRepository::write_unlocked(const PortfolioSnapshot& snapshot,bool rotate_backup) const {
     validate_snapshot(snapshot);
     auto parent=file_path_.parent_path();
     if(parent.empty()) parent=".";
@@ -172,7 +173,7 @@ void JsonPortfolioRepository::write_unlocked(const PortfolioSnapshot& snapshot) 
         ::unlink(temp.c_str());
         throw std::runtime_error("Nie można utrwalić pliku portfela.");
     }
-    if(config_.backup_on_write && std::filesystem::exists(file_path_))
+    if(rotate_backup && config_.backup_on_write && std::filesystem::exists(file_path_))
         std::filesystem::copy_file(file_path_,backup_path(),std::filesystem::copy_options::overwrite_existing);
     if(::rename(temp.c_str(),file_path_.c_str())!=0) {
         ::unlink(temp.c_str());
@@ -221,6 +222,37 @@ std::uint64_t JsonPortfolioRepository::append_batch(
     validate_snapshot(next);
     write_unlocked(next);
     return next.revision;
+}
+
+PortfolioSnapshot JsonPortfolioRepository::restore_backup() {
+    auto parent=file_path_.parent_path();
+    if(parent.empty()) parent=".";
+    if(config_.create_parent_directories) std::filesystem::create_directories(parent);
+    FileLock lock(file_path_.string()+".lock",LOCK_EX);
+    const auto backup=backup_path();
+    if(!std::filesystem::exists(backup))
+        throw std::runtime_error("Nie istnieje kopia zapasowa portfela.");
+    const auto size=std::filesystem::file_size(backup);
+    if(size==0U||size>config_.max_document_bytes)
+        throw std::runtime_error("Kopia zapasowa portfela jest pusta lub przekracza limit.");
+    std::ifstream input(backup,std::ios::binary);
+    if(!input) throw std::runtime_error("Nie można otworzyć kopii zapasowej portfela.");
+    json document;
+    try { input>>document; }
+    catch(const std::exception& e) {
+        throw std::runtime_error(std::string("Nie można odczytać kopii portfela: ")+e.what());
+    }
+    auto restored=decode_snapshot(document);
+    if(restored.reporting_currency!=initial_reporting_currency_)
+        throw std::runtime_error("Waluta raportowania kopii różni się od konfiguracji repozytorium.");
+    std::uint64_t current_revision=restored.revision;
+    try { current_revision=std::max(current_revision,load_unlocked().revision); }
+    catch(const std::exception&) { /* Corrupt primary: backup revision is the recovery base. */ }
+    if(current_revision==std::numeric_limits<std::uint64_t>::max())
+        throw std::overflow_error("Wyczerpano zakres rewizji portfela.");
+    restored.revision=current_revision+1U;
+    write_unlocked(restored,false);
+    return restored;
 }
 
 } // namespace monitor::market
