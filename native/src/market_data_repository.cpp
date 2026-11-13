@@ -1295,7 +1295,7 @@ std::string build_venue_audit_report_json(const MarketDataSnapshot& snapshot) {
     for(const auto& object:find_orphaned_source_objects(snapshot))
         orphaned.push_back(object.source_object_id);
     report["orphaned_source_object_ids"]=std::move(orphaned);
-    return report.dump(2)+"\\n";
+    return report.dump(2)+"\n";
 }
 EffectiveVenueCalendarDay resolve_effective_venue_calendar_day(
     const MarketDataSnapshot& snapshot,std::string_view calendar_id,CivilDate date) {
