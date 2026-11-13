@@ -1041,3 +1041,35 @@ Przed każdym następnym etapem sprawdzić bieżący `main`, gałęzie, PR, Issu
 2. Dodać jawne sparowanie obu nóg wymiany FX (waluta oddana i otrzymana) i wspólny identyfikator operacji, z jednorazowym naliczaniem prowizji.
 3. Rozważyć odtwarzanie kopii zapasowej wyłącznie jako jawne działanie użytkownika i dodać testy uszkodzenia/odtworzenia.
 4. Dopiero po stabilizacji wyceny i trwałości danych przejść do API oraz klientów.
+
+
+## 48. Etap 19 — wycena portfela z obserwacji FX/XAU (2026-11-13)
+
+### Zakres implementacji
+- Dodano native/include/monitor/portfolio_valuation.hpp, native/src/portfolio_valuation.cpp i native/tests/test_portfolio_valuation.cpp.
+- Funkcja build_portfolio_price_book() buduje ceny bieżące w walucie raportowania na podstawie MarketDataSnapshot; wynik zawiera pary cen do calculate_portfolio() oraz pełne pochodzenie wyceny.
+- Dla walut wycena ma charakter likwidacyjny: sprzedaż waluty bazowej używa bid; wycena odwrotna używa odwrotności ask. Jeśli dostępny jest tylko mid/average/reference, wynik pozostaje oparty na cenie orientacyjnej, a rodzaj źródła jest zachowany w pochodzeniu.
+- Obsługiwane są kursy krzyżowe przez graf par walutowych; ścieżka i wszystkie użyte instrumenty, dostawcy, URI, rodzaje cen oraz flagi jakości są zachowywane.
+- Złoto jest normalizowane do ceny za gram czystego kruszcu. Cena USD/uncja trojańska jest przeliczana przez 31,1034768 g/uncję i następnie przez ścieżkę FX do waluty raportowania. Źródła PLN/g (NBP) są obsługiwane bezpośrednio.
+- Źródła XAU są sortowane według czasu obserwacji; jeśli najnowsze źródło nie ma dostępnej ścieżki walutowej, moduł próbuje następne najświeższe źródło, którego walutę można przeliczyć.
+- Do wyceny dopuszczane są tylko obserwacje Validated, nieprzyszłe względem as_of i mieszczące się w max_age_seconds. Dane Suspect, Unreviewed, przyszłe i przeterminowane są pomijane.
+- Dodano testy kursu bezpośredniego bid, kursu krzyżowego, odwrotnej pary, XAU USD/uncja do PLN/gram czystego złota, odrzucania podejrzanego bid, świeżości oraz awaryjnego wyboru starszego źródła NBP.
+
+### Weryfikacja CI
+- Końcowy SHA etapu: 2f41a677697476a372e450bce2aec5fa39052c9e.
+- [Native C++ checks #443](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43419410635), dokładny SHA 2f41a677697476a372e450bce2aec5fa39052c9e: Configure — success; Build — success; Test — success; CTest **12/12 (100%)**, 1,37 s.
+- Wcześniejszy przebieg #442 wykrył nieprawidłowe oczekiwanie testu w scenariuszu, w którym podejrzany bid został odrzucony, ale nadal dostępna była starsza, prawidłowa wycena NBP. Poprawiono asercję tak, aby wymagała użycia tej starszej, konwertowalnej ceny NBP; poprawiony przebieg #443 jest zielony.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) pozostaje otwarty i nie scalony. main pozostaje bez zmian.
+
+### Ograniczenia
+- Wycena wykorzystuje wyłącznie obserwacje już zapisane w MarketDataSnapshot; sama nie pobiera sieciowo nowych danych ani nie uruchamia adapterów.
+- Dla waluty, dla której brak ścieżki do waluty raportowania, nie powstaje cena. Kalkulator portfela powinien zgłosić brak wymaganej ceny otwartej pozycji.
+- Mid/average/reference są wycenami orientacyjnymi, nie gwarantowanymi cenami wykonania. Wynik nie jest ofertą brokera ani kantoru.
+- Przy wielu możliwych ścieżkach FX wybierana jest najkrótsza ścieżka grafu, z deterministyczną kolejnością krawędzi; dalszy etap powinien rozważyć ranking ścieżek według spójności czasu i jakości.
+- Pochodzenie ceny jest zachowane, ale warstwa użytkowa/API nie prezentuje go jeszcze w interfejsie.
+
+### Następny etap
+1. Etap 20 — transakcja wymiany FX jako atomowa para zapisów: waluta oddana i otrzymana, wspólny identyfikator operacji i jednokrotne naliczenie opłaty.
+2. Połączenie repozytorium portfela z price book w jednym przebiegu wyceny.
+3. Dodać jawne odtwarzanie kopii zapasowej portfela i testy odporności na przerwanie zapisu.
+4. Dopiero potem API i klienci.
