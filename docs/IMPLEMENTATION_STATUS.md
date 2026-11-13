@@ -1269,5 +1269,7 @@ Przed każdym następnym etapem sprawdzić bieżący `main`, gałęzie, PR, Issu
 - CI #494 (`0d5745f…`): success — uzupełnienie zależności kompilacji.
 - CI #495 (`89f4101…`): failure w teście — test wykazał, że kursor strony nie był związany z zestawem filtrów.
 - CI #496 (`8c09841…`): failure z tą samą asercją, ponieważ commit dokumentacyjny uruchomił ponownie kod przed poprawką.
-- Poprawka w SHA `5613b96286313227280b40bf0ffb302d34bedad2`: kursor zawiera teraz stabilny podpis FNV-1a kanonicznego zestawu filtrów i jest odrzucany po zmianie filtrów. CI #497 dla tego dokładnego SHA jest w toku.
-- Etap 26 pozostaje otwarty do zielonego CI dla kodu i aktualnego rejestru.
+- Poprawka w SHA `5613b96286313227280b40bf0ffb302d34bedad2`: kursor zawiera stabilny podpis FNV-1a kanonicznego zestawu filtrów i jest odrzucany po zmianie filtrów.
+- CI [#497](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43512473432), dokładny SHA `5613b96286313227280b40bf0ffb302d34bedad2`: Configure/Build/Test success. Test paginacji oraz walidacji kursora przeszedł.
+- CI [#498](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43512614382), dokumentacyjny SHA `7987e3de86df7955b26f76732683e24a64f65138`: w toku podczas aktualizacji rejestru.
+- Etap 26 ma zielony CI dla kodu; oczekuje jeszcze na kontrolę aktualnego SHA dokumentacyjnego i końcowy audyt kontraktu.
