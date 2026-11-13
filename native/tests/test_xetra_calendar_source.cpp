@@ -133,6 +133,40 @@ int main() {
             parsed.days.at(1).product_sessions.front().closes_at.hour==17U &&
             parsed.days.at(1).product_sessions.front().closes_at.minute==30U,
             "regular session hours are read from source text rather than fixed constants");
+
+    // Exercise the wording currently published by Deutsche Börse rather than
+    // only the older synthetic phrasing: footnote stars in holiday labels,
+    // "from 9 until 17:30 CET", and the venue-qualified shortened-hours text.
+    auto live_wording_html=html;
+    const auto replace_once=[&](const std::string& before,const std::string& after) {
+        const auto at=live_wording_html.find(before);
+        require(at!=std::string::npos,"live-wording fixture marker exists");
+        live_wording_html.replace(at,before.size(),after);
+    };
+    replace_once("<th>Christmas Eve</th>","<th>Christmas Eve**</th>");
+    replace_once("<th>New Year's Eve</th>","<th>New Year's Eve**</th>");
+    replace_once("<p>Regular trading hours are from 09:00 to 17:30.</p>",
+        "<p>Trading on Xetra takes place from Mondays to Fridays from 9 until 17:30 CET.</p>");
+    replace_once("<p>Trading on shares and Exchange traded products ends at 20:00 CET. Structured products are traded until 22:00 CET.</p>",
+        "<p>Trading of shares and Exchange traded products on Frankfurt and Xetra ends on public holidays (Germany and State of Hesse) where trading takes place according to the FWB trading calendar at 20:00 CET. Deviating from this, structured products are traded until 22:00 CET on these days.</p>");
+    const auto live_wording_parsed=parse_xetra_html_calendar(live_wording_html,source());
+    require(live_wording_parsed.days.size()==365U &&
+            live_wording_parsed.days.at(1).product_sessions.front().opens_at.hour==9U &&
+            live_wording_parsed.days.at(1).product_sessions.front().closes_at.hour==17U &&
+            live_wording_parsed.days.at(1).product_sessions.front().closes_at.minute==30U,
+            "parser accepts current official regular-hours wording");
+    const auto christmas_eve_2026=std::find_if(live_wording_parsed.days.begin(),live_wording_parsed.days.end(),
+        [&](const VenueCalendarDay& day){return date_is(day.date,2026,12U,24U);});
+    require(christmas_eve_2026!=live_wording_parsed.days.end() &&
+            christmas_eve_2026->status==VenueDayStatus::SettlementOnly,
+            "parser ignores footnote stars on settlement-only holiday labels");
+    const auto ascension_2026=std::find_if(live_wording_parsed.days.begin(),live_wording_parsed.days.end(),
+        [&](const VenueCalendarDay& day){return date_is(day.date,2026,5U,14U);});
+    require(ascension_2026!=live_wording_parsed.days.end() &&
+            ascension_2026->product_sessions.size()==2U &&
+            ascension_2026->product_sessions[0].closes_at.hour==20U &&
+            ascension_2026->product_sessions[1].closes_at.hour==22U,
+            "parser accepts current official venue-qualified holiday hours");
     const auto date_is=[](const CivilDate& date,int year,unsigned month,unsigned day) {
         return date.year==year && date.month==month && date.day==day;
     };
