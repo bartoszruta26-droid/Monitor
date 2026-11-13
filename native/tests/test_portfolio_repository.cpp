@@ -75,6 +75,18 @@ int main(){
     throws([&]{(void)paired_repo.append_batch({orphan_leg},2);},
            "incomplete FX pair rejected atomically");
     require(paired_repo.load().revision==2,"failed FX batch leaves revision unchanged");
+    const auto recovery_file=dir/"recovery.json";
+    JsonPortfolioRepository recovery(recovery_file,"PLN");
+    require(recovery.append(PortfolioTransaction{"recovery-1","EUR",PortfolioAssetKind::Currency,
+        TradeSide::Buy,10,1,4.0,0,10,"bank"},0)==1,"recovery first revision");
+    require(recovery.append(PortfolioTransaction{"recovery-2","EUR",PortfolioAssetKind::Currency,
+        TradeSide::Buy,5,1,4.1,0,20,"bank"},1)==2,"recovery second revision");
+    {std::ofstream out(recovery_file,std::ios::trunc);out<<"{corrupt";}
+    throws([&]{(void)recovery.load();},"corrupt primary requires explicit recovery");
+    const auto recovered=recovery.restore_backup();
+    require(recovered.revision==2 && recovered.transactions.size()==1 &&
+            recovery.load().transactions.size()==1,
+            "explicit backup recovery restores prior valid snapshot and advances revision");
     std::filesystem::remove_all(dir);
     std::cout<<"All portfolio repository tests passed.\n";
 }
