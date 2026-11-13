@@ -1,6 +1,7 @@
 #include "monitor/portfolio_service.hpp"
 
 #include <algorithm>
+#include <charconv>
 #include <cmath>
 #include <map>
 #include <set>
@@ -118,6 +119,83 @@ PortfolioHistoryReport build_portfolio_history(
     report.transaction_count=report.entries.size();
     report.audited_fx_execution_count=audited_operations.size();
     return report;
+}
+
+namespace {
+struct HistoryCursor {
+    std::uint64_t revision{};
+    std::int64_t executed_at{};
+    std::string transaction_id;
+};
+
+HistoryCursor parse_history_cursor(const std::string& cursor) {
+    const auto first=cursor.find(':');
+    const auto second=first==std::string::npos?first:cursor.find(':',first+1);
+    const auto third=second==std::string::npos?second:cursor.find(':',second+1);
+    if(first==std::string::npos || second==std::string::npos ||
+       third==std::string::npos || cursor.substr(0,first)!="v1" ||
+       third+1>=cursor.size())
+        throw std::invalid_argument("Nieprawidłowy kursor historii API.");
+    HistoryCursor parsed;
+    const auto revision_text=std::string_view(cursor).substr(first+1,second-first-1);
+    const auto time_text=std::string_view(cursor).substr(second+1,third-second-1);
+    const auto revision_result=std::from_chars(revision_text.data(),
+        revision_text.data()+revision_text.size(),parsed.revision);
+    const auto time_result=std::from_chars(time_text.data(),
+        time_text.data()+time_text.size(),parsed.executed_at);
+    if(revision_result.ec!=std::errc{} ||
+       revision_result.ptr!=revision_text.data()+revision_text.size() ||
+       time_result.ec!=std::errc{} ||
+       time_result.ptr!=time_text.data()+time_text.size() ||
+       parsed.executed_at<0)
+        throw std::invalid_argument("Nieprawidłowe dane kursora historii API.");
+    parsed.transaction_id=cursor.substr(third+1);
+    return parsed;
+}
+
+std::string make_history_cursor(std::uint64_t revision,
+    const PortfolioHistoryEntry& entry) {
+    return "v1:"+std::to_string(revision)+":"+
+        std::to_string(entry.transaction.executed_at_unix)+":"+
+        entry.transaction.id;
+}
+}
+
+PortfolioHistoryPage get_portfolio_history_page(
+    const PortfolioSnapshot& portfolio,
+    const PortfolioHistoryPageRequest& request) {
+    if(request.api_version!=portfolio_history_api_version)
+        throw std::invalid_argument("Nieobsługiwana wersja API historii portfela.");
+    if(request.page_size==0U || request.page_size>500U)
+        throw std::invalid_argument("Rozmiar strony historii musi mieścić się w zakresie 1–500.");
+
+    const auto report=build_portfolio_history(portfolio,request.filter);
+    std::size_t start=0;
+    if(request.cursor) {
+        const auto cursor=parse_history_cursor(*request.cursor);
+        if(cursor.revision!=portfolio.revision)
+            throw std::invalid_argument("Kursor historii należy do innej rewizji portfela.");
+        const auto found=std::find_if(report.entries.begin(),report.entries.end(),
+            [&](const auto& entry) {
+                return entry.transaction.id==cursor.transaction_id &&
+                    entry.transaction.executed_at_unix==cursor.executed_at;
+            });
+        if(found==report.entries.end())
+            throw std::invalid_argument("Kursor historii nie wskazuje wpisu w bieżącym filtrze.");
+        start=static_cast<std::size_t>(std::distance(report.entries.begin(),found))+1U;
+    }
+
+    PortfolioHistoryPage page;
+    page.snapshot_revision=portfolio.revision;
+    page.total_matching=report.entries.size();
+    const auto remaining=report.entries.size()-std::min(start,report.entries.size());
+    const auto count=std::min(request.page_size,remaining);
+    page.entries.insert(page.entries.end(),
+        report.entries.begin()+static_cast<std::ptrdiff_t>(start),
+        report.entries.begin()+static_cast<std::ptrdiff_t>(start+count));
+    if(start+count<report.entries.size() && !page.entries.empty())
+        page.next_cursor=make_history_cursor(portfolio.revision,page.entries.back());
+    return page;
 }
 
 PortfolioValuationReport value_saved_portfolio(
