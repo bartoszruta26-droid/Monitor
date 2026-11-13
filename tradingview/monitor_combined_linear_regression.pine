@@ -10,7 +10,9 @@ indicator("Monitor Rynków — DGT + LonesomeTheBlue", shorttitle="Monitor LinRe
 // ─────────────────────────────────────────────────────────────────────────────
 // WSPÓLNA FUNKCJA REGRESJI
 // Midline jest końcową wartością regresji kroczącej. SSE wyznaczamy z tożsamości
-// OLS: SST = Slope²·Sxx + SSE. Dzięki temu unikamy kosztownej pętli po oknie.
+// OLS: SST = Slope²·Sxx + SSE. Momenty sumujemy jawnie po oknie, centrując
+// każdą próbkę względem jednej bieżącej kotwicy — kosztem O(length) na kanał i bar.
+// Wydajność przy maksymalnych długościach wymaga profilowania w Pine Editor.
 // DGT: sqrt(SSE/(n-1)); LonesomeTheBlue: sqrt(SSE/n).
 // ─────────────────────────────────────────────────────────────────────────────
 f_channel(float src, int length, bool sampleDenominator) =>
