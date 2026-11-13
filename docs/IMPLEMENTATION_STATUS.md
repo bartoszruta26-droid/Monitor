@@ -718,3 +718,19 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 - Commit `0746f308c946f805779ccb404c9e32112edf04c9` przełącza wybór podsekcji na etykietę Xetra występującą po sekcji dostępności.
 - Commit `c22642023cf8ac3ab2a8e3afe7f50396f7cf8c65` wzmacnia walidację: wymaga jawnego MIC XETR oraz TES OTC w wybranej części tekstu; w razie niepowodzenia komunikat zawiera ograniczony fragment ekstrakcji do diagnozy CI. Test negatywny XFRA nadal musi odrzucać komunikat.
 - Wynik CI dla tych commitów jest oczekiwany. Etap 19A nie został zamknięty.
+
+
+## 64. Etap 19B — deterministyczny raport audytowy źródeł i efektywnych sesji (w toku)
+
+- Dodano publiczne API `build_venue_audit_report_json(const MarketDataSnapshot&)`, zwracające raport `monitor.venue_audit.v1` bez modyfikowania repozytorium ani plików.
+- Raport zawiera manifest obiektów SHA-256, pochodzenie i licencje kalendarzy, wersje parserów, pełną historię komunikatów, efektywne dni po zastosowaniu aktywnych nadpisań/anulowań, fazy sesji, daty wymagające oficjalnych komunikatów oraz identyfikatory osieroconych obiektów.
+- Kolekcje są sortowane deterministycznie. Raport odzwierciedla wyłącznie zapisaną migawkę; nie wykonuje HTTP ani nie skanuje katalogu archiwum.
+- Dodano test JSON parse, kompletności zakresu dni, faz komunikatu, referencji zastosowanego komunikatu, pustego raportu orphan dla używanych źródeł i powtarzalności eksportu tej samej migawki.
+- Specyfikacja: `docs/venue-audit-report.md` (commit `0efc312e9aa299504a1ce60ac9e20b62a248e698`).
+- Wstępny CI ujawnił brak jawnego include `nlohmann/json.hpp` w teście; dodano go w commicie `a5cfcefd8f3b3b2923b0de6bdd9204173ffa3210`. Nie uznaję Etapu 19B za zakończony do pełnego zielonego CI dla aktualnego HEAD.
+- Parser PDF 19A nadal wymaga potwierdzenia: dotychczasowe próby ujawniły różnice ekstrakcji sekcji off-book. Wprowadzono diagnostykę i sprawdzanie jawnego MIC XETR; nie wolno osłabiać kontroli MIC w celu „przepuszczenia” fixture.
+
+### Następne czynności
+1. Potwierdzić pełny CI aktualnego HEAD; rozdzielić błędy parsera PDF od testów raportu.
+2. Jeżeli parser nadal nie przejdzie, pobrać tekst z syntetycznego PDF w samym CI lub dodać test diagnostyczny ekstrakcji, a następnie naprawić fixture/parser na podstawie rzeczywistego tekstu.
+3. Po zielonym CI zamknąć 19B i 19A tylko w zakresie, który rzeczywiście przeszedł. Oryginalny PDF nadal nie jest zarchiwizowany binarnie.
