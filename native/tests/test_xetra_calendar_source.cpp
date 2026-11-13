@@ -271,6 +271,7 @@ int main() {
     transport.response.status_code=503;
     throws([&]{(void)adapter.fetch(source());},"reject server failure");
     transport.response.status_code=200;
+    transport.response.headers.clear();
     transport.response.headers["content-type"]="application/pdf";
     throws([&]{(void)adapter.fetch(source());},"reject non-HTML content type");
     transport.response.headers.clear();
