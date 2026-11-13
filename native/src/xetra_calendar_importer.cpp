@@ -185,7 +185,7 @@ VenueSessionCalendar parse_xetra_html_calendar(
             // The live Deutsche Börse table marks settlement-only dates with
             // superscript footnote stars (e.g. "Christmas Eve**"). They are
             // presentation markers, not part of the holiday's semantic name.
-            label = std::regex_replace(label, std::regex(R"(\\*+$)"), "");
+            label = std::regex_replace(label, std::regex(R"(\*+$)"), "");
             if (!required.contains(label)) continue;
             const auto date=date_from_cell(node_text(cells[year_column]),calendar_year);
             if (!holidays.emplace(label, date).second)
