@@ -1264,4 +1264,10 @@ Przed każdym następnym etapem sprawdzić bieżący `main`, gałęzie, PR, Issu
 - Kursor zawiera wersję, rewizję, czas wykonania i identyfikator ostatniej transakcji; jest odrzucany, gdy ma błędny format, pochodzi z innej rewizji albo nie wskazuje wpisu pasującego do aktywnego filtra.
 - Wpisy stron zachowują pełny `PortfolioHistoryEntry`, w tym `fx_pair` oraz `PortfolioPriceEvidence` i opcjonalny `FxExecutionAudit` w transakcji. Kontrakt jest niezależny od HTTP; serwer REST/OpenAPI i autoryzacja pozostają odrębnym etapem.
 - Dodano testy stron 1–3, braku duplikacji, zachowania audytu na ostatniej stronie, nieobsługiwanej wersji API, limitów strony, błędnego kursora, niezgodnej rewizji i kursora spoza aktywnego filtra.
-- CI dla kolejnych commitów etapu: #492 (`192fb9f…`), #493 (`2e34f39…`), #494 (`0d5745f…`) i #495 (`89f4101…`) — w toku podczas ostatniej kontroli. Etap pozostaje otwarty do zielonego CI dla aktualnego SHA.
+- CI #492 (`192fb9f…`): success — kontrakt API v1.
+- CI #493 (`2e34f39…`): success — pierwsza implementacja paginacji.
+- CI #494 (`0d5745f…`): success — uzupełnienie zależności kompilacji.
+- CI #495 (`89f4101…`): failure w teście — test wykazał, że kursor strony nie był związany z zestawem filtrów.
+- CI #496 (`8c09841…`): failure z tą samą asercją, ponieważ commit dokumentacyjny uruchomił ponownie kod przed poprawką.
+- Poprawka w SHA `5613b96286313227280b40bf0ffb302d34bedad2`: kursor zawiera teraz stabilny podpis FNV-1a kanonicznego zestawu filtrów i jest odrzucany po zmianie filtrów. CI #497 dla tego dokładnego SHA jest w toku.
+- Etap 26 pozostaje otwarty do zielonego CI dla kodu i aktualnego rejestru.
