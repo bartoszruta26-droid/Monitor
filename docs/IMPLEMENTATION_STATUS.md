@@ -2,7 +2,7 @@
 
 **Repozytorium:** `bartoszruta26-droid/Monitor`  
 **Gałąź:** `main`  
-**Ostatnia weryfikacja:** 2026-11-13 09:31 Europe/Warsaw
+**Ostatnia weryfikacja:** 2026-11-13 10:12 Europe/Warsaw
 **Zasada prowadzenia:** status etapu zmienia się na „zakończony” dopiero po sprawdzeniu kodu, testów i CI dla konkretnego SHA. Ten plik jest bieżącym rejestrem wykonania; szczegóły techniczne pozostają w dokumentach etapów.
 
 ## Stan repozytorium przy audycie
@@ -801,3 +801,16 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 - Zmiana nie dotyka parsera faz, semantyki sesji ani walidacji MIC. Obowiązkowe MIC XETR w sekcji rynku i podsekcji off-book oraz negatywny test XFRA pozostają bez zmian.
 - Etap 19A pozostaje **otwarty**: ten commit naprawia dopuszczenie oficjalnego hosta, ale nie stanowi dowodu zarchiwizowania oryginalnych bajtów PDF. Próba pobrania binarnego PDF do środowiska roboczego w tym przebiegu nie powiodła się; nie zapisano fikcyjnego SHA-256, długości ani MIME. Nie dodano pliku binarnego do publicznego repozytorium.
 - Następny krok 19A: w środowisku z dostępnym pobieraniem wykonać import oryginalnego PDF przez `import_pdf_notice`, zapisać rzeczywisty SHA-256, długość, MIME, URL i czas pobrania, a następnie porównać dziewięć faz z wynikiem parsera. Przed publicznym udostępnieniem binarnego dokumentu wymagana jest odrębna ocena warunków licencyjnych.
+
+### Kontrola ciągłości i CI #370 — 2026-11-13 10:12 Europe/Warsaw
+
+- Odczytano rzeczywisty HEAD `main`: `fa462169c094657bfe2c6f5ed3e6b40587939ba8`.
+- Gałąź `main` wskazuje dokładnie na ten SHA. Repozytorium ma jedną gałąź roboczą; wyszukiwanie otwartych PR i Issues zwróciło po 0 wyników.
+- Najnowszy workflow [Native C++ checks #370](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43393970254) dotyczy dokładnie tego SHA i zakończył się `success`.
+- Job `native-linux`: instalacja zależności, Configure, Build i Test — wszystkie kroki `success`. CTest: **9/9**. Nie ma nieudanych jobów ani kroków, więc nie występują logi błędów do diagnozowania.
+- Poprawka hosta w kodzie znajduje się w poprzednim commicie `4608ac02f2892a5a2c12b5ca3b5eceec3eb9a7a7`; jej CI [#369](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43393787470) również potwierdził Configure/Build/Test i 9/9. Dokładny host `cashmarket.deutsche-boerse.com` jest dozwolony, host z dopisanym obcym sufiksem jest odrzucany; walidacja MIC XETR i negatywne przypadki XFRA nie zostały zmienione.
+- Ponowny audyt Etapu 11 potwierdził w kodzie: generator okien publikacji NBP A/B/C i świąt ustawowych, wyprowadzanie `ObservedPublication` wyłącznie z metadanych rzeczywistych obserwacji, parser semantycznej tabeli HTML Xetra, adapter HTTPS oraz archiwizację dokładnych bajtów źródłowych w repozytorium JSON. Testy sieciowe pozostają poza zwykłym CI; testy CI używają atrap transportu i fixture offline.
+- Etap 11 pozostaje **w toku**: bieżący zakres Xetra jest ograniczony do obsługi fixture/układu 2026, a automatyczne pobieranie i weryfikacja kolejnych wersji rocznych oraz pełne kalendarze innych źródeł/instrumentów wymagają osobnych prac. Nie przypisujemy XAUS kalendarza giełdowego ani World Bank miesięcznej częstotliwości dziennej.
+- Etap 19A pozostaje **otwarty**: test syntetycznego PDF i poprawka allowlisty hosta nie dowodzą pobrania oraz zarchiwizowania oryginalnych bajtów komunikatu końcoworocznego. Nadal brak rzeczywistego SHA-256, długości i MIME oryginalnego PDF; nie wpisano wartości szacunkowych.
+- Następny niezależny etap z audytu `docs/next-implementation-audit.md`: Etap 12 — fixture i porównanie C++/Pine. Pine Script v6 jest zapisany, ale nie ma potwierdzonej kompilacji w Pine Editor. Należy przygotować porównywalny zestaw danych i wyników dla obu profili, a test TradingView pozostawić jawnie oczekującym na wykonanie w Pine Editor.
+- Nie wykonano zmian kodu ani scalania w tej kontroli, ponieważ najnowszy CI jest zielony i nie ujawnił konkretnej usterki wymagającej poprawki. Nie należy tworzyć poprawki bez wykazanej przyczyny.
