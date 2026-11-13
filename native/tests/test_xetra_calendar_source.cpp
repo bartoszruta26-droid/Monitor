@@ -694,17 +694,27 @@ int main() {
             return event.kind==kind && event.at.hour==hour && event.at.minute==minute &&
                    event.at.second==0U && event.scope==scope;
         };
-        require(phase_matches(0U,VenueSessionPhaseEventKind::PreTradingStart,7U,0U,"") &&
-                phase_matches(1U,VenueSessionPhaseEventKind::RetailEarlyStart,8U,0U,"") &&
-                phase_matches(2U,VenueSessionPhaseEventKind::OpeningAuctionCall,8U,55U,"") &&
-                phase_matches(3U,VenueSessionPhaseEventKind::IntradayAuctionCall,13U,0U,"") &&
-                phase_matches(4U,VenueSessionPhaseEventKind::ClosingAuctionCall,14U,0U,"") &&
-                phase_matches(5U,VenueSessionPhaseEventKind::ClosingAuctionPriceDeterminationNotBefore,14U,5U,"") &&
-                phase_matches(6U,VenueSessionPhaseEventKind::TradeAtCloseEnd,14U,10U,"DAX, MDAX, SDAX") &&
-                phase_matches(7U,VenueSessionPhaseEventKind::PostTradingEnd,15U,0U,"") &&
-                phase_matches(8U,VenueSessionPhaseEventKind::OffBookServicesEnd,14U,59U,
+        // The parser stores phase events chronologically: the 14:59 off-book
+        // cutoff precedes the 15:00 post-trading end.
+        require(phase_matches(0U,VenueSessionPhaseEventKind::PreTradingStart,7U,0U,""),
+                "PDF import preserves the 07:00 pre-trading start");
+        require(phase_matches(1U,VenueSessionPhaseEventKind::RetailEarlyStart,8U,0U,""),
+                "PDF import preserves the 08:00 retail-early start");
+        require(phase_matches(2U,VenueSessionPhaseEventKind::OpeningAuctionCall,8U,55U,""),
+                "PDF import preserves the 08:55 opening-auction call");
+        require(phase_matches(3U,VenueSessionPhaseEventKind::IntradayAuctionCall,13U,0U,""),
+                "PDF import preserves the 13:00 intraday-auction call");
+        require(phase_matches(4U,VenueSessionPhaseEventKind::ClosingAuctionCall,14U,0U,""),
+                "PDF import preserves the 14:00 closing-auction call");
+        require(phase_matches(5U,VenueSessionPhaseEventKind::ClosingAuctionPriceDeterminationNotBefore,14U,5U,""),
+                "PDF import preserves the 14:05 closing-price lower bound");
+        require(phase_matches(6U,VenueSessionPhaseEventKind::TradeAtCloseEnd,14U,10U,"DAX, MDAX, SDAX"),
+                "PDF import preserves the 14:10 Trade-at-Close end and instrument scope");
+        require(phase_matches(7U,VenueSessionPhaseEventKind::OffBookServicesEnd,14U,59U,
                               "TES OTC, TES LIS, Xetra EnLight"),
-                "PDF parser preserves all nine official Xetra phase times and their service scopes");
+                "PDF import preserves the 14:59 off-book cutoff and service scope");
+        require(phase_matches(8U,VenueSessionPhaseEventKind::PostTradingEnd,15U,0U,""),
+                "PDF import preserves the 15:00 post-trading end");
         const auto pdf_hash=sha256_hex(pdf_bytes);
         const auto pdf_object=std::find_if(pdf_snapshot.source_objects.begin(),pdf_snapshot.source_objects.end(),
             [&](const SourceArchiveObject& object){return object.content_sha256==pdf_hash;});
