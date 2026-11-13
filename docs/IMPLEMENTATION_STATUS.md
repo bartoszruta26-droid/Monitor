@@ -949,7 +949,7 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 - Nie scalać PR przed zielonym CI i przeglądem diffu.
 
 ### Następne etapy po Etapie 16
-1. Etap 17 — model transakcji FX/XAU, portfel FIFO, koszt nabycia i wynik zrealizowany/niezrealizowany (implementacja w gałęzi roboczej; oczekuje na końcową weryfikację CI po aktualizacji rejestru).
+1. Etap 17 — model transakcji FX/XAU, portfel FIFO, koszt nabycia i wynik zrealizowany/niezrealizowany (**zakończony dla warstwy obliczeniowej**, CI #429: 10/10; ograniczenia opisano w sekcji 46).
 2. Etap 18 — trwały zapis/odczyt transakcji i portfela w istniejącym repozytorium, z migracją i zgodnością dotychczasowych plików JSON.
 3. Etap 19 — przeliczanie wartości portfela XAU/FX do PLN i innych walut na podstawie źródeł wraz z czasem obserwacji i statusem jakości.
 4. Etap 20 — integracja API i klientów dopiero po stabilizacji modelu oraz trwałości danych.
@@ -1007,3 +1007,37 @@ Przed każdym następnym etapem sprawdzić bieżący `main`, gałęzie, PR, Issu
 2. Dodać parowanie obu nóg wymiany FX, aby ewidencja obejmowała zarówno nabytą, jak i oddaną walutę, bez podwójnego naliczania opłat.
 3. Etap 19 — pobieranie cen bieżących i przeliczanie XAU/FX do waluty raportowania ze znacznikami czasu i jakością źródeł.
 4. Etap 20 — API i klienci.
+
+
+
+## 47. Etap 18 — trwałe repozytorium transakcji FX/XAU (2026-11-13)
+
+### Zakres implementacji
+- Dodano native/include/monitor/portfolio_repository.hpp, native/src/portfolio_repository.cpp i native/tests/test_portfolio_repository.cpp.
+- JsonPortfolioRepository przechowuje osobny dokument monitor.portfolio; nie zmienia istniejących dokumentów monitor.market_data ani ich schematu JSON.
+- Dokument ma jawne schema_version=1, rewizję, walutę raportowania i listę transakcji. Enumy są zapisywane jako stabilne nazwy tekstowe.
+- Operacje append i replace wymagają oczekiwanej rewizji (optimistic concurrency); konflikt nie nadpisuje nowszych danych.
+- Zapis odbywa się przez plik tymczasowy, fsync, atomowe rename, blokadę plikową i opcjonalną kopię poprzedniej wersji .bak.
+- Odczyt odrzuca pusty/uszkodzony dokument, nieznaną wersję schematu, niezgodną walutę raportowania, nadmierny rozmiar i nieprawidłowe transakcje. Brak pliku oznacza nowy pusty portfel w skonfigurowanej walucie.
+- Walidacja dokumentu odtwarza księgę transakcji i odrzuca duplikaty identyfikatorów, chronologię błędną dla danego aktywa, sprzedaż ponad stan i błędne dane złota/walut.
+- Dodano testy round-trip JSON, rewizji i konfliktu, kopii zapasowej, błędnej sprzedaży, chronologii, nieznanej wersji i uszkodzonego pliku.
+- CMake rejestruje monitor-portfolio-repository-tests; CTest wzrósł do 11 testów.
+
+### Weryfikacja CI
+- Końcowy commit etapu: a0bafc71fcece63dbf6d7b63cd8459b6f0a5cc92.
+- [Native C++ checks #435](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43418884964), dokładny SHA a0bafc71fcece63dbf6d7b63cd8459b6f0a5cc92: Configure — success; Build — success; Test — success; CTest **11/11 (100%)**, 1,32 s.
+- W tym przebiegu przeszły: testy rdzenia, modelu danych, wyceny FX/XAU, portfela FIFO, repozytorium portfela JSON, adapterów, repozytorium danych rynkowych, agregacji, wykresów, regresji i kalendarza publikacji.
+- [CI #434](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43418865528) dla poprzedniego SHA 2e084c988a3f4c322e5868d5acfd7bd33d70993c również przeszedł, ale końcową weryfikacją etapu jest #435 po rejestracji repozytorium w CMake.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) pozostaje otwarty i nie scalony. main nie został zmieniony.
+
+### Ograniczenia i ryzyka do kolejnego przeglądu
+- Repozytorium jest osobnym plikiem JSON; nie ma jeszcze automatycznej migracji transakcji ze starszego formatu, ponieważ wcześniejszy schemat portfela nie istniał. Istniejące pliki monitor.market_data pozostają nietknięte.
+- Kopia .bak jest tworzona przed podmianą; automatyczne odtwarzanie kopii wymaga jawnej operacji i nie jest wykonywane po cichu.
+- Model nadal wymaga podania cen bieżących przez wywołującego; etap integracji źródeł FX/XAU i waluty raportowania jest następny.
+- Należy w kolejnym przeglądzie ocenić zachowanie przy równoległych procesach, przerwaniu zapisu, braku miejsca i błędach systemu plików; testy obecne sprawdzają blokady rewizji i atomowy przepływ podstawowy, nie pełną macierz awarii systemowych.
+
+### Następny etap
+1. Etap 19 — warstwa wyceny portfela: pobieranie najnowszych obserwacji FX/XAU, kontrola świeżości, statusu jakości i źródła, konwersja do waluty raportowania.
+2. Dodać jawne sparowanie obu nóg wymiany FX (waluta oddana i otrzymana) i wspólny identyfikator operacji, z jednorazowym naliczaniem prowizji.
+3. Rozważyć odtwarzanie kopii zapasowej wyłącznie jako jawne działanie użytkownika i dodać testy uszkodzenia/odtworzenia.
+4. Dopiero po stabilizacji wyceny i trwałości danych przejść do API oraz klientów.
