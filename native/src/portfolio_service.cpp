@@ -55,8 +55,7 @@ PortfolioHistoryReport build_portfolio_history(
         if(pair.empty()) pair=tx.asset_code;
         else if(pair.find('/')==std::string::npos && pair!=tx.asset_code) {
             const auto first=pair;
-            pair=tx.side==TradeSide::Sell ? first+"/"+tx.asset_code
-                                         : tx.asset_code+"/"+first;
+            pair=first+"/"+tx.asset_code;
         }
     }
 
