@@ -1173,6 +1173,7 @@ Przed każdym następnym etapem sprawdzić bieżący `main`, gałęzie, PR, Issu
 ### Weryfikacja CI
 - Końcowy SHA etapu: 309b42b08a1400387a24024977d85fc9c7781389.
 - [Native C++ checks #469](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43420958912), dokładny SHA 309b42b08a1400387a24024977d85fc9c7781389: Configure — success; Build — success; Test — success; CTest **13/13 (100%)**, 1,22 s.
+- Etap 23 jest zakończony: testy odporności przeszły na dokładnym SHA kodu i testów.
 - PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) nadal otwarty i nie scalony.
 
 ### Granice testów
