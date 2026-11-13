@@ -32,7 +32,7 @@
 | 8 | Jawny kalendarz sesyjny dla kompletności HTF | Zakończony v1 jako funkcja obliczeniowa | `MarketSessionCalendar` i `session_aware_rolling_regression()`; terminy przekazuje wywołujący |
 | 9 | Trwały magazyn i wersjonowanie kalendarzy sesyjnych | Zakończony | Commit `df867c6efaa7f8cebad74db3291a3c0dde12f67e`; CI [43264555372](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43264555372) sukces, kompilacja i CTest 7/7. Pochodzenie regresji zawiera `calendar_id` i `calendar_version`. |
 | 10 | Generator harmonogramów z IANA TZ/DST i reguł sesji | Zakończony | Commit `da61302dc4de43308228e6f60e82e187bef566df`; CI [43301335250](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43301335250) sukces: konfiguracja, kompilacja i CTest 8/8. Testy obejmują DST wiosenny i jesienny, polityki czasu, weekendy, wyłączenia, błędne strefy i zakres dat. |
-| 11 | Kalendarze źródłowe i instrumentowe (NBP, metale, giełdy) | W toku — generator okien publikacji NBP | Generator okien A/B/C przeszedł CI 43303169211 (8/8). Generator okien A/B/C, świąt ustawowych i automatycznego stosowania kalendarza świąt przeszedł CI 43304025796 (8/8). Etap 11 nadal w toku: model obserwowanych publikacji NBP jest zaimplementowany i przetestowany; importer NBP ma już podział zakresu 93-dniowego i obsługę 404 z testami offline (CI bieżącej zmiany w toku); pozostaje implementacja parsera/wersjonowanego rejestru oficjalnego kalendarza venue (Xetra). |
+| 11 | Kalendarze publikacji i aktualizacji źródeł FX oraz złota (NBP, FX, XAU spot) | W toku — obserwowane publikacje NBP i świeżość źródeł FX/XAU | Generator okien A/B/C przeszedł CI 43303169211 (8/8). Generator okien A/B/C, świąt ustawowych i automatycznego stosowania kalendarza świąt przeszedł CI 43304025796 (8/8). Etap 11 nadal w toku: model obserwowanych publikacji NBP jest zaimplementowany i przetestowany; importer NBP ma już podział zakresu 93-dniowego i obsługę 404 z testami offline (CI bieżącej zmiany w toku); dalsza praca ma dotyczyć wyłącznie publikacji NBP oraz aktualizacji źródeł FX/XAU; kalendarz Xetra jest poza zakresem. |
 | 12 | Wspólne fixture i porównanie C++/Pine | Do wykonania | Pine Editor niezweryfikowany; brak potwierdzonej kompilacji TradingView |
 | 13 | Serwer API, autoryzacja, REST/JSON i WebSocket | Do wykonania | Brak aktywnego modułu serwera |
 | 14 | Klienci Linux GUI, WebUI, TUI i Android | Do wykonania | Brak aktywnych modułów klientów |
@@ -141,7 +141,7 @@ Przy każdym kolejnym poleceniu kontynuacji należy najpierw odczytać ten plik 
 - NBP gold API dostarcza datę publikacji, ale dokumentacja API nie deklaruje godziny publikacji. Nie należy dopisywać fikcyjnej godziny do obserwacji.
 - World Bank Pink Sheet jest miesięcznym źródłem danych; nie wolno przypisywać mu dziennego kalendarza sesji.
 - XAUS udostępnia orientacyjny spot z cache 60 s i serię intraday co 5 minut z ograniczoną retencją; nie jest to kalendarz giełdowy ani kwotowanie wykonywalne.
-- Dla giełd należy importować oficjalny kalendarz konkretnego operatora i rynku (np. Xetra), uwzględniając dni handlu w święta, skrócone sesje i wersje kalendarza.
+- Dla bieżącego produktu nie importować kalendarzy giełdowych; harmonogramy muszą opisywać publikacje NBP oraz świeżość/aktualizację źródeł FX i złota.
 - Szczegóły, źródła i kryteria implementacji: `docs/market-calendar-sources.md`.
 
 
@@ -211,8 +211,8 @@ Przy każdym kolejnym poleceniu kontynuacji należy najpierw odczytać ten plik 
 Etap 11 pozostaje w toku. Następna implementacja powinna być rozdzielona na małe, testowalne zmiany:
 1. Model faktycznie zaobserwowanych publikacji NBP został dodany jako `ObservedPublication`; `provider_published_on` pozostaje datą, a `received_at` rzeczywistym czasem odbioru odpowiedzi. Nie konstruować sztucznej godziny publikacji z przedziału A/B/C.
 2. Import NBP: podział zakresu do 93 dni, obsługa 404/pustej odpowiedzi i czas odbioru mierzony per odpowiedź zostały wdrożone; po zielonym CI uznać ten podzakres za zakończony. Kolejny importer do zrobienia to wersjonowany kalendarz Xetra.
-3. Dodać wersjonowany rejestr źródłowego dokumentu kalendarza giełdowego (najpierw Xetra): URL, data publikacji, zakres obowiązywania, strefa IANA, skrót SHA-256, licencja/atrybucja.
-4. Dodać importer Xetra dla jawnie wybranego oficjalnego formatu i utrzymywać skrócone sesje, dni handlowe w święta, zamknięcia i wyjątki jako osobne reguły.
+3. Dodać wersjonowany rejestr metadanych publikacji i aktualizacji źródeł FX/XAU; bez dokumentów kalendarzy giełdowych.
+4. Dodać kontrolę świeżości i kompletności serii FX oraz XAU z uwzględnieniem rzeczywistej częstotliwości dostawcy.
 5. Zachować istniejący JSON schema v1 przez kompatybilny odczyt i jawną migrację przy zmianie formatu; opublikowane wersje kalendarzy pozostają niezmienne.
 6. Rozszerzyć testy o fixture offline: 404, brak danych, korekty źródła, zmiana wersji, nieznany format, skrócona sesja, handel w święto, zamknięcie oraz granice DST.
 7. Po implementacji uruchomić pełne CI i dopiero wtedy zmienić status Etapu 11.
@@ -898,3 +898,12 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 - Etap 11 pozostaje **w toku**: fixture 2025–2028 jest syntetyczny; brakuje archiwizacji dozwolonych oryginalnych bajtów HTML i ich rzeczywistych metadanych (SHA-256, długość, MIME, czas pobrania). Dla lat 2027–2032 nie dopowiadać nieopublikowanych wyjątków świątecznych.
 - Etap 19A pozostaje **otwarty**: brak oryginalnych bajtów PDF w archiwum projektu oraz ich zweryfikowanego SHA-256, długości, MIME i czasu pobrania. Tekst PDF i syntetyczny fixture nie zastępują importu oryginalnego pliku.
 - Następny bezpieczny zakres: w środowisku z bezpośrednim dostępem pobrać oryginalne HTML/PDF, obliczyć metadane z rzeczywistych bajtów, ocenić licencję, uruchomić importer na oryginalnym PDF i sprawdzić dziewięć faz oraz obie walidacje MIC XETR. Dopiero po tym i zielonym CI dla dokładnego SHA można zamykać odpowiednie podzakresy.
+
+
+## Decyzja zakresowa produktu — 2026-11-13
+
+**Obowiązujący zakres:** wymiana walut FX oraz zakup, sprzedaż, wymiana i wycena złota XAU. Wszystkie kolejne zadania i priorytety mają służyć tym funkcjom. Wymagane są: kursy referencyjne i bid/ask, przeliczanie z uwzględnieniem spreadu/opłat, ceny XAU w PLN i innych walutach, gram/kg/uncja trojańska, odróżnienie ceny referencyjnej/spot od rzeczywistej ceny transakcji oraz portfel i historia operacji walutowo-złotowych.
+
+**Poza zakresem:** akcje, udziały, papiery wartościowe, zlecenia maklerskie, arkusze zleceń, brokerzy akcyjni i kalendarze sesji giełd papierów wartościowych. Nie kontynuować prac Xetra/Frankfurt, MIC XETR/XFRA ani aukcji. Wszystkie wpisy Xetra w starszej części rejestru dokumentują wyłącznie prace historyczne; nie są otwartymi zadaniami ani kryterium akceptacji. Nie scalać ani nie rozszerzać funkcji akcyjnych w ramach tego produktu.
+
+**Następny kierunek implementacyjny:** (1) zakończyć i przetestować importy FX/NBP/XAU w zakresie zgodnym z aktualnym modelem; (2) dopracować przeliczanie walut, bid/ask, spread i opłaty; (3) dopracować wycenę i jednostki złota; (4) zbudować portfel i dziennik transakcji walutowo-złotowych; (5) podłączyć wykresy i regresję do serii FX/XAU; (6) dopiero potem rozwijać API i klientów. CI nadal jest wymagane dla każdego SHA, ale zielone testy Xetra nie uzasadniają dalszych prac nad Xetra.
