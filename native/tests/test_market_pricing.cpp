@@ -48,6 +48,14 @@ int main() {
            "fees exceeding gross output");
     throws([&] { (void)convert_currency(1, "EUR", "PLN", eur_pln, 101, 0); },
            "percentage fee above 100");
+    throws([&] { (void)convert_currency(1, "PLN", "EUR",
+                {"EUR", "PLN", 1e-320, 1e-320}); },
+           "inverse quote reciprocal overflow");
+    const auto wide_quote = convert_currency(1.0, "AAA", "BBB",
+                {"AAA", "BBB", 1e308, 1.7e308});
+    require(std::isfinite(wide_quote.mid_rate) &&
+            std::isfinite(wide_quote.spread_basis_points),
+            "large finite quote avoids intermediate sum overflow");
 
     const auto gold = value_gold(10.0, Unit::Gram, 300.0, "PLN", 0.585, 2.0, 1.0);
     require(near(gold.gross_mass_grams, 10.0), "gold mass in grams");
