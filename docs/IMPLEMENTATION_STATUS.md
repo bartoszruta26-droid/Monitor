@@ -1134,3 +1134,29 @@ Przed każdym następnym etapem sprawdzić bieżący `main`, gałęzie, PR, Issu
 1. Ranking kursów krzyżowych powinien preferować świeższe i lepszej jakości obserwacje, a w raporcie wskazywać dokładny identyfikator każdej użytej obserwacji.
 2. Rozszerzyć testy awarii zapisu, w tym konflikt kopii, brak miejsca, nieudany rename/fsync i równoległe procesy.
 3. Dopiero po stabilizacji modelu i audycie semantyki transakcji rozpocząć API i klienta.
+
+
+## 51. Etap 22 — ranking świeżości kursów i dokładne pochodzenie obserwacji (2026-11-13)
+
+### Zakres implementacji
+- Rozszerzono PortfolioPriceProvenance o observation_ids, równoległe do instrument_ids, provider_ids, source_uris i price_kinds.
+- Każda wycena waluty i złota wskazuje dokładne identyfikatory obserwacji źródłowych, z których pochodzi kurs bezpośredni lub każda krawędź kursu krzyżowego.
+- Krawędzie grafu FX są porządkowane deterministycznie: najpierw nowszy observed_at, następnie nowszy received_at, a przy remisie identyfikator instrumentu.
+- Wyszukiwanie nadal preferuje najkrótszą ścieżkę BFS; wśród ścieżek o tej samej liczbie krawędzi wcześniejsza kolejność świeższych krawędzi zwiększa szansę wyboru nowszej obserwacji.
+- Testy potwierdzają, że spośród dwóch bezpośrednich par EUR/PLN wybierana jest świeższa obserwacja oraz że jej observation_id trafia do provenance.
+- Nie zmieniono zasad bid/ask, wyceny odwrotnej, świeżości, jakości ani normalizacji złota.
+
+### Weryfikacja CI
+- Końcowy SHA etapu: 648c6e9b118ed5cc41109dfb851b594f6adc23e9.
+- [Native C++ checks #467](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43420712520), dokładny SHA 648c6e9b118ed5cc41109dfb851b594f6adc23e9: Configure — success; Build — success; Test — success; CTest **13/13 (100%)**, 1,34 s.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) pozostaje otwarty i nie scalony; main nie został zmieniony.
+
+### Ograniczenia
+- Wybór ścieżki nadal priorytetyzuje liczbę krawędzi; świeżość porządkuje krawędzie lokalnie, ale nie oblicza globalnie najlepszego kompromisu świeżości dla całej ścieżki.
+- Do wyceny dopuszczane są wyłącznie obserwacje Validated; Unreviewed i Suspect są odrzucane. W przyszłości można dodać kontrolowane poziomy akceptacji, ale bez automatycznego obniżania jakości.
+- Nie ma jeszcze interfejsu prezentującego provenance użytkownikowi.
+
+### Następny etap
+1. Etap 23 — testy odporności repozytorium na przerwanie zapisu, błędy systemu plików, równoległe procesy i uszkodzenie kopii zapasowej.
+2. Dodać pełniejszy model audytowy wymiany FX, w tym przechowanie pierwotnego bid/ask, kursu wykonania, spreadu i opłaty obok sparowanych nóg.
+3. Następnie API i klient portfela FX/XAU; nie wprowadzać funkcji akcyjnych.
