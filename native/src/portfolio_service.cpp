@@ -101,6 +101,10 @@ PortfolioHistoryReport build_portfolio_history(
         [](const auto& a,const auto& b) {
             if(a.transaction.executed_at_unix!=b.transaction.executed_at_unix)
                 return a.transaction.executed_at_unix<b.transaction.executed_at_unix;
+            if(!a.transaction.operation_id.empty() &&
+               a.transaction.operation_id==b.transaction.operation_id &&
+               a.transaction.side!=b.transaction.side)
+                return a.transaction.side==TradeSide::Sell;
             return a.transaction.id<b.transaction.id;
         });
     for(auto& [code,item]:activity) {
