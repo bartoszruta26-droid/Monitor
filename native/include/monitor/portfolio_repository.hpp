@@ -36,6 +36,8 @@ public:
         const PortfolioSnapshot& snapshot, std::uint64_t expected_revision);
     [[nodiscard]] std::uint64_t append(
         const PortfolioTransaction& transaction, std::uint64_t expected_revision);
+    [[nodiscard]] std::uint64_t append_batch(
+        const std::vector<PortfolioTransaction>& transactions, std::uint64_t expected_revision);
     [[nodiscard]] const std::filesystem::path& file_path() const noexcept { return file_path_; }
     [[nodiscard]] std::filesystem::path backup_path() const;
     [[nodiscard]] bool exists() const;
