@@ -127,42 +127,80 @@ namespace {
 struct HistoryCursor {
     std::uint64_t revision{};
     std::int64_t executed_at{};
+    std::uint64_t filter_signature{};
     std::string transaction_id;
 };
+
+std::uint64_t history_filter_signature(const PortfolioHistoryFilter& filter) {
+    std::string canonical;
+    const auto append_text=[&](char tag,const std::optional<std::string>& value) {
+        canonical.push_back(tag);
+        if(value) {
+            canonical+=std::to_string(value->size());
+            canonical.push_back(':');
+            canonical+=*value;
+        } else {
+            canonical.push_back('-');
+        }
+        canonical.push_back(';');
+    };
+    const auto append_time=[&](char tag,const std::optional<std::int64_t>& value) {
+        canonical.push_back(tag);
+        canonical+=value?std::to_string(*value):"-";
+        canonical.push_back(';');
+    };
+    append_text('a',filter.asset_code);
+    append_text('p',filter.fx_pair);
+    append_text('s',filter.source_id);
+    append_text('o',filter.operation_id);
+    append_time('f',filter.executed_from_unix);
+    append_time('t',filter.executed_to_unix);
+    std::uint64_t hash=14695981039346656037ULL;
+    for(const unsigned char byte:canonical) {
+        hash^=byte;
+        hash*=1099511628211ULL;
+    }
+    return hash;
+}
 
 HistoryCursor parse_history_cursor(const std::string& cursor) {
     const auto first=cursor.find(':');
     const auto second=first==std::string::npos?first:cursor.find(':',first+1);
     const auto third=second==std::string::npos?second:cursor.find(':',second+1);
+    const auto fourth=third==std::string::npos?third:cursor.find(':',third+1);
     if(first==std::string::npos || second==std::string::npos ||
-       third==std::string::npos || cursor.substr(0,first)!="v1" ||
-       third+1>=cursor.size())
+       third==std::string::npos || fourth==std::string::npos ||
+       cursor.substr(0,first)!="v1" || fourth+1>=cursor.size())
         throw std::invalid_argument("Nieprawidłowy kursor historii API.");
     HistoryCursor parsed;
     const auto revision_text=std::string_view(cursor).substr(first+1,second-first-1);
     const auto time_text=std::string_view(cursor).substr(second+1,third-second-1);
+    const auto signature_text=std::string_view(cursor).substr(third+1,fourth-third-1);
     const auto revision_result=std::from_chars(revision_text.data(),
         revision_text.data()+revision_text.size(),parsed.revision);
     const auto time_result=std::from_chars(time_text.data(),
         time_text.data()+time_text.size(),parsed.executed_at);
+    const auto signature_result=std::from_chars(signature_text.data(),
+        signature_text.data()+signature_text.size(),parsed.filter_signature);
     if(revision_result.ec!=std::errc{} ||
        revision_result.ptr!=revision_text.data()+revision_text.size() ||
        time_result.ec!=std::errc{} ||
        time_result.ptr!=time_text.data()+time_text.size() ||
+       signature_result.ec!=std::errc{} ||
+       signature_result.ptr!=signature_text.data()+signature_text.size() ||
        parsed.executed_at<0)
         throw std::invalid_argument("Nieprawidłowe dane kursora historii API.");
-    parsed.transaction_id=cursor.substr(third+1);
+    parsed.transaction_id=cursor.substr(fourth+1);
     return parsed;
 }
 
 std::string make_history_cursor(std::uint64_t revision,
-    const PortfolioHistoryEntry& entry) {
+    std::uint64_t filter_signature,const PortfolioHistoryEntry& entry) {
     return "v1:"+std::to_string(revision)+":"+
         std::to_string(entry.transaction.executed_at_unix)+":"+
-        entry.transaction.id;
+        std::to_string(filter_signature)+":"+entry.transaction.id;
 }
 }
-
 PortfolioHistoryPage get_portfolio_history_page(
     const PortfolioSnapshot& portfolio,
     const PortfolioHistoryPageRequest& request) {
@@ -172,11 +210,14 @@ PortfolioHistoryPage get_portfolio_history_page(
         throw std::invalid_argument("Rozmiar strony historii musi mieścić się w zakresie 1–500.");
 
     const auto report=build_portfolio_history(portfolio,request.filter);
+    const auto filter_signature=history_filter_signature(request.filter);
     std::size_t start=0;
     if(request.cursor) {
         const auto cursor=parse_history_cursor(*request.cursor);
         if(cursor.revision!=portfolio.revision)
             throw std::invalid_argument("Kursor historii należy do innej rewizji portfela.");
+        if(cursor.filter_signature!=filter_signature)
+            throw std::invalid_argument("Kursor historii należy do innego zestawu filtrów.");
         const auto found=std::find_if(report.entries.begin(),report.entries.end(),
             [&](const auto& entry) {
                 return entry.transaction.id==cursor.transaction_id &&
@@ -196,7 +237,7 @@ PortfolioHistoryPage get_portfolio_history_page(
         report.entries.begin()+static_cast<std::ptrdiff_t>(start),
         report.entries.begin()+static_cast<std::ptrdiff_t>(start+count));
     if(start+count<report.entries.size() && !page.entries.empty())
-        page.next_cursor=make_history_cursor(portfolio.revision,page.entries.back());
+        page.next_cursor=make_history_cursor(portfolio.revision,filter_signature,page.entries.back());
     return page;
 }
 
