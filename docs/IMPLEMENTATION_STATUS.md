@@ -7,11 +7,11 @@
 
 ## Bieżący stan repozytorium — 2026-11-13 13:27 Europe/Warsaw
 
-- Główna gałąź: main, HEAD ce bdaba6194d3e8cb4ebe65f6251b5fc6126ae06.
-- Gałąź prac FX/XAU: feature/fx-xau-pricing-engine, HEAD f008559964a80f4b62f3c58e56b400479a8181fe.
+- Główna gałąź: main, HEAD cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06.
+- Gałąź prac FX/XAU: feature/fx-xau-pricing-engine; aktualny SHA gałęzi jest widoczny w nagłówku PR #1.
 - PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) jest otwarty, mergeable=true, merged=false. Nie scalono zmian; main pozostaje bez zmian.
 - Ostatni zielony CI dla kodu FX/XAU: [#469](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43420958912), SHA 309b42b08a1400387a24024977d85fc9c7781389 — Configure/Build/Test success, CTest 13/13.
-- Dla bieżącego SHA gałęzi po aktualizacji dokumentacji działa [CI #471](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43421192960); w chwili zapisu Configure zakończony, Build w toku, Test oczekuje. Kod nie zmienił się po zielonym #469; jest to przebieg obejmujący najnowszą dokumentację.
+- Dla bieżącego kodu ostatni zielony przebieg to #469; kolejne commity w tej gałęzi po #469 zmieniały wyłącznie dokumentację i rejestr etapów. Każdy taki commit nadal jest sprawdzany przez workflow CI.
 - Ostatni zielony CI main: [#414](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43411904371), SHA cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06 — CTest 9/9.
 - Gałęzie: main oraz feature/fx-xau-pricing-engine. Otwarte Issues: 0.
 - Zakres wiążący: wymiana walut FX i zakup/sprzedaż/wycena złota XAU. Akcje, papiery wartościowe, brokerzy akcyjni, zlecenia giełdowe i kalendarze Xetra/Frankfurt są poza zakresem.
