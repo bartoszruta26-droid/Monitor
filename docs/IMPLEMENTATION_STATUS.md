@@ -750,3 +750,10 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 - Commit `e3adbe4303052adbc58b8834e53c3d732d192f91` zmienia generator PDF: każda linia otrzymuje osobny obiekt tekstowy i bezwzględną pozycję bazową. Dzięki temu fixture sprawdza import wielowierszowego PDF, a nie zachowanie jednego długiego strumienia tekstowego.
 - Ten sam przebieg wykazał zbyt ścisłą asercję raportu: dzień może mieć kilka aktywnych referencji komunikatów. Commit `a461065eefc0443c01bba63fbab9219383af09f4` sprawdza obecność konkretnego komunikatu fazowego zamiast wymagać dokładnie jednej referencji.
 - Pełny CI dla obu poprawek pozostaje wymagany.
+
+
+### Diagnostyka i poprawka wielostronicowego fixture PDF — 2026-11-13
+- CI [43386862600](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43386862600) dla SHA `9e61936816854f042b2ef02f59d81b24b94f9e76`: Configure i Build sukces; CTest 8/9. Jedyny błąd pozostał w `monitor-xetra-calendar-source-tests`; tekst po nagłówku dostępności kończył się na `availability`.
+- Analiza generatora PDF wykazała błąd numeru obiektu: pierwsza strona wskazywała `/Contents 5 0 R`, czyli obiekt czcionki, zamiast strumienia treści nr 6. Druga strona wskazywała poprawny strumień nr 7. Błąd był w syntetycznym fixture, nie w kontroli MIC ani parserze.
+- Commit `1a8fbc2d52f73e582e6dc8c7729ba53e08e9d6da` poprawia odwołanie pierwszej strony na `/Contents 6 0 R`. Nie zmieniono parsera ani walidacji MIC XETR.
+- CI dla poprawionego SHA oczekuje na wynik. Etapy 19A i 19B pozostają otwarte; raport JSON przechodził w poprzednich przebiegach, ale końcowy status wymaga pełnego zielonego CI.
