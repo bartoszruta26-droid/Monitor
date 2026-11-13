@@ -757,3 +757,9 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 - Analiza generatora PDF wykazała błąd numeru obiektu: pierwsza strona wskazywała `/Contents 5 0 R`, czyli obiekt czcionki, zamiast strumienia treści nr 6. Druga strona wskazywała poprawny strumień nr 7. Błąd był w syntetycznym fixture, nie w kontroli MIC ani parserze.
 - Commit `1a8fbc2d52f73e582e6dc8c7729ba53e08e9d6da` poprawia odwołanie pierwszej strony na `/Contents 6 0 R`. Nie zmieniono parsera ani walidacji MIC XETR.
 - CI dla poprawionego SHA oczekuje na wynik. Etapy 19A i 19B pozostają otwarte; raport JSON przechodził w poprzednich przebiegach, ale końcowy status wymaga pełnego zielonego CI.
+
+### Wynik CI #355/#356 i korekta zasobów czcionki fixture PDF — 2026-11-13
+- CI [43388463784](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43388463784) dla SHA `1a8fbc2d52f73e582e6dc8c7729ba53e08e9d6da` oraz [43388475718](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43388475718) dla SHA `5f6c05445de0fa4727d28c4e852dc22d46c9d5b9`: Configure i Build zakończone sukcesem; CTest 8/9. W obu przebiegach jedyną porażką pozostał `monitor-xetra-calendar-source-tests`; ekstrakcja z PDF nadal zawierała tylko `availability`.
+- Ponowna kontrola tablicy obiektów wykazała drugi, niezależny błąd fixture: obie strony wskazywały `/F1 6 0 R`, mimo że obiekt 6 jest strumieniem treści pierwszej strony, a obiekt 5 jest czcionką Helvetica. Poprawne odwołania stron to `/F1 5 0 R`, przy zachowaniu `/Contents 6 0 R` i `/Contents 7 0 R`.
+- Commit `37859c9bbda44bd131a2257fbf505d25245e668b` poprawia zasób czcionki na obu stronach. Zmiana dotyczy wyłącznie syntetycznego fixture; parser oraz obowiązkowa kontrola MIC XETR i test negatywny XFRA pozostają bez zmian.
+- Pełny CI dla SHA poprawki oczekuje na wynik. Etapy 19A i 19B pozostają otwarte; nie uznaje się ich za zakończone przed zielonym Configure/Build/Test dla dokładnego SHA.
