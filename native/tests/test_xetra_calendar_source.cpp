@@ -72,7 +72,7 @@ std::string make_pdf_notice_fixture() {
         "TES OTC and TES LIS trades in combination with clearing and settlement may be",
         "entered, and Xetra EnLight may be used, until 2.59 p.m. on 30 December 2026."
     };
-    std::string stream;
+    std::vector<std::string> page_streams(2U);
     const auto escape=[](const std::string& value) {
         std::string result;
         for(char ch:value) {
@@ -81,34 +81,39 @@ std::string make_pdf_notice_fixture() {
         }
         return result;
     };
-    // Separate text objects with absolute baselines are more robust across
-    // Poppler versions than one long text object with repeated relative Td.
+    // Use two physical PDF pages: the off-book Xetra subsection follows the
+    // main-market section and must remain extractable after a page boundary.
+    constexpr std::size_t lines_per_page=12U;
     for(std::size_t i=0;i<lines.size();++i) {
-        const auto baseline=750U-static_cast<unsigned>(i)*14U;
-        stream+="BT /F1 10 Tf 50 "+std::to_string(baseline)+" Td ("+
+        const auto page=i/lines_per_page;
+        const auto line_on_page=i%lines_per_page;
+        const auto baseline=750U-static_cast<unsigned>(line_on_page)*48U;
+        page_streams[page]+="BT /F1 10 Tf 50 "+std::to_string(baseline)+" Td ("+
             escape(lines[i])+") Tj ET\n";
     }
-    const std::vector<std::string> objects{
+    std::vector<std::string> objects{
         "<< /Type /Catalog /Pages 2 0 R >>",
-        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+        "<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >>",
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 6 0 R >> >> /Contents 5 0 R >>",
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 6 0 R >> >> /Contents 7 0 R >>",
         "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-        "<< /Length "+std::to_string(stream.size())+" >>\nstream\n"+stream+"endstream"
+        "<< /Length "+std::to_string(page_streams[0].size())+" >>\nstream\n"+page_streams[0]+"endstream",
+        "<< /Length "+std::to_string(page_streams[1].size())+" >>\nstream\n"+page_streams[1]+"endstream"
     };
     std::string pdf="%PDF-1.4\n";
-    std::vector<std::size_t> offsets(6U);
+    std::vector<std::size_t> offsets(objects.size()+1U);
     for(std::size_t i=0;i<objects.size();++i) {
         offsets[i+1U]=pdf.size();
         pdf+=std::to_string(i+1U)+" 0 obj\n"+objects[i]+"\nendobj\n";
     }
     const auto xref=pdf.size();
-    pdf+="xref\n0 6\n0000000000 65535 f \n";
+    pdf+="xref\n0 "+std::to_string(objects.size()+1U)+"\n0000000000 65535 f \n";
     for(std::size_t i=1;i<offsets.size();++i) {
         std::ostringstream line;
         line<<std::setw(10)<<std::setfill('0')<<offsets[i]<<" 00000 n \n";
         pdf+=line.str();
     }
-    pdf+="trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n"+
+    pdf+="trailer\n<< /Size "+std::to_string(objects.size()+1U)+" /Root 1 0 R >>\nstartxref\n"+
         std::to_string(xref)+"\n%%EOF\n";
     return pdf;
 }
