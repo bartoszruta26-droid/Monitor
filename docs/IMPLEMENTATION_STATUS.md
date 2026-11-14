@@ -1421,3 +1421,16 @@ Nadal rozwijamy wyłącznie FX i XAU. Nie przywracać zadań Xetra, akcji, broke
 - CI #512 dla `fd4b21f64b4d147edf6e67ee12f9e2b8b427b50b`: Configure/Build/Test — success.
 - CI #513 dla `f5a9eebde308dcbc4f1725152ccc1e3e1b25b081`, #514 dla `8ec243b1eec7e9594faf2eeefa87e1274419ae1f` i #515 dla `12f6793aca45b37e1af00861c1ddc3289fe6e26` nie miały jeszcze końcowego wyniku podczas ostatniej kontroli.
 - Najnowszy test TCP jest dodany, ale nie wolno uznać go za zaliczony do czasu zielonego kroku Test w CI dla tego testu lub nowszego SHA.
+
+
+## 61. Etap 27 — test procesu serwera i aktualizacja kryteriów zamknięcia (2026-11-14)
+
+- Dodano `native/tests/test_http_server_process.cpp`: test uruchamia rzeczywisty plik wykonywalny `monitor-http-server` jako proces potomny, przekazuje token, ścieżkę repozytorium i port przez środowisko, łączy się z loopback, pobiera autoryzowaną migawkę portfela, a następnie wysyła SIGTERM i sprawdza czyste zakończenie procesu.
+- CTest rejestruje `monitor-http-server-process-tests` i przekazuje ścieżkę pliku wykonywalnego przez generator expression CMake.
+- Test obejmuje pełny przepływ: trwały JSON → proces serwera → TCP/HTTP → Bearer → router → JSON odpowiedzi → kontrolowane zatrzymanie.
+- CI #515 dla SHA `12f6793aca45b37e1af00861c1ddc3289fe6e26d`: Configure/Build/Test — success; obejmuje test routera oraz TCP integracyjny.
+- CI #516 dla SHA `1542808aeaea39db7e69286cc89bf5eccb42eb1f`: Configure/Build/Test — success.
+- CI #517 dla SHA `f4617dec2f54c62748a9e5a47d48f85240749208`: Configure/Build/Test — success.
+- CI #518 dla SHA `7d84b2b559cf65795c05dd26723169f55caf112e`, obejmującego test rzeczywistego procesu, uruchomiło się; wynik Configure/Build/Test oczekuje na zakończenie.
+- CI #514 zakończyło się niepowodzeniem przed korektą jawnych include testu; zostało zastąpione poprawionym i zielonym CI #515.
+- Kryteria zamknięcia Etapu 27: zielone CI #518 dla testu procesu, zielone CI dla aktualnego rejestru, ponowna kontrola PR i potwierdzenie, że serwer nie dopuszcza bind na interfejsie zewnętrznym.
