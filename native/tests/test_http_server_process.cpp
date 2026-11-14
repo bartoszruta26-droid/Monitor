@@ -78,8 +78,8 @@ int main(int argc,char** argv) {
             tcp::socket socket{context};
             socket.connect({net::ip::address_v4::loopback(),port});
             const std::string oversized =
-                "GET /healthz HTTP/1.1\\r\\nHost: 127.0.0.1\\r\\nX-Oversized: "+
-                std::string(17U*1024U,'a')+"\\r\\n\\r\\n";
+                "GET /healthz HTTP/1.1\r\nHost: 127.0.0.1\r\nX-Oversized: "+
+                std::string(17U*1024U,'a')+"\r\n\r\n";
             net::write(socket,net::buffer(oversized));
             beast::flat_buffer buffer;
             http::response<http::string_body> response;
