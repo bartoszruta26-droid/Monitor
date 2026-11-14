@@ -1395,3 +1395,10 @@ Nadal rozwijamy wyłącznie FX i XAU. Nie przywracać zadań Xetra, akcji, broke
 - CI #509 dla dokumentacyjnego SHA `6ca747474c1bfac766466d38d28260edb355407b` oraz CI #510 dla poprawki transportu były w toku podczas ostatniej kontroli; nie przypisano im jeszcze wyniku.
 - Najnowszy commit dokumentacji po tej aktualizacji wymaga własnego zielonego CI.
 - Weryfikacja CTest dla routera pozostaje zielona w CI #505. Nie ma jeszcze osobnego testu integracyjnego uruchomionego procesu TCP; należy go dodać przed zamknięciem Etapu 27.
+
+
+### Aktualizacja wyników po kontroli — 2026-11-14
+- CI #509 dla SHA `6ca747474c1bfac766466d38d28260edb355407b`: Configure, Build i Test — success.
+- CI #510 dla poprawki `Connection: close` w SHA `c9c20d19f9ade7e460d0196811147c2c113aff59`: Configure — success; Build w toku podczas aktualizacji.
+- CI #511 dla SHA dokumentacji `0bbf557f24aea2f2f93bcc9c834efba1212e4a73`: Configure — success; Build w toku podczas aktualizacji.
+- PR #1 pozostaje otwarty, nie scalony; GitHub zgłasza mergeable=true, mergeable_state=unstable podczas aktywnych przebiegów CI.
