@@ -1,7 +1,7 @@
 # Wspólny model danych rynkowych — wersja 1
 
 ## Cel i granice
-Model jest niezależnym kontraktem domenowym C++20. Nie zależy od dostawców, HTTP, JSON, SQLite, MariaDB ani interfejsów. Adapter mapuje dane źródłowe do modelu; magazyn i API zostaną zbudowane później na tych typach.
+Model danych rynkowych jest niezależnym kontraktem domenowym C++20. Nie zależy od dostawców, HTTP, JSON, SQLite, MariaDB ani interfejsów. Adapter mapuje dane źródłowe do modelu; repozytorium danych rynkowych przechowuje obserwacje, a osobne moduły portfela wykorzystują ten model do wyceny.
 Implementacja: native/include/monitor/market_data.hpp oraz native/src/market_data.cpp. Wersja kontraktu: schema_version = 1.
 
 ## Zakres domenowy
@@ -35,5 +35,8 @@ Walidatory odrzucają błędne identyfikatory, kody walut, pary FX z identyczną
 Ujemne ceny są dozwolone wyłącznie po jawnym ustawieniu allow_negative_prices. Nie zakładamy dodatniości dla wszystkich rynków.
 MarketObservation zawiera jawny numer schematu. Zmiany niekompatybilne wymagają podniesienia wersji i migracji w przyszłej warstwie magazynu.
 
+## Powiązane moduły portfela FX/XAU
+Model rynkowy v1 pozostaje oddzielony od ewidencji transakcji. Moduł portfolio przechowuje zakupy i sprzedaże walut oraz złota, a repozytorium portfolio zapisuje je w osobnym, wersjonowanym dokumencie JSON. Moduł portfolio_valuation buduje ceny w walucie raportowania na podstawie MarketDataSnapshot, stosując bid przy sprzedaży waluty bazowej, odwrotność ask dla par odwrotnych, kursy krzyżowe oraz normalizację złota do grama czystego kruszcu. Zachowuje źródła, czas obserwacji, rodzaje cen i flagi jakości. Szczegóły implementacji i ograniczenia opisuje docs/IMPLEMENTATION_STATUS.md.
+
 ## Poza zakresem wersji 1
-Model nie implementuje pobierania danych, adapterów sieciowych, zapisu JSON/MariaDB, REST/WebSocket, agregacji, świec OHLCV, portfela, transakcji, przewalutowania, kalendarzy giełdowych ani nanosekundowej precyzji czasu. Są to osobne etapy.
+Model rynku nie implementuje REST/WebSocket, UI, automatycznego harmonogramu pobierania, handlu giełdowego ani kalendarzy sesji papierów wartościowych. Trwały zapis obserwacji rynkowych i portfela realizują odrębne repozytoria JSON. Kalendarze giełdowe i akcje pozostają poza zakresem produktu.

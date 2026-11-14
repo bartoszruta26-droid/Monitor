@@ -43,3 +43,16 @@ bash scripts/test-native.sh
 
 Powyższy podział opisuje architekturę docelową. Aktywnie zaimplementowane są rdzeń regresji, model danych, adaptery dostawców i pierwszy magazyn JSON. Serwer, MariaDB i klienci pozostają do wykonania.
 JSON jest docelowym domyślnym magazynem, a MariaDB opcjonalnym adapterem. Oba mają implementować wspólny kontrakt repozytorium. Serwer będzie jedynym komponentem uprawnionym do zapisu w magazynie serwerowym.
+
+
+## Lokalny serwer HTTP (w trakcie wdrażania)
+
+Po zbudowaniu celu `monitor-http-server` można uruchomić serwer lokalny:
+
+```bash
+MONITOR_API_TOKEN='ustaw-wlasny-sekret' \
+MONITOR_PORTFOLIO_FILE='./data/portfolio.json' \
+./build/native/monitor-http-server
+```
+
+Opcjonalnie ustaw `MONITOR_PORT` (domyślnie 8080). Serwer wiąże się wyłącznie z `127.0.0.1`. Nie wystawiać portu publicznie ani nie konfigurować przekierowania portów: bieżąca wersja nie ma TLS i nie obsługuje zdalnego dostępu. Token należy przekazywać przez bezpieczne środowisko uruchomieniowe, nigdy przez repozytorium.

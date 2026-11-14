@@ -399,6 +399,8 @@ Brak wystarczających danych powinien skutkować komunikatem o braku wiarygodnej
 - [Wspólny model danych rynkowych v1](docs/market-data-model.md)
 - [Adaptery dostawców C++20](docs/cpp-provider-adapters.md)
 - [Magazyn danych rynkowych JSON C++20](docs/json-market-data-repository.md)
+- [Obowiązujący zakres produktu FX/XAU](docs/PRODUCT_SCOPE.md)
+- [Rejestr etapów, portfela i weryfikacji CI](docs/IMPLEMENTATION_STATUS.md)
 
 ## 15. Licencja
 

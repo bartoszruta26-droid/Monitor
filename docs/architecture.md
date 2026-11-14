@@ -83,9 +83,9 @@ Adaptery dostawców C++20 są zaimplementowane. Magazyn JSON C++20 jest zaimplem
 
 ## Status
 
-Obecnie w repozytorium działa natywny rdzeń C++20: regresja, model danych rynkowych v1, walidacja, testy, CLI, transport HTTP libcurl i adaptery NBP, Frankfurter, World Bank Pink Sheet oraz XAUS. Adaptery są budowane w monitor_core i objęte testami bez dostępu do sieci. Magazyn JSON jest zaimplementowany i zweryfikowany w CI; MariaDB, serwer, API i interfejsy pozostają do implementacji.
+Obecnie w repozytorium działa natywny rdzeń C++20: regresja, model danych rynkowych v1, walidacja, transport HTTP libcurl, adaptery NBP/Frankfurter/World Bank/XAUS, repozytorium JSON danych rynkowych, silnik kalkulacji FX/XAU, ewidencja transakcji i portfel FIFO, repozytorium JSON portfela, budowanie price book z obserwacji FX/XAU oraz zintegrowaną usługę wyceny zapisanych portfeli z jawnym odzyskiwaniem kopii zapasowej. Moduły są objęte testami offline. MariaDB, serwer, API i interfejsy pozostają do implementacji.
 
-Wspólny model danych rynkowych opisano w [docs/market-data-model.md](market-data-model.md), a adaptery w [docs/cpp-provider-adapters.md](cpp-provider-adapters.md). Typy domenowe znajdują się w native/include/monitor/market_data.hpp, a kontrakt adapterów i transport HTTP w native/include/monitor/market_data_adapters.hpp. Adaptery zwracają rekordy domenowe. Warstwa repozytorium udostępnia atomowy zapis partii wyników do JSON; adaptery nie zapisują bezpośrednio plików.
+Wspólny model danych rynkowych opisano w [docs/market-data-model.md](market-data-model.md), a adaptery w [docs/cpp-provider-adapters.md](cpp-provider-adapters.md). Typy domenowe znajdują się w native/include/monitor/market_data.hpp, kontrakt adapterów i transport HTTP w native/include/monitor/market_data_adapters.hpp, a transakcje, repozytorium, price book i usługę wyceny portfela w native/include/monitor/portfolio.hpp, native/include/monitor/portfolio_repository.hpp, native/include/monitor/portfolio_valuation.hpp oraz native/include/monitor/portfolio_service.hpp. Adaptery zwracają rekordy domenowe. Warstwa repozytorium udostępnia atomowy zapis partii wyników do JSON; adaptery nie zapisują bezpośrednio plików.
 
 
 ## Integracja z Nextcloud — kierunek przyszły
@@ -135,3 +135,8 @@ Szczegółowy audyt, priorytety, model danych i kryteria akceptacji znajdują si
 ## Agregacja i model wykresów
 
 Etap 4 dostarcza deterministyczną agregację obserwacji punktowych do świec próbkowanych OHLC, z zachowaniem częstotliwości źródłowej, granic UTC, pochodzenia i luk. Świece są jawnie oznaczane jako `SampledObservations`; nie są przedstawiane jako natywne świece OHLC dostawcy. Etap 5 dostarcza wspólny model danych wykresów liniowych, obszarowych i świecowych niezależny od GUI. Renderery, osie, zoom i interakcje pozostają częścią przyszłych klientów.
+
+
+## Serwer HTTP/REST FX/XAU — wybór technologii
+
+Projekt pierwszej iteracji serwera opisano w [docs/http-server-design.md](http-server-design.md). Wybrano Boost.Beast + Boost.Asio (C++20), jako oddzielny cel CMake niezależny od `monitor_core`. Serwer ma domyślnie nasłuchiwać wyłącznie na `127.0.0.1`, wymagać tokenu Bearer z `MONITOR_API_TOKEN` dla danych portfela i nie uruchamiać zdalnego nasłuchiwania bez odrębnie wdrożonego TLS oraz uwierzytelniania. Wybór technologii i kontrakt endpointów są decyzją projektową; implementacja serwera, testy routera i transportu pozostają do wykonania.

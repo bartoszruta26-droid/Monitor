@@ -1,22 +1,22 @@
 # Rejestr etapów prac — Monitor
 
 **Repozytorium:** `bartoszruta26-droid/Monitor`  
-**Gałąź:** `main`  
-**Ostatnia weryfikacja:** 2026-11-13 10:32 Europe/Warsaw
+**Gałąź:** `feature/fx-xau-pricing-engine`  
+**Ostatnia weryfikacja:** 2026-11-14 09:41 Europe/Warsaw
 **Zasada prowadzenia:** status etapu zmienia się na „zakończony” dopiero po sprawdzeniu kodu, testów i CI dla konkretnego SHA. Ten plik jest bieżącym rejestrem wykonania; szczegóły techniczne pozostają w dokumentach etapów.
 
-## Stan repozytorium przy audycie
+## Bieżący stan repozytorium — 2026-11-13 22:34 Europe/Warsaw
 
-- HEAD `main` przed zapisem tego wpisu: `9a947e5a483683e14fce232991af6fa4478a81d4`.
-- Najnowszy przebieg `Native C++ checks` dla dokładnego SHA: [CI #383 / 43401833422](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43401833422) — **success**; Configure, Build i Test zakończone powodzeniem; CTest **9/9**.
-- Poprzedni przebieg dla zmiany kodu parsera Xetra 2025: [CI #382 / 43401645335](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43401645335), SHA `e055cfe5d5e61123b073c4fae4932216d0d6c249` — **success**, CTest **9/9**.
-- Gałęzie: wyłącznie `main`; otwarte pull requesty: 0; otwarte Issues: 0.
-- Poprzedni problem kompilacji testu kalendarza (brak `#include <algorithm>` w starszym SHA) został naprawiony; nie jest stanem bieżącym.
-- Poprzednie przebiegi obejmują jeden nieudany CI dla wcześniejszego SHA `aa3b7eb`, po którym późniejszy commit przeszedł poprawnie. Nie traktować błędu jako aktualnego, ale zachować go w historii.
-- Gałęzie: wyłącznie `main`.
-- Otwarte pull requesty: 0.
-- Otwarte Issues: 0.
-- Aktywny build: C++20, CMake, Bash i CTest. Python nie jest częścią aktywnego procesu budowania/testowania.
+- Główna gałąź: main, HEAD cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06.
+- Gałąź prac FX/XAU: feature/fx-xau-pricing-engine; aktualny SHA gałęzi jest widoczny w nagłówku PR #1.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) jest otwarty, mergeable=true, merged=false. Nie scalono zmian; main pozostaje bez zmian.
+- Ostatni zielony CI dla kodu FX/XAU: [#489](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43444067165), SHA `f03603dcc24642485b3eade2e5eed4979ff040bd` — Configure/Build/Test success, CTest 13/13. Najnowszy CI gałęzi [#490](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43444240322), SHA `098c6692f28b6f877c7e78ac01674eed0276ada1` — success, CTest 13/13.
+- Etapy 24 i 25 są potwierdzone zielonym CI dla właściwych SHA. Najnowszy commit gałęzi został zbudowany i przetestowany w CI #490.
+- Ostatni zielony CI main: [#414](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43411904371), SHA cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06 — CTest 9/9.
+- Gałęzie: main oraz feature/fx-xau-pricing-engine. Otwarte Issues: 0.
+- Zakres wiążący: wymiana walut FX i zakup/sprzedaż/wycena złota XAU. Akcje, papiery wartościowe, brokerzy akcyjni, zlecenia giełdowe i kalendarze Xetra/Frankfurt są poza zakresem.
+- Aktywny build: C++20, CMake, Bash i CTest. Testy adapterów są offline; nie potwierdzają dostępności usług zewnętrznych.
+- Etapy 16–23 opisane poniżej zostały zaimplementowane i przeszły CI na wskazanych SHA. Etapy API, klienci i MariaDB pozostają do wykonania.
 
 ## Rejestr etapów
 
@@ -36,7 +36,17 @@
 | 12 | Wspólne fixture i porównanie C++/Pine | Do wykonania | Pine Editor niezweryfikowany; brak potwierdzonej kompilacji TradingView |
 | 13 | Serwer API, autoryzacja, REST/JSON i WebSocket | Do wykonania | Brak aktywnego modułu serwera |
 | 14 | Klienci Linux GUI, WebUI, TUI i Android | Do wykonania | Brak aktywnych modułów klientów |
-| 15 | Opcjonalny adapter MariaDB | Do wykonania | Brak implementacji |
+| 15 | Opcjonalny adapter MariaDB | Do wykonania | Brak implementacji; niższy priorytet niż kompletna ścieżka FX/XAU |
+| 16 | Silnik kalkulacji wymiany FX i wyceny złota XAU | Zakończony | CI #421, CTest 9/9; bid/ask, spread, opłaty, masa i próba |
+| 17 | Portfel FIFO i wynik zrealizowany/niezrealizowany | Zakończony | CI #429, CTest 10/10 |
+| 18 | Trwałe repozytorium JSON transakcji portfela | Zakończony | CI #435, CTest 11/11; rewizje, atomowy zapis, kopia |
+| 19 | Price book z obserwacji FX/XAU | Zakończony | CI #443, CTest 12/12; kursy krzyżowe i świeżość |
+| 20 | Sparowane nogi wymiany FX i atomowy zapis | Zakończony | CI #454, CTest 12/12 |
+| 21 | Zintegrowana usługa wyceny i jawne odtwarzanie kopii | Zakończony | CI #462, CTest 13/13 |
+| 22 | Dokładne provenance i preferowanie świeższych krawędzi FX | Zakończony | CI #467, CTest 13/13 |
+| 23 | Odporność repozytorium na błędy i konkurencyjne procesy | Zakończony | CI #469, CTest 13/13 |
+| 24 | Szczegóły audytowe wykonania wymiany FX | Zakończony — CI #479 i #480 success | Surowe bid/ask, mid, spread, kurs brutto i efektywny, opłaty oraz provenance; JSON opcjonalny i zgodny wstecz |
+| 25 | Historia i analiza transakcji FX/XAU | Zakończony | CI #489 dla kodu `f03603d…` oraz CI #490 dla aktualnego SHA gałęzi; oba CTest 13/13. Filtry aktywa, pary (obie orientacje), źródła, operacji i czasu; aktywność, opłaty i rozróżnienie audytu wykonania |
 
 ## Ostatnie potwierdzone commity
 
@@ -916,3 +926,530 @@ Pełny CI musi potwierdzić parser, importer, magazyn JSON, nakładanie i anulow
 - Commit poprawki: `f4e79d01964a6b7ae59f68e88f47b345b4969164`. [Native C++ checks #413](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43411692239) dla dokładnego SHA: Configure — success; Build — success; Test — success; CTest **9/9 (100%)**, 1,21 s.
 - Jest to wyłącznie naprawa regresji w istniejącym, historycznym kodzie i teście, aby utrzymać zielone CI bez usuwania testów. Zgodnie z wiążącym `docs/PRODUCT_SCOPE.md` Xetra/Frankfurt, MIC i kalendarze sesji akcji pozostają poza zakresem produktu; nie planować dalszych funkcji Xetra.
 - Etap 11 pozostaje w toku dla właściwego zakresu FX/NBP/XAU. Następne prace dotyczą obserwowanych publikacji NBP, aktualności źródeł FX/XAU, poprawności bid/ask i spreadu, wyceny złota w gramach/kg/uncjach oraz portfela walutowo-złotowego. Nie oznaczono żadnego z tych zakresów jako zakończonego.
+
+
+## 45. Audyt ciągłości i nowy etap FX/XAU — 2026-11-13
+
+### Potwierdzony stan repozytorium
+- `main` HEAD: `cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06`.
+- Gałąź robocza: `feature/fx-xau-pricing-engine`; PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1), bez scalania.
+- Ostatni zielony CI dla `main`: [#414](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43411904371), dokładny SHA `cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06`; Configure/Build/Test success, CTest 9/9.
+- CI #413 również przeszedł 9/9. CI #412 i #411 zakończyły się błędem w historycznym teście Xetra; #413 przeszedł po korekcie historycznego parsera, lecz zgodnie z zakresem moduł Xetra jest obecnie odpinany od aktywnego builda.
+- Jedyna gałąź na `main` przed rozpoczęciem nowego etapu; brak wcześniejszych otwartych PR i Issues.
+- Po otwarciu PR #1 workflow został uruchomiony; wymagane jest sprawdzenie wyniku dla końcowego SHA PR, nie tylko dla pierwszego commitu gałęzi.
+
+### Wynik audytu funkcjonalnego
+- Istniejący model `Instrument` i `MarketObservation` przechowuje waluty bazowe/kwotowane oraz typy cen Reference, Bid, Ask, Mid, Spot i Transaction.
+- Istniejące `convert_quantity()` obsługuje gram, kilogram i uncję trojańską.
+- Brakowało wydzielonego mechanizmu wykonania kalkulacji wymiany walut z wyborem bid/ask, konwersją odwrotną, spreadem i jawnymi opłatami.
+- Brakowało wyceny złota według masy, próby, ceny czystego kruszcu i opłat.
+- Adaptery źródeł oraz testy offline istnieją; testy adapterów nie potwierdzają bieżącej dostępności usług zewnętrznych.
+- Serwer API, portfel i dziennik transakcji nadal nie są zaimplementowane.
+
+### Etap 16 — silnik kalkulacji FX i wyceny złota (w toku)
+- Dodano `native/include/monitor/market_pricing.hpp` i `native/src/market_pricing.cpp`.
+- `convert_currency()`: dla sprzedaży waluty bazowej stosuje bid; dla konwersji odwrotnej stosuje odwrotność ask; wylicza kurs wykonania, mid, spread w punktach bazowych, prowizję procentową, opłatę stałą w walucie wyjściowej, kwotę brutto i netto.
+- `value_gold()`: przelicza gram/kg/uncję na gramy, stosuje próbę jako ułamek 0..1, przyjmuje cenę jednego grama czystego złota, pokazuje wartość brutto, opłatę i wartość netto.
+- Dodano `native/tests/test_market_pricing.cpp` i test CTest `monitor-market-pricing-tests`. Przypadki obejmują kierunek pary, bid/ask, opłaty, spread, błędne kwotowanie, przekroczenie opłat, próbę i jednostki masy.
+- CMake wyłącza historyczne `xetra_calendar_importer.cpp`, `xetra_calendar_source.cpp` i `test_xetra_calendar_source.cpp` z aktywnego builda/testów. Pliki źródłowe i ich historia pozostają w repozytorium, lecz nie są już aktywną zależnością ani kryterium CI.
+- Commit/HEAD gałęzi po ostatniej zmianie: `ca033af001649a6fc95bf700b86cf491222cd7d2`.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) oczekuje na pełny CI dla końcowego SHA. Pierwsze próby #416/#417 ujawniły, że test kalendarza nadal linkował funkcje Xetra; usunięto ten blok testowy w commicie `181136d5abb2f045f16795efb206597bc5ace003`. Dodano też ochronę przed przepełnieniem kursu środkowego i odwrotności ask w commicie `6a9e310bb553b7bd672aa9160cb2a22e258e9b62`, z testami granicznymi w `80bbb65879de8f501bff070a05e6d5f2be9b5fda`. CI #418, #419, #420 oraz #421 zakończyły się sukcesem. Dla końcowego SHA PR `ca033af001649a6fc95bf700b86cf491222cd7d2` przebieg [#421](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43416755404) potwierdził Configure/Build/Test success i CTest 9/9. PR pozostaje otwarty i nie został scalony; etap oczekuje na decyzję o scaleniu.
+- Nie scalać PR przed zielonym CI i przeglądem diffu.
+
+### Następne etapy po Etapie 16
+1. Etap 17 — model transakcji FX/XAU, portfel FIFO, koszt nabycia i wynik zrealizowany/niezrealizowany (**zakończony dla warstwy obliczeniowej**, CI #429: 10/10; ograniczenia opisano w sekcji 46).
+2. Etap 18 — trwały zapis/odczyt transakcji i portfela w istniejącym repozytorium, z migracją i zgodnością dotychczasowych plików JSON.
+3. Etap 19 — przeliczanie wartości portfela XAU/FX do PLN i innych walut na podstawie źródeł wraz z czasem obserwacji i statusem jakości.
+4. Etap 20 — integracja API i klientów dopiero po stabilizacji modelu oraz trwałości danych.
+5. Nie rozwijać funkcji akcyjnych ani kalendarzy sesji giełdowych.
+
+### Zasada dalszego monitorowania
+Przed każdym następnym etapem sprawdzić bieżący `main`, gałęzie, PR, Issues, dokładny SHA PR oraz ostatni CI. Po każdym etapie dopisać commit, wynik Configure/Build/Test, liczbę testów i ograniczenia do tego pliku. Status „zakończony” nadawać wyłącznie po zielonym CI dla dokładnego SHA.
+
+
+### Uzupełnienie monitoringu CI PR #1 — 2026-11-13
+- [CI #416](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43416419441), SHA `8a986df76b4d1017e71f487071458ad516633c13`: Configure success; Build failure. Test kalendarza NBP nadal zawierał historyczne wywołania `parse_xetra_html_calendar()`, których implementację celowo odłączono od biblioteki.
+- [CI #417](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43416489927), SHA `5f9774d0f7d27c153ec5705499adb5d8866e8c7c`: ten sam błąd linkowania; diagnoza potwierdzona w logu joba `native-linux`.
+- Poprawka: commit `181136d5abb2f045f16795efb206597bc5ace003` usunął z `test_market_data_calendar.cpp` 97-wierszowy blok testów wyłącznie Xetra. Testy okien publikacji NBP, świąt RP i IANA TZ/DST pozostają aktywne.
+- Dodatkowa kontrola numeryczna: commit `6a9e310bb553b7bd672aa9160cb2a22e258e9b62` stabilizuje wyliczanie mid przy dużych wartościach i odrzuca nieskończoną odwrotność ask; commit `80bbb65879de8f501bff070a05e6d5f2be9b5fda` dodaje testy tych granic.
+- Przebiegi #418 (SHA `181136d5...`), #419 (SHA `6a9e310...`) i #420 (SHA `80bbb658...`) były w toku przy zapisie. Nie deklarować ich jako sukcesu bez ponownego odczytu GitHub Actions.
+
+
+### Końcowa weryfikacja etapu 16 — 2026-11-13
+- Końcowy SHA PR: `ca033af001649a6fc95bf700b86cf491222cd7d2`.
+- [Native C++ checks #421](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43416755404): Configure — success; Build — success; Test — success; CTest **9/9 (100%)**, 1,55 s.
+- Test `monitor-market-pricing-tests` jest włączony i przeszedł. Aktywny zestaw nie kompiluje ani nie uruchamia historycznego modułu/testów Xetra.
+- Poprawki po nieudanych #416/#417 potwierdzone: odłączenie implementacji Xetra wymagało usunięcia jej historycznych przypadków z ogólnego testu kalendarza. Testy NBP i IANA pozostały zielone.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) ma status open, mergeable=true, merged=false. Nie scalono go bez polecenia; `main` pozostaje na SHA `cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06`.
+- Codex Review nie dostarczył recenzji merytorycznej z powodu limitu użycia usługi; przegląd zmian wykonano ręcznie, ale nie należy przedstawiać go jako niezależnej recenzji.
+- Następny etap po scaleniu: model transakcji FX/XAU i portfel z kosztem nabycia oraz wynikiem zrealizowanym/niezrealizowanym. Nie rozwijać funkcji akcyjnych ani kalendarzy giełdowych.
+
+
+## 46. Etap 17 — model transakcji i portfel FX/XAU (2026-11-13)
+
+### Zakres implementacji
+- Dodano `native/include/monitor/portfolio.hpp`, `native/src/portfolio.cpp` i `native/tests/test_portfolio.cpp`.
+- `PortfolioTransaction` przechowuje identyfikator, kod aktywa (kod waluty ISO 4217 albo XAU), rodzaj aktywa, stronę Buy/Sell, ilość, próbę, cenę jednostkową w walucie raportowania, opłatę w walucie raportowania, czas wykonania UTC (Unix) i identyfikator źródła/oferty.
+- Waluty są ewidencjonowane w jednostkach waluty; złoto w gramach brutto i gramach czystego kruszcu po zastosowaniu próby.
+- `calculate_portfolio()` wylicza pozycje i koszt nabycia metodą FIFO, przychód netto ze sprzedaży, wynik zrealizowany i niezrealizowany, wartość bieżącą oraz sumę opłat.
+- Ceny bieżące są jawnie przekazywane w walucie raportowania: za jednostkę waluty albo za gram czystego złota. Brak ceny dla otwartej pozycji jest błędem, a nie domyślną wyceną.
+- Walidacja obejmuje unikalność identyfikatorów transakcji, chronologię w obrębie aktywa, kod waluty, kod XAU, próbę, opłaty, nadmierną sprzedaż, brak ceny i wartości niefinitywne.
+- CMake rejestruje `monitor-portfolio-tests`; liczba testów CTest wzrosła z 9 do 10.
+- Testy sprawdzają FIFO dla EUR, wycenę złota próby 585, opłaty, wynik zrealizowany/niezrealizowany, zamkniętą całkowicie pozycję i walidację błędnych transakcji.
+
+### Weryfikacja CI
+- Commit kodu/testów i rejestracji CMake: `ff24b9bb1c989f1d7aa8134dde5f81c521e04006`.
+- [Native C++ checks #429](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43418422394), dokładny SHA `ff24b9bb1c989f1d7aa8134dde5f81c521e04006`: Configure — success; Build — success; Test — success; CTest **10/10 (100%)**, 1,58 s.
+- `monitor-market-pricing-tests` i `monitor-portfolio-tests` przechodzą; dotychczasowe testy danych, adapterów, repozytorium, agregacji, wykresów, regresji i kalendarza NBP również pozostają zielone.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) nadal otwarty; nie scalono go. `main` pozostaje na `cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06`.
+
+### Ograniczenia — nie oznaczać jeszcze jako pełnego przepływu transakcyjnego
+- To jest deterministyczny model obliczeniowy w pamięci; trwały zapis/odczyt i migracja JSON są kolejnym etapem.
+- Ceny bieżące dostarcza wywołujący; moduł nie pobiera samodzielnie notowań ani nie przelicza między walutami. Integracja FX z wyceną portfela nastąpi w kolejnym etapie.
+- Każda pozycja jest wyceniana w jednej, jawnej walucie raportowania. Wymiana walut powinna być odwzorowana jako osobne, sparowane zapisy nabycia i zbycia aktywów z tym samym identyfikatorem źródłowej operacji; model nie tworzy automatycznie drugiej nogi wymiany.
+- FIFO działa w obrębie pojedynczego kodu aktywa; nie stanowi jeszcze księgowego ani podatkowego systemu rozliczeń. Zasady podatkowe i szczególne metody wyceny wymagają odrębnej decyzji.
+- Niezależna automatyczna recenzja kodu nie jest dostępna z powodu limitu usługi review; nie przedstawiać zielonego CI jako substytutu niezależnego przeglądu.
+
+### Kolejne prace
+1. Etap 18 — trwała serializacja i repozytorium transakcji/portfela, wersjonowanie schematu i zgodność dotychczasowych JSON.
+2. Dodać parowanie obu nóg wymiany FX, aby ewidencja obejmowała zarówno nabytą, jak i oddaną walutę, bez podwójnego naliczania opłat.
+3. Etap 19 — pobieranie cen bieżących i przeliczanie XAU/FX do waluty raportowania ze znacznikami czasu i jakością źródeł.
+4. Etap 20 — API i klienci.
+
+
+
+## 47. Etap 18 — trwałe repozytorium transakcji FX/XAU (2026-11-13)
+
+### Zakres implementacji
+- Dodano native/include/monitor/portfolio_repository.hpp, native/src/portfolio_repository.cpp i native/tests/test_portfolio_repository.cpp.
+- JsonPortfolioRepository przechowuje osobny dokument monitor.portfolio; nie zmienia istniejących dokumentów monitor.market_data ani ich schematu JSON.
+- Dokument ma jawne schema_version=1, rewizję, walutę raportowania i listę transakcji. Enumy są zapisywane jako stabilne nazwy tekstowe.
+- Operacje append i replace wymagają oczekiwanej rewizji (optimistic concurrency); konflikt nie nadpisuje nowszych danych.
+- Zapis odbywa się przez plik tymczasowy, fsync, atomowe rename, blokadę plikową i opcjonalną kopię poprzedniej wersji .bak.
+- Odczyt odrzuca pusty/uszkodzony dokument, nieznaną wersję schematu, niezgodną walutę raportowania, nadmierny rozmiar i nieprawidłowe transakcje. Brak pliku oznacza nowy pusty portfel w skonfigurowanej walucie.
+- Walidacja dokumentu odtwarza księgę transakcji i odrzuca duplikaty identyfikatorów, chronologię błędną dla danego aktywa, sprzedaż ponad stan i błędne dane złota/walut.
+- Dodano testy round-trip JSON, rewizji i konfliktu, kopii zapasowej, błędnej sprzedaży, chronologii, nieznanej wersji i uszkodzonego pliku.
+- CMake rejestruje monitor-portfolio-repository-tests; CTest wzrósł do 11 testów.
+
+### Weryfikacja CI
+- Końcowy commit etapu: a0bafc71fcece63dbf6d7b63cd8459b6f0a5cc92.
+- [Native C++ checks #435](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43418884964), dokładny SHA a0bafc71fcece63dbf6d7b63cd8459b6f0a5cc92: Configure — success; Build — success; Test — success; CTest **11/11 (100%)**, 1,32 s.
+- W tym przebiegu przeszły: testy rdzenia, modelu danych, wyceny FX/XAU, portfela FIFO, repozytorium portfela JSON, adapterów, repozytorium danych rynkowych, agregacji, wykresów, regresji i kalendarza publikacji.
+- [CI #434](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43418865528) dla poprzedniego SHA 2e084c988a3f4c322e5868d5acfd7bd33d70993c również przeszedł, ale końcową weryfikacją etapu jest #435 po rejestracji repozytorium w CMake.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) pozostaje otwarty i nie scalony. main nie został zmieniony.
+
+### Ograniczenia i ryzyka do kolejnego przeglądu
+- Repozytorium jest osobnym plikiem JSON; nie ma jeszcze automatycznej migracji transakcji ze starszego formatu, ponieważ wcześniejszy schemat portfela nie istniał. Istniejące pliki monitor.market_data pozostają nietknięte.
+- Kopia .bak jest tworzona przed podmianą; automatyczne odtwarzanie kopii wymaga jawnej operacji i nie jest wykonywane po cichu.
+- Model nadal wymaga podania cen bieżących przez wywołującego; etap integracji źródeł FX/XAU i waluty raportowania jest następny.
+- Należy w kolejnym przeglądzie ocenić zachowanie przy równoległych procesach, przerwaniu zapisu, braku miejsca i błędach systemu plików; testy obecne sprawdzają blokady rewizji i atomowy przepływ podstawowy, nie pełną macierz awarii systemowych.
+
+### Następny etap
+1. Etap 19 — warstwa wyceny portfela: pobieranie najnowszych obserwacji FX/XAU, kontrola świeżości, statusu jakości i źródła, konwersja do waluty raportowania.
+2. Dodać jawne sparowanie obu nóg wymiany FX (waluta oddana i otrzymana) i wspólny identyfikator operacji, z jednorazowym naliczaniem prowizji.
+3. Rozważyć odtwarzanie kopii zapasowej wyłącznie jako jawne działanie użytkownika i dodać testy uszkodzenia/odtworzenia.
+4. Dopiero po stabilizacji wyceny i trwałości danych przejść do API oraz klientów.
+
+
+## 48. Etap 19 — wycena portfela z obserwacji FX/XAU (2026-11-13)
+
+### Zakres implementacji
+- Dodano native/include/monitor/portfolio_valuation.hpp, native/src/portfolio_valuation.cpp i native/tests/test_portfolio_valuation.cpp.
+- Funkcja build_portfolio_price_book() buduje ceny bieżące w walucie raportowania na podstawie MarketDataSnapshot; wynik zawiera pary cen do calculate_portfolio() oraz pełne pochodzenie wyceny.
+- Dla walut wycena ma charakter likwidacyjny: sprzedaż waluty bazowej używa bid; wycena odwrotna używa odwrotności ask. Jeśli dostępny jest tylko mid/average/reference, wynik pozostaje oparty na cenie orientacyjnej, a rodzaj źródła jest zachowany w pochodzeniu.
+- Obsługiwane są kursy krzyżowe przez graf par walutowych; ścieżka i wszystkie użyte instrumenty, dostawcy, URI, rodzaje cen oraz flagi jakości są zachowywane.
+- Złoto jest normalizowane do ceny za gram czystego kruszcu. Cena USD/uncja trojańska jest przeliczana przez 31,1034768 g/uncję i następnie przez ścieżkę FX do waluty raportowania. Źródła PLN/g (NBP) są obsługiwane bezpośrednio.
+- Źródła XAU są sortowane według czasu obserwacji; jeśli najnowsze źródło nie ma dostępnej ścieżki walutowej, moduł próbuje następne najświeższe źródło, którego walutę można przeliczyć.
+- Do wyceny dopuszczane są tylko obserwacje Validated, nieprzyszłe względem as_of i mieszczące się w max_age_seconds. Dane Suspect, Unreviewed, przyszłe i przeterminowane są pomijane.
+- Dodano testy kursu bezpośredniego bid, kursu krzyżowego, odwrotnej pary, XAU USD/uncja do PLN/gram czystego złota, odrzucania podejrzanego bid, świeżości oraz awaryjnego wyboru starszego źródła NBP.
+
+### Weryfikacja CI
+- Końcowy SHA etapu: 2f41a677697476a372e450bce2aec5fa39052c9e.
+- [Native C++ checks #443](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43419410635), dokładny SHA 2f41a677697476a372e450bce2aec5fa39052c9e: Configure — success; Build — success; Test — success; CTest **12/12 (100%)**, 1,37 s.
+- Wcześniejszy przebieg #442 wykrył nieprawidłowe oczekiwanie testu w scenariuszu, w którym podejrzany bid został odrzucony, ale nadal dostępna była starsza, prawidłowa wycena NBP. Poprawiono asercję tak, aby wymagała użycia tej starszej, konwertowalnej ceny NBP; poprawiony przebieg #443 jest zielony.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) pozostaje otwarty i nie scalony. main pozostaje bez zmian.
+
+### Ograniczenia
+- Wycena wykorzystuje wyłącznie obserwacje już zapisane w MarketDataSnapshot; sama nie pobiera sieciowo nowych danych ani nie uruchamia adapterów.
+- Dla waluty, dla której brak ścieżki do waluty raportowania, nie powstaje cena. Kalkulator portfela powinien zgłosić brak wymaganej ceny otwartej pozycji.
+- Mid/average/reference są wycenami orientacyjnymi, nie gwarantowanymi cenami wykonania. Wynik nie jest ofertą brokera ani kantoru.
+- Przy wielu możliwych ścieżkach FX wybierana jest najkrótsza ścieżka grafu, z deterministyczną kolejnością krawędzi; dalszy etap powinien rozważyć ranking ścieżek według spójności czasu i jakości.
+- Pochodzenie ceny jest zachowane, ale warstwa użytkowa/API nie prezentuje go jeszcze w interfejsie.
+
+### Następny etap
+1. Etap 20 — transakcja wymiany FX jako atomowa para zapisów: waluta oddana i otrzymana, wspólny identyfikator operacji i jednokrotne naliczenie opłaty.
+2. Etap 20 — sparowanie obu nóg wymiany FX i atomowy zapis jednej operacji (zakończony; szczegóły w sekcji 49).
+3. Połączenie repozytorium portfela z price book w jednym przebiegu wyceny.
+4. Dodać jawne odtwarzanie kopii zapasowej portfela i testy odporności na przerwanie zapisu.
+5. Dopiero potem API i klienci.
+
+
+## 49. Etap 20 — sparowane i atomowe operacje wymiany FX (2026-11-13)
+
+### Zakres implementacji
+- Rozszerzono PortfolioTransaction o opcjonalny operation_id, zachowując odczyt dokumentów JSON v1 bez tego pola.
+- Dodano FxExchangeExecution i make_fx_exchange_transactions(): pojedyncze wykonanie tworzy dwie powiązane nogi — sprzedaż waluty oddawanej i zakup waluty otrzymywanej.
+- Obie nogi mają wspólny operation_id, czas wykonania i source_id; identyfikatory transakcji są stabilnie rozróżnione sufiksami debit/credit.
+- Kwota to_amount oznacza kwotę netto otrzymaną po potrąceniu opłaty. Opłata w walucie raportowania jest księgowana dokładnie raz na nodze nabycia. Wartość brutto nogi sprzedaży jest wyliczana tak, aby bilansowała koszt nogi nabycia wraz z opłatą.
+- calculate_portfolio() sprawdza kompletność pary, przeciwne strony, różne kody walut, wspólny czas i źródło, jednokrotne naliczenie opłaty oraz zgodność wartości w walucie raportowania. Niekompletne lub niezbilansowane operacje są odrzucane.
+- JsonPortfolioRepository otrzymało append_batch(); dwie nogi wymiany są walidowane i zapisywane w jednej rewizji w ramach jednego atomowego zapisu JSON.
+- Pole operation_id jest zapisywane w JSON; dekoder zachowuje zgodność wsteczną i przy braku pola przypisuje pustą wartość.
+- Testy obejmują wygenerowanie obu nóg, saldo waluty oddanej i otrzymanej, jednorazową opłatę, niezbilansowaną i niekompletną parę oraz round-trip JSON i atomowe odrzucenie niepełnej partii.
+
+### Weryfikacja CI
+- Końcowy SHA etapu: a30c8d8d79b21bdf68ec8db454289d76b2955f7a.
+- [Native C++ checks #454](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43419992623), dokładny SHA a30c8d8d79b21bdf68ec8db454289d76b2955f7a: Configure — success; Build — success; Test — success; CTest **12/12 (100%)**, 1,80 s.
+- Wcześniejsze #449 wykazało błędne założenie testu co do kolejności pozycji (wynik jest sortowany według kodu aktywa). Poprawiono asercję, aby sprawdzała jawny porządek EUR/PLN; #454 potwierdził cały zestaw testów.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) pozostaje otwarty, mergeable i nie scalony; main nie został zmieniony.
+
+### Ograniczenia
+- Operacja wymiany jest atomowa w obrębie repozytorium portfela, ale nie stanowi jeszcze integracji z zewnętrznym kantorem ani potwierdzenia rzeczywistego wykonania. Dane wykonania przekazuje klient.
+- Opłata jest modelowana w walucie raportowania i księgowana na nodze nabycia; inne sposoby pobierania opłat wymagają jawnego rozszerzenia kontraktu.
+- Wartość jednostkowa waluty oddawanej jest wyprowadzana z kwoty netto waluty otrzymanej, jej ceny w walucie raportowania i opłaty. Zachowuje to bilans księgowy, ale nie zastępuje archiwizacji oryginalnego kwotowania bid/ask; źródło i identyfikator operacji pozostają w transakcji.
+- Nadal nie ma API/UI do ręcznego wprowadzania i przeglądania operacji.
+
+### Następny etap
+1. Etap 21 — integracja repozytorium, price book i kalkulacji w jednej usłudze domenowej oraz jawne odtwarzanie kopii zapasowej (**zakończony**, CI #462: 13/13).
+2. Etap 22 — poprawa rankingu kursów krzyżowych i dokładne wskazanie obserwacji użytych do każdej krawędzi wyceny.
+3. Etap 23 — dalsze testy odporności zapisu na awarie procesu/systemu plików i obsługa błędów kopii zapasowej.
+4. Następnie API i klienci; bez funkcji akcyjnych.
+
+
+## 50. Etap 21 — zintegrowana usługa wyceny portfela i jawne odtwarzanie kopii (2026-11-13)
+
+### Zakres implementacji
+- Dodano native/include/monitor/portfolio_service.hpp, native/src/portfolio_service.cpp i native/tests/test_portfolio_service.cpp.
+- value_saved_portfolio() wykonuje jeden deterministyczny przepływ domenowy: odczytuje PortfolioSnapshot z JsonPortfolioRepository, buduje PortfolioPriceBook z MarketDataSnapshot i oblicza PortfolioSummary.
+- Raport zwraca równocześnie rewizję i transakcje portfela, ceny użyte do wyceny, pochodzenie obserwacji oraz podsumowanie pozycji i wyników.
+- Brak świeżych notowań albo brak prawidłowego kursu dla otwartej pozycji powoduje błąd wyceny. Obserwacje Suspect nie są używane jako awaryjne ceny.
+- Dodano jawne restore_backup() w JsonPortfolioRepository. Odtworzenie wymaga wywołania funkcji; nie jest wykonywane automatycznie po błędzie odczytu. Odtworzona kopia otrzymuje nową, rosnącą rewizję, a kopia źródłowa nie jest nadpisywana kolejną kopią uszkodzonego pliku.
+- Testy sprawdzają połączenie EUR i XAU w PLN, sumę kosztu nabycia i wartości bieżącej, zachowanie provenance, odrzucanie danych starych/podejrzanych oraz jawne odtworzenie poprzedniej poprawnej rewizji z pliku .bak.
+- CMake rejestruje monitor-portfolio-service-tests; CTest ma teraz 13 testów.
+
+### Weryfikacja CI
+- Końcowy SHA etapu: 1eb27b28cc835a4f2c63e8b49fa141cbb5235136.
+- [Native C++ checks #462](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43420406551), dokładny SHA 1eb27b28cc835a4f2c63e8b49fa141cbb5235136: Configure — success; Build — success; Test — success; CTest **13/13 (100%)**, 1,26 s.
+- [PR merge-ref CI #461](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43420392194) również zakończył się sukcesem. Oba przebiegi są zielone.
+- Wcześniejszy #456 ujawnił niezgodność sygnatury write_unlocked po dodaniu opcji rotacji kopii; poprawiono definicję, a #457/#458 przeszły. Końcowy #462 obejmuje pełny kod usługi, odzyskiwanie i testy.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) pozostaje otwarty, mergeable i nie scalony. main pozostaje bez zmian.
+
+### Ograniczenia
+- Usługa przyjmuje MarketDataSnapshot od wywołującego; pobieranie i odświeżanie adapterów nie jest jeszcze orkiestracją automatyczną.
+- Raport jest dostępny jako typ domenowy C++; brak jeszcze REST API, ekranu użytkownika, synchronizacji ani powiadomień.
+- Odtwarzanie kopii jest jawne i testowane dla uszkodzonego pliku głównego oraz poprawnego .bak. Nie jest to jeszcze pełna symulacja utraty zasilania, uszkodzenia katalogu, braku miejsca i awarii fsync.
+
+### Następny etap
+1. Ranking kursów krzyżowych powinien preferować świeższe i lepszej jakości obserwacje, a w raporcie wskazywać dokładny identyfikator każdej użytej obserwacji.
+2. Rozszerzyć testy awarii zapisu, w tym konflikt kopii, brak miejsca, nieudany rename/fsync i równoległe procesy.
+3. Dopiero po stabilizacji modelu i audycie semantyki transakcji rozpocząć API i klienta.
+
+
+## 51. Etap 22 — ranking świeżości kursów i dokładne pochodzenie obserwacji (2026-11-13)
+
+### Zakres implementacji
+- Rozszerzono PortfolioPriceProvenance o observation_ids, równoległe do instrument_ids, provider_ids, source_uris i price_kinds.
+- Każda wycena waluty i złota wskazuje dokładne identyfikatory obserwacji źródłowych, z których pochodzi kurs bezpośredni lub każda krawędź kursu krzyżowego.
+- Krawędzie grafu FX są porządkowane deterministycznie: najpierw nowszy observed_at, następnie nowszy received_at, a przy remisie identyfikator instrumentu.
+- Wyszukiwanie nadal preferuje najkrótszą ścieżkę BFS; wśród ścieżek o tej samej liczbie krawędzi wcześniejsza kolejność świeższych krawędzi zwiększa szansę wyboru nowszej obserwacji.
+- Testy potwierdzają, że spośród dwóch bezpośrednich par EUR/PLN wybierana jest świeższa obserwacja oraz że jej observation_id trafia do provenance.
+- Nie zmieniono zasad bid/ask, wyceny odwrotnej, świeżości, jakości ani normalizacji złota.
+
+### Weryfikacja CI
+- Końcowy SHA etapu: 648c6e9b118ed5cc41109dfb851b594f6adc23e9.
+- [Native C++ checks #467](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43420712520), dokładny SHA 648c6e9b118ed5cc41109dfb851b594f6adc23e9: Configure — success; Build — success; Test — success; CTest **13/13 (100%)**, 1,34 s.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) pozostaje otwarty i nie scalony; main nie został zmieniony.
+
+### Ograniczenia
+- Wybór ścieżki nadal priorytetyzuje liczbę krawędzi; świeżość porządkuje krawędzie lokalnie, ale nie oblicza globalnie najlepszego kompromisu świeżości dla całej ścieżki.
+- Do wyceny dopuszczane są wyłącznie obserwacje Validated; Unreviewed i Suspect są odrzucane. W przyszłości można dodać kontrolowane poziomy akceptacji, ale bez automatycznego obniżania jakości.
+- Nie ma jeszcze interfejsu prezentującego provenance użytkownikowi.
+
+### Następny etap
+1. Etap 23 — testy odporności repozytorium na przerwanie zapisu, błędy systemu plików, równoległe procesy i uszkodzenie kopii zapasowej.
+2. Dodać pełniejszy model audytowy wymiany FX, w tym przechowanie pierwotnego bid/ask, kursu wykonania, spreadu i opłaty obok sparowanych nóg.
+3. Następnie API i klient portfela FX/XAU; nie wprowadzać funkcji akcyjnych.
+
+
+## 52. Etap 23 — odporność repozytorium portfela (2026-11-13)
+
+### Zakres testów
+- Rozszerzono native/tests/test_portfolio_repository.cpp o test odrzucenia uszkodzonej kopii zapasowej. Poprawny dokument główny pozostaje nietknięty, gdy jawne odtworzenie z błędnego .bak kończy się błędem.
+- Dodano test limitu rozmiaru dokumentu: zbyt duży zapis zostaje odrzucony przed podmianą, plik główny nie powstaje częściowo, a repozytorium nadal zwraca pustą rewizję.
+- Dodano test dwóch procesów zapisujących równolegle z tą samą oczekiwaną rewizją. Blokada plikowa i kontrola rewizji pozwalają zatwierdzić dokładnie jeden zapis; drugi otrzymuje konflikt, bez utraty danych.
+- Zachowano test odtwarzania poprawnej kopii po uszkodzeniu dokumentu głównego, test atomowego odrzucenia niepełnej pary FX oraz testy wersji schematu i uszkodzonego JSON.
+
+### Weryfikacja CI
+- Końcowy SHA etapu: 309b42b08a1400387a24024977d85fc9c7781389.
+- [Native C++ checks #469](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43420958912), dokładny SHA 309b42b08a1400387a24024977d85fc9c7781389: Configure — success; Build — success; Test — success; CTest **13/13 (100%)**, 1,22 s.
+- Etap 23 jest zakończony: testy odporności przeszły na dokładnym SHA kodu i testów.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) nadal otwarty i nie scalony.
+
+### Granice testów
+- Test współbieżności obejmuje dwa procesy i wspólną rewizję; nie jest testem obciążeniowym dla wielu dziesiątek writerów.
+- Test limitu rozmiaru sprawdza odrzucenie przed zapisem, ale nie symuluje fizycznego braku miejsca w systemie plików.
+- Nie ma wstrzykiwania awarii fsync/rename ani twardego zakończenia procesu w każdej fazie zapisu; takie testy wymagają kontrolowanego punktu wstrzyknięcia awarii.
+
+### Następny etap
+1. Etap 24 — rozszerzenie audytowego modelu wykonania wymiany FX o pierwotne kwotowanie bid/ask, cenę wykonania, spread, opłaty, źródło, czas i identyfikator oferty.
+2. Zachować zgodność wsteczną JSON oraz walidację par operacji FX.
+3. Dopiero potem rozpocząć API i interfejs użytkownika.
+
+
+## 53. Etap 24 — audyt wykonania wymiany FX (2026-11-13)
+
+### Zakres wdrożony
+- Dodano opcjonalny model `FxExecutionAudit` do danych transakcji portfela.
+- Audyt przechowuje walutę bazową i kwotowaną, surowe bid/ask, mid, spread w punktach bazowych, kurs wykonania brutto oraz kurs efektywny wyliczony z kwoty netto i kwoty oddanej.
+- Zachowywane są parametry opłat procentowych i stałych, waluta opłaty, identyfikator dostawcy, identyfikator obserwacji, URI źródła oraz czas obserwacji.
+- Szczegóły audytowe są zapisywane wyłącznie na nodze nabywanej; obie nogi pozostają powiązane przez `operation_id`. Opłata księgowana jest nadal dokładnie raz.
+- Walidacja portfela sprawdza zgodność kierunku pary z walutami obu nóg, kursu brutto z bid (kierunek bezpośredni) lub odwrotnością ask (kierunek odwrotny), mid, spreadu, kursu efektywnego, danych opłat i chronologii obserwacji.
+- Repozytorium JSON zapisuje i odczytuje `fx_audit` jako pole opcjonalne. Starsze dokumenty bez tego pola pozostają czytelne; nie podniesiono wersji schematu.
+- Dodano testy poprawnego audytu, odrzucenia niespójnego kursu efektywnego i pełnego round-trip JSON.
+
+### Monitoring CI
+- CI #475, SHA `1d9e1b366ff09b58502ceb38f82f3d889f4a05d0`: Configure/Build/Test success.
+- CI #476, SHA `77530ba92d144fd5dd73a2fc8ec90b9dcf90cfe2`: Configure/Build/Test success.
+- CI #477, SHA `10172e7ea61adc41566027320c369a8ea175c4ff`: Configure/Build/Test success.
+- CI #478, SHA `b0a855e4758d0b0ba92bcc12f9cab8e2d49445e4`: Configure/Build/Test success; CTest 13/13. W logu wykryto ostrzeżenia o pominiętym inicjalizatorze pola opcjonalnego; dodano konstruktor z domyślnym audytem, aby usunąć ostrzeżenia bez zmiany semantyki inicjalizacji.
+- Commit porządkujący inicjalizację: `ce8a0d6d744fb7882907405d92865f68bb985f58`. Oczekuje na osobny, końcowy przebieg CI; etapu nie uznaje się jeszcze za zakończony.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) pozostaje otwarty i niescalony. `main` pozostaje bez zmian.
+
+### Następny zakres po zakończeniu etapu 24
+- Etap 25: spójny model historii i analizy wykonanych transakcji FX/XAU — filtrowanie po parach/aktywach, źródle i czasie; jawne rozróżnienie kursu referencyjnego, kwotowania i kursu faktycznego wykonania.
+- Następnie integracja API i klientów dopiero po ustabilizowaniu kontraktu danych; bez funkcji akcyjnych, zleceń giełdowych i kalendarzy sesji.
+
+
+## 54. Etap 25 — historia i analiza transakcji FX/XAU (2026-11-13)
+
+### Zakres implementacji
+- Rozszerzono `portfolio_service.hpp/.cpp` o model zapytania historii: kod aktywa, para FX, źródło, identyfikator operacji oraz inkluzywny zakres czasu wykonania.
+- `build_portfolio_history()` zwraca wpisy historii w deterministycznym porządku czasu; dla nóg tej samej wymiany zachowuje kolejność sprzedaż waluty oddawanej → zakup waluty otrzymywanej.
+- Wpisy wymiany są łączone w parę BASE/QUOTE na podstawie wspólnego `operation_id`; filtr pary akceptuje również orientację odwrotną, ale raport zachowuje oryginalną orientację transakcji.
+- Raport zawiera aktywność per aktywo: liczbę transakcji, sumę ilości kupionych i sprzedanych oraz opłaty w walucie raportowania; agreguje także łączną liczbę wpisów, operacji z audytem kwotowania i opłaty.
+- Każdy wpis rozróżnia zwykły zapis transakcji od wykonania z zachowanym audytem pierwotnego kwotowania. Dane bid/ask i rzeczywistego wykonania pochodzą z audytu FX; ceny referencyjne/spot pozostają odrębnymi obserwacjami rynku i nie są przedstawiane jako cena wykonania.
+- Dodano testy filtrowania po aktywie, parze w obu orientacjach, źródle, dokładnym przedziale czasu, kolejności nóg i oznaczenia wykonania z audytem. Test odrzuca odwrócony przedział czasu.
+- Test historii korzysta z osobnego repozytorium z prawidłowo zasilonym stanem USD, aby nie wprowadzać sprzedaży waluty bez wcześniejszego stanu do testu usługi wyceny.
+
+### Monitoring CI
+- #481, SHA `ef280efe6066ad0cbbfce085548d36fa6159df9c`: Configure/Build/Test success (13/13) — po dodaniu kontraktu historii.
+- #482, SHA `d57c144a78f4f44fc6dbfa9ae788c0da4ca4ff5a`: Configure/Build/Test success (13/13) — implementacja filtrowania.
+- #483, SHA `36166b6c4d086a62c521218bcd3d2f6f9102edf3`: Test failure — test używał repozytorium portfela z niekompletnym stanem początkowym.
+- #484, SHA `71fe17dd32d9609f794eed6fed90a15d4fbf41d5`: Test failure — log wykazał błędną asercję przypisującą audyt do nogi debetowej zamiast kredytowej.
+- #485, SHA `caf770c25b3dd5bf9f21ec0d1a96dd0c6fc1442f`: poprawiono deterministyczne sortowanie nóg, ale przebieg wymagał jeszcze korekty asercji testowej.
+- #486, SHA `6350293924f9ce4fe0837b83debe362148ef8f51`: Test failure — filtr pary nie dopasował orientacji BASE/QUOTE; log potwierdził błąd asercji filtra.
+- #487, SHA `e1d784de7de929c6644739003d4dbefedfde4078`: Test failure — commit dokumentacyjny uruchomił ponownie zestaw z tym samym błędem.
+- Poprawka w commicie `f03603dcc24642485b3eade2e5eed4979ff040bd`: para jest budowana zgodnie z kolejnością nogi debetowej (waluta bazowa) i kredytowej (waluta kwotowana), niezależnie od sortowania identyfikatorów.
+- CI [#489](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43444067165), dokładny SHA `f03603dcc24642485b3eade2e5eed4979ff040bd`: Configure/Build/Test success, CTest **13/13 (100%)**.
+- CI [#490](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43444240322), aktualny SHA `098c6692f28b6f877c7e78ac01674eed0276ada1`: Configure/Build/Test success, CTest **13/13 (100%)**.
+- Weryfikacja PR: #1 open, mergeable=true, merged=false. `main` bez zmian, SHA `cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06`.
+- Etap 25 jest zakończony. Przebiegi #483–#488 zakończyły się niepowodzeniem na wcześniejszych wersjach; ich przyczyny i poprawki zachowano powyżej dla pełnej historii audytowej.
+
+### Następny etap
+- Etap 26: stabilne, wersjonowane API odczytu historii i portfela FX/XAU, z paginacją, walidacją filtrów i zachowaniem metadanych audytowych; dopiero potem klient GUI/Web/TUI/Android.
+- Poza zakresem pozostają akcje, papiery wartościowe, zlecenia giełdowe i kalendarze sesji.
+
+
+## 55. Etap 26 — wersjonowany kontrakt odczytu historii i portfela FX/XAU (rozpoczęcie 2026-11-13)
+
+### Zakres
+- Kontrakt odczytu historii w wersji API v1, niezależny od transportu HTTP i konkretnego klienta.
+- Paginacja stabilna względem rewizji migawki portfela, z kursorem opartym na znaczniku czasu i identyfikatorze transakcji.
+- Walidacja wersji API, limitu strony, kursora, rewizji i filtrów historii.
+- Zachowanie pełnych danych transakcji, w tym `FxExecutionAudit`; brak utożsamiania ceny referencyjnej/spot z ceną wykonanego zlecenia.
+- Zakres wyłącznie FX/XAU; bez akcji, zleceń giełdowych i kalendarzy sesji.
+
+### Status
+- Dodano kontrakt `PortfolioHistoryPageRequest/PortfolioHistoryPage` w API v1 oraz `get_portfolio_history_page()`.
+- Paginacja ogranicza stronę do 1–500 wpisów, zachowuje kolejność historii i zwraca `total_matching`, rewizję migawki oraz kursor kontynuacji.
+- Kursor zawiera wersję, rewizję, czas wykonania i identyfikator ostatniej transakcji; jest odrzucany, gdy ma błędny format, pochodzi z innej rewizji albo nie wskazuje wpisu pasującego do aktywnego filtra.
+- Wpisy stron zachowują pełny `PortfolioHistoryEntry`, w tym `fx_pair` oraz `PortfolioPriceEvidence` i opcjonalny `FxExecutionAudit` w transakcji. Kontrakt jest niezależny od HTTP; serwer REST/OpenAPI i autoryzacja pozostają odrębnym etapem.
+- Dodano testy stron 1–3, braku duplikacji, zachowania audytu na ostatniej stronie, nieobsługiwanej wersji API, limitów strony, błędnego kursora, niezgodnej rewizji i kursora spoza aktywnego filtra.
+- CI #492 (`192fb9f…`): success — kontrakt API v1.
+- CI #493 (`2e34f39…`): success — pierwsza implementacja paginacji.
+- CI #494 (`0d5745f…`): success — uzupełnienie zależności kompilacji.
+- CI #495 (`89f4101…`): failure w teście — test wykazał, że kursor strony nie był związany z zestawem filtrów.
+- CI #496 (`8c09841…`): failure z tą samą asercją, ponieważ commit dokumentacyjny uruchomił ponownie kod przed poprawką.
+- Poprawka w SHA `5613b96286313227280b40bf0ffb302d34bedad2`: kursor zawiera stabilny podpis FNV-1a kanonicznego zestawu filtrów i jest odrzucany po zmianie filtrów.
+- CI [#497](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43512473432), dokładny SHA `5613b96286313227280b40bf0ffb302d34bedad2`: Configure/Build/Test success. Test paginacji oraz walidacji kursora przeszedł.
+- CI [#498](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43512614382), dokumentacyjny SHA `7987e3de86df7955b26f76732683e24a64f65138`: w toku podczas aktualizacji rejestru.
+- Etap 26 ma zielony CI dla kodu; oczekuje jeszcze na kontrolę aktualnego SHA dokumentacyjnego i końcowy audyt kontraktu.
+
+
+## 56. Audyt końcowy Etapu 26 i przygotowanie Etapu 27 — 2026-11-14
+
+### Weryfikacja stanu GitHub
+- Gałąź robocza: `feature/fx-xau-pricing-engine`; gałąź docelowa: `main`.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) pozostaje otwarty; nie scalono zmian.
+- Porównanie `main...feature/fx-xau-pricing-engine`: gałąź robocza jest 91 commitów przed `main`, 0 commitów za; wspólny punkt bazowy to `cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06`.
+- Ostatni commit dokumentacyjny przed tym wpisem: `7987e3de86df7955b26f76732683e24a64f65138`.
+- CI #498 dla tego SHA: Configure — success; Build — success; Test — success; job `native-linux` zakończony sukcesem.
+- CI #497 dla poprawki kodu kursora `5613b96286313227280b40bf0ffb302d34bedad2`: Configure/Build/Test success; job `native-linux` zakończony sukcesem.
+- Ostatni potwierdzony wynik testów w rejestrze Etapu 25: CTest 13/13. Etap 26 ma zielone przebiegi dla kodu (#497) i aktualizacji rejestru (#498); w następnym wpisie należy dopisać dokładny SHA aktualnej gałęzi i liczbę testów z logu CI.
+
+### Zamknięcie zakresu Etapu 26
+- Kontrakt paginowanego odczytu historii portfela FX/XAU jest niezależny od transportu HTTP.
+- Kursor jest związany z rewizją migawki oraz kanonicznym zestawem filtrów; zmiana filtrów, rewizji lub nieprawidłowy format powoduje odrzucenie kursora.
+- Odpowiedź zachowuje pełne wpisy historii, parę FX, dowody cenowe i opcjonalny audyt wykonania FX.
+- Limity strony wynoszą 1–500 wpisów; porządek jest deterministyczny i kontynuacja nie powinna powodować duplikacji.
+- Poprawka podpisu filtrów została potwierdzona w CI #497, a aktualizacja rejestru w CI #498. Etap 26 uznaje się za zakończony po tych dwóch zielonych przebiegach.
+- API nie jest jeszcze serwerem HTTP: nie ma routingu REST, autoryzacji, TLS ani WebSocket. Nie przedstawiać kontraktu jako publicznie dostępnego API.
+
+### Etap 27 — serwer REST/JSON FX/XAU (następny)
+Zakres pierwszej, bezpiecznej iteracji:
+1. Przed implementacją wybrać i udokumentować bibliotekę serwera HTTP zgodną z C++20, CMake i środowiskiem Linux CI; nie dodawać zależności bez sprawdzenia sposobu instalacji i licencji.
+2. Wydzielić warstwę transportową od istniejących usług domenowych i kontraktów API v1. Kontrolery nie mogą ponownie implementować wyceny, filtrowania ani paginacji.
+3. Dodać wersjonowane endpointy tylko do odczytu: kontrola zdrowia/usługi, migawka portfela oraz historia z filtrami i kursorem Etapu 26.
+4. Zdefiniować jednolity format odpowiedzi błędów, walidację parametrów, limity rozmiaru żądania/odpowiedzi i bezpieczne logowanie bez ujawniania sekretów.
+5. Domyślnie wiązać serwer wyłącznie z loopback. Zdalne nasłuchiwanie wymaga jawnej konfiguracji TLS i uwierzytelniania; nie wystawiać danych portfela bez kontroli dostępu.
+6. Nie dodawać endpointów modyfikujących portfel w tej iteracji. Operacje zapisu wymagają osobnego projektu uprawnień, idempotencji i audytu.
+7. Dodać testy routera/serializacji, odpowiedzi błędów, autoryzacji, ograniczeń żądań, filtrów, paginacji oraz integracyjny przepływ od repozytorium JSON do odpowiedzi HTTP.
+8. Uruchomić pełne CI dla dokładnego SHA; zaktualizować rejestr dopiero po odczytaniu logów i liczby testów.
+
+### Kontrola zakresu
+- Produkt nadal obejmuje wyłącznie wymianę walut FX oraz zakup, sprzedaż, wymianę i wycenę złota XAU.
+- Akcje, papiery wartościowe, brokerzy, zlecenia giełdowe i kalendarze sesji giełdowych pozostają poza zakresem.
+- `main` pozostaje nietknięty; PR #1 pozostaje otwarty i nie należy go scalać przed końcowym audytem całego zakresu.
+
+
+## 57. Weryfikacja CI #500 i decyzja technologiczna Etapu 27 — 2026-11-14
+
+### Potwierdzenie poprzedniego etapu
+- Commit `5063d06bafd61ecca989ac01ce92629423314ff0` — CI [#500](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43570168865) zakończyło się `success`.
+- Job `native-linux`: instalacja zależności, Configure, Build i Test — wszystkie kroki zakończone sukcesem.
+- Gałąź `feature/fx-xau-pricing-engine` jest 92 commity przed `main`, 0 za; wspólny punkt bazowy: `cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06`.
+- Dostępne gałęzie: `main` i `feature/fx-xau-pricing-engine`. Otwarty pozostaje PR #1; Issues otwarte: 0. Nie scalano PR i nie modyfikowano `main`.
+- Etap 26 jest zamknięty na podstawie zielonych CI #497 i #500. CI #498 potwierdziło wcześniejszy commit rejestru.
+
+### Etap 27 — decyzja projektowa
+- Wybrano Boost.Beast + Boost.Asio dla serwera HTTP/1.1 i przyszłego WebSocket, w C++20.
+- Beast jest nagłówkowy; zależność systemowa będzie instalowana jawnie jako `libboost-dev`. Minimalna wersja CMake: Boost 1.74. Należy odnotować Boost Software License 1.0.
+- Serwer będzie osobnym celem CMake; `monitor_core` pozostaje niezależny od transportu HTTP.
+- Specyfikacja endpointów, bezpieczeństwa, formatów błędów i testów: [docs/http-server-design.md](http-server-design.md).
+- Architektura została uzupełniona o tę decyzję.
+- Bezpieczeństwo: domyślny bind `127.0.0.1`; dane portfela wymagają Bearer tokenu z `MONITOR_API_TOKEN`; brak tokenu oznacza odmowę startu. Pierwsza iteracja nie włącza zdalnego nasłuchiwania bez TLS. Nie ma anonimowego dostępu do danych portfela.
+- Endpointy pierwszej iteracji: `GET /healthz`, `GET /api/v1/portfolio`, `GET /api/v1/portfolio/history`. Historia deleguje do istniejącego kontraktu Etapu 26; bez duplikowania filtrów i paginacji.
+- Nie dodano jeszcze kodu serwera ani zależności Boost do kompilacji. Etap 27 pozostaje w toku; decyzja architektoniczna i specyfikacja są wykonane, implementacja i CI pozostają kolejnymi zadaniami.
+
+### Następny podetap implementacyjny
+1. Dodać Boost 1.74+ jako jawnie sprawdzaną zależność w oddzielnym celu CMake `monitor_server`.
+2. Zaimplementować router i jawne serializatory JSON dla health, snapshot i history.
+3. Dodać walidację Bearer tokenu, parametry historii, limity HTTP i mapowanie błędów.
+4. Zaimplementować serwer Beast z bezpiecznym domyślnym adresem loopback i kontrolowanym zatrzymaniem.
+5. Dodać testy routera oraz test integracyjny przez lokalny port i tymczasowe repozytorium JSON.
+6. Uruchomić CI dla dokładnego SHA; wpisać wynik i liczbę testów po odczytaniu workflow.
+
+### Kontrola zakresu
+Nadal rozwijamy wyłącznie FX i XAU. Nie przywracać zadań Xetra, akcji, brokerów ani zleceń giełdowych. PR #1 pozostaje otwarty do czasu końcowego audytu i jawnej decyzji o scaleniu.
+
+
+## 58. Etap 27 — implementacja routera HTTP i testy (2026-11-14)
+
+### Zmiany kodu
+- Dodano `native/include/monitor/http_api.hpp` i `native/src/http_api.cpp` z routerem HTTP opartym na Boost.Beast.
+- Router obsługuje `GET /healthz`, `GET /api/v1/portfolio` oraz `GET /api/v1/portfolio/history`.
+- Endpointy danych wymagają nagłówka Bearer; token jest przekazywany do routera z konfiguracji procesu, a pusty token jest odrzucany przez konstruktor.
+- Historia deleguje do `get_portfolio_history_page()` i istniejącego kontraktu Etapu 26; parametry filtrów i kursor nie są implementowane ponownie.
+- Dodano jawne serializowanie transakcji oraz `FxExecutionAudit`, odpowiedzi JSON, `Cache-Control: no-store` i mapowanie błędów HTTP.
+- Router odrzuca nieprawidłowe kodowanie URL, puste/powtórzone parametry, zbyt wiele parametrów, błędny rozmiar strony, nieautoryzowany dostęp, metody inne niż GET i body ponad skonfigurowany limit.
+- Dodano `native/tests/test_http_api.cpp` z testami zdrowia, autoryzacji, odczytu migawki, paginacji, filtrów, powtórzonych parametrów, 400/401/404/405/413.
+- CMake tworzy osobny cel `monitor_server`; `monitor_core` nie otrzymuje zależności HTTP. Dodano Boost 1.74+ oraz instalację `libboost-dev` w CI.
+
+### Monitoring CI
+- CI #503 dla pierwszego commitu integrującego serwer zakończyło się błędem konfiguracji CMake. Przyczyną były literalne sekwencje `\\n` wstawione w pliku CMake; zostały zamienione na rzeczywiste końce linii.
+- CI #504 dla korekty CMake: Configure — success; Build — w toku podczas ostatniej kontroli.
+- CI #505 dla aktualnej rejestracji testów routera: Install — success; Configure — success; Build — w toku podczas ostatniej kontroli.
+- Nie oznaczać routera jako zweryfikowanego, dopóki CI #505 nie zakończy Build i Test. Wynik CTest i dokładny SHA zostaną dopisane po odczytaniu zakończonego workflow.
+
+### Granice aktualnej implementacji
+- To jest router i warstwa serializacji; nie ma jeszcze procesu nasłuchującego, obsługi sygnałów, konfiguracji portu ani pełnej obsługi połączeń TCP.
+- Nie wdrożono jeszcze produkcyjnego pobierania tokenu z `MONITOR_API_TOKEN`, uruchamiania wyłącznie na loopback ani TLS. Te zabezpieczenia są kryteriami dla procesu serwera, a nie funkcją już dostarczoną przez router.
+- Nie ma endpointów zapisu, WebSocket ani zdalnego nasłuchiwania. Nie udostępniać routera poza procesem testowym bez ukończenia konfiguracji bezpieczeństwa.
+- Etap 27 pozostaje w toku. Następny podetap po zielonym CI: proces serwera Beast, bezpieczna konfiguracja loopback/token, zatrzymywanie i testy integracyjne TCP.
+
+
+### Uzupełnienie monitoringu CI Etapu 27 — 2026-11-14
+- CI #504 dla SHA `6f1e77273edca993baa9c471c576608d613b4981`: Configure, Build i Test — success.
+- CI #505 dla SHA `af2afdb89fe2319c54a867943bceeb8f2a0f202c`: Configure, Build i Test — success; obejmuje kompilację routera oraz zarejestrowany test `monitor-http-api-tests`.
+- Tym samym błąd konfiguracji z CI #503 został usunięty, a kompilacja i testy routera przeszły w CI #505.
+- CI #506 dla dokumentacyjnego SHA `5e30c1a0944c1b557db8b4d8983136f1c56f20f1` uruchomiło się i pozostaje w toku podczas tej aktualizacji.
+- Router uznaje się za skompilowany i przetestowany w CI. Cały Etap 27 pozostaje otwarty: nadal trzeba dostarczyć proces nasłuchujący Beast, bezpieczne uruchamianie z loopback i tokenem środowiskowym, kontrolowane zatrzymywanie oraz testy integracyjne TCP.
+
+
+## 59. Etap 27 — proces serwera Beast (2026-11-14)
+
+- Dodano `native/src/server_main.cpp` oraz cel wykonywalny `monitor-http-server`.
+- Proces wymaga `MONITOR_API_TOKEN` i `MONITOR_PORTFOLIO_FILE`; bez któregokolwiek z nich kończy start błędem.
+- `MONITOR_PORT` jest opcjonalny, domyślnie 8080 i walidowany w zakresie 1–65535.
+- Nasłuch jest na stałe ograniczony do IPv4 loopback `127.0.0.1`; nie ma parametru pozwalającego wystawić usługę na interfejs zewnętrzny.
+- Serwer obsługuje żądania HTTP/1.1 synchronicznie, z limitem nagłówków 16 KiB, limitem treści 64 KiB i 15-sekundowym terminem odczytu/zapisu. Obsługuje SIGINT/SIGTERM.
+- Nie ma TLS ani dostępu zdalnego; nie uruchamiać jako publicznej usługi. TLS i wielowątkowa obsługa połączeń pozostają osobnymi zadaniami.
+- Commit runtime: `f45d8b23001d33db0901421be0667aeaf1ef5fa2`.
+- CI #507 dla poprzedniego SHA dokumentacyjnego: Configure success; Build w toku podczas ostatniej kontroli. CI dla runtime i aktualnego rejestru musi jeszcze potwierdzić kompilację oraz testy.
+- Etap 27 nadal otwarty do zielonego CI dla procesu serwera i testów integracyjnych TCP.
+
+
+### Uzupełnienie kontroli serwera — 2026-11-14
+- CI #507 dla SHA `cee94e0c4b3fe632b17ddab3b7fb556ba017005c`: Configure, Build i Test — success.
+- CI #508 dla SHA `f45d8b23001d33db0901421be0667aeaf1ef5fa2`: Configure, Build i Test — success; kompilacja celu `monitor-http-server` potwierdzona.
+- Po przeglądzie transportu poprawiono zamykanie połączenia: serwer jawnie ustawia `Connection: close`, zgodnie z jedną obsługiwaną transakcją HTTP na połączenie. Poprawka: `c9c20d19f9ade7e460d0196811147c2c113aff59`.
+- CI #509 dla dokumentacyjnego SHA `6ca747474c1bfac766466d38d28260edb355407b` oraz CI #510 dla poprawki transportu były w toku podczas ostatniej kontroli; nie przypisano im jeszcze wyniku.
+- Najnowszy commit dokumentacji po tej aktualizacji wymaga własnego zielonego CI.
+- Weryfikacja CTest dla routera pozostaje zielona w CI #505. Nie ma jeszcze osobnego testu integracyjnego uruchomionego procesu TCP; należy go dodać przed zamknięciem Etapu 27.
+
+
+### Aktualizacja wyników po kontroli — 2026-11-14
+- CI #509 dla SHA `6ca747474c1bfac766466d38d28260edb355407b`: Configure, Build i Test — success.
+- CI #510 dla poprawki `Connection: close` w SHA `c9c20d19f9ade7e460d0196811147c2c113aff59`: Configure — success; Build w toku podczas aktualizacji.
+- CI #511 dla SHA dokumentacji `0bbf557f24aea2f2f93bcc9c834efba1212e4a73`: Configure — success; Build w toku podczas aktualizacji.
+- PR #1 pozostaje otwarty, nie scalony; GitHub zgłasza mergeable=true, mergeable_state=unstable podczas aktywnych przebiegów CI.
+
+
+## 60. Etap 27 — test integracyjny TCP (2026-11-14)
+
+- Dodano `native/tests/test_http_server_integration.cpp`: lokalny serwer TCP na porcie efemerycznym i klient HTTP Beast komunikują się przez loopback.
+- Test używa tymczasowego repozytorium JSON i tokenu testowego; sprawdza odpowiedź 200, rewizję portfela, serializację transakcji i `Cache-Control: no-store`.
+- Test jest rejestrowany jako `monitor-http-server-integration-tests` w CTest; nie łączy się z internetem ani dostawcami danych.
+- Commit testu: `8ec243b1eec7e9594faf2eeefa87e1274419ae1f`; uzupełnienie jawnych include: `12f6793aca45b37e1af00861c1ddc3289fe6e26d`.
+- CI #510 dla poprawki zamykania połączenia `c9c20d19f9ade7e460d0196811147c2c113aff59`: Configure/Build/Test — success.
+- CI #511 i #512 pozostawały w toku podczas ostatniej kontroli; CI #514 dla commitu z testem TCP uruchomiło się i oczekuje na Configure/Build/Test.
+- Etap 27 pozostaje otwarty do zielonego CI #514 dla testu TCP oraz zielonego CI aktualnego rejestru. Następnie wykonać audyt zabezpieczeń, walidacji i błędnych żądań.
+
+
+### Potwierdzenie dodatkowych przebiegów CI — 2026-11-14
+- CI #510 dla `c9c20d19f9ade7e460d0196811147c2c113aff59`: Configure/Build/Test — success.
+- CI #511 dla `0bbf557f24aea2f2f93bcc9c834efba1212e4a73`: Configure/Build/Test — success.
+- CI #512 dla `fd4b21f64b4d147edf6e67ee12f9e2b8b427b50b`: Configure/Build/Test — success.
+- CI #513 dla `f5a9eebde308dcbc4f1725152ccc1e3e1b25b081`, #514 dla `8ec243b1eec7e9594faf2eeefa87e1274419ae1f` i #515 dla `12f6793aca45b37e1af00861c1ddc3289fe6e26` nie miały jeszcze końcowego wyniku podczas ostatniej kontroli.
+- Najnowszy test TCP jest dodany, ale nie wolno uznać go za zaliczony do czasu zielonego kroku Test w CI dla tego testu lub nowszego SHA.
+
+
+## 61. Etap 27 — test procesu serwera i aktualizacja kryteriów zamknięcia (2026-11-14)
+
+- Dodano `native/tests/test_http_server_process.cpp`: test uruchamia rzeczywisty plik wykonywalny `monitor-http-server` jako proces potomny, przekazuje token, ścieżkę repozytorium i port przez środowisko, łączy się z loopback, pobiera autoryzowaną migawkę portfela, a następnie wysyła SIGTERM i sprawdza czyste zakończenie procesu.
+- CTest rejestruje `monitor-http-server-process-tests` i przekazuje ścieżkę pliku wykonywalnego przez generator expression CMake.
+- Test obejmuje pełny przepływ: trwały JSON → proces serwera → TCP/HTTP → Bearer → router → JSON odpowiedzi → kontrolowane zatrzymanie.
+- CI #515 dla SHA `12f6793aca45b37e1af00861c1ddc3289fe6e26d`: Configure/Build/Test — success; obejmuje test routera oraz TCP integracyjny.
+- CI #516 dla SHA `1542808aeaea39db7e69286cc89bf5eccb42eb1f`: Configure/Build/Test — success.
+- CI #517 dla SHA `f4617dec2f54c62748a9e5a47d48f85240749208`: Configure/Build/Test — success.
+- CI #518 dla SHA `7d84b2b559cf65795c05dd26723169f55caf112e`, obejmującego test rzeczywistego procesu, uruchomiło się; wynik Configure/Build/Test oczekuje na zakończenie.
+- CI #514 zakończyło się niepowodzeniem przed korektą jawnych include testu; zostało zastąpione poprawionym i zielonym CI #515.
+- Kryteria zamknięcia Etapu 27: zielone CI #518 dla testu procesu, zielone CI dla aktualnego rejestru, ponowna kontrola PR i potwierdzenie, że serwer nie dopuszcza bind na interfejsie zewnętrznym.
+
+
+## 62. Etap 27 — zamknięcie podstawowej implementacji i audyt transportu (2026-11-14)
+
+- CI [#518](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43571221193), SHA testu procesu `7d84b2b559cf65795c05dd26723169f55caf112e`: Configure/Build/Test — success. Test uruchamia rzeczywisty proces serwera, autoryzuje odczyt portfela przez TCP/HTTP i potwierdza poprawne zakończenie po SIGTERM.
+- CI [#519](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43571249210), SHA rejestru `fa01dca5d7a1f34db7650acc322325afd184f225`: Configure/Build/Test — success.
+- Etap 27 — podstawowy serwer REST/JSON na loopback, router, autoryzacja Bearer, odczyt portfela i historii, test routera, test TCP i test procesu — spełnił kryteria implementacyjne oraz CI. PR pozostaje otwarty.
+- Audyt kodu wykrył niedopasowanie: przekroczenie limitu nagłówków i timeout odczytu były mapowane na ogólny 400. W ramach następnego podetapu poprawiono mapowanie na 431 i 408 oraz dodano test procesu dla nadmiernego nagłówka.
+- Ograniczenia pozostające jawne: brak TLS i zdalnego dostępu, brak limitera żądań (429 jest wyłącznie przyszłym mapowaniem), serwer obsługuje połączenia sekwencyjnie, a healthz nie ma identyfikatora żądania. Nie przedstawiać tego transportu jako gotowego do publicznego wdrożenia.
+- Następny etap: audyt i utwardzenie transportu (nagłówki, timeouty, błędne żądania, start bez sekretu, obsługa awarii i zamykanie), a potem kontrakt aktualnej wyceny portfela oparty o price book FX/XAU. WebSocket i klienci pozostają dalszymi etapami.
+
+
+## 63. Etap 27 — weryfikacja transportu i startu fail-closed (2026-11-14)
+
+- CI #521 dla SHA `872bb596b41bebbb95fca28faf52b10ea00e6b20`: Configure/Build/Test — success. Test procesu potwierdza odrzucenie nagłówka przekraczającego 16 KiB odpowiedzią HTTP 431.
+- CI #520 dla wcześniejszego SHA `25c56f1d1cb56b0092f2cbf1223a78b35e5aa3c1` zakończyło się niepowodzeniem w kroku Test; przebieg dotyczył wcześniejszej wersji testu z niepoprawnym zapisem CRLF. Poprawiono fixture w `872bb59`; nie ukrywać ani nie usuwać historycznego wyniku.
+- Rozpoczęto rozszerzenie testu procesu o przypadki fail-closed: brak `MONITOR_API_TOKEN`, brak `MONITOR_PORTFOLIO_FILE` i nieprawidłowy port. Wynik będzie uznany za potwierdzony dopiero po CI dla nowego SHA.
+- Audyt wykazał kolejne zadania przed uznaniem transportu za gotowy: sprawdzenie timeoutu odczytu w rzeczywistym procesie, limitu body 64 KiB, obsługi błędnego żądania, deterministycznego zamykania i ochrony przed próbą ponownego użycia portu.
+- Nadal obowiązuje ograniczenie: HTTP bez TLS, tylko loopback, brak zdalnego wdrożenia. Nie traktować tej implementacji jako publicznego endpointu.
