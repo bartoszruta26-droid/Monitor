@@ -12,6 +12,7 @@
 #include <iostream>
 #include <string>
 #include <thread>
+#include <utility>
 
 namespace net=boost::asio;
 namespace beast=boost::beast;
@@ -114,6 +115,7 @@ int main() {
             } else {
                 auto request=parser.release();
                 auto response=router.handle(request);
+                response.keep_alive(false);
                 stream.expires_after(std::chrono::seconds{15});
                 http::write(stream,response,ec);
             }
