@@ -1480,3 +1480,27 @@ Nadal rozwijamy wyłącznie FX i XAU. Nie przywracać zadań Xetra, akcji, broke
 ### Ograniczenia
 - Serwer nadal nasłuchuje wyłącznie na `127.0.0.1`; brak TLS i dostępu zdalnego.
 - Brak limitera częstotliwości (429), wielowątkowego modelu obsługi i WebSocket. Te funkcje nie są częścią tego podetapu.
+
+
+
+## 65. Ponowna kontrola zawieszonego CI transportu — 2026-11-14
+
+### Stan kontrolny
+- PR [#2](https://github.com/bartoszruta26-droid/Monitor/pull/2) pozostaje otwarty; przed tą aktualizacją head: `3d8bb697483e7af861261e3196fb2111369a102b`.
+- CI [#525](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43595443611) nadal ma status `in_progress`. Job `native-linux` zakończył Configure i Build sukcesem, ale krok Test nie ma wyniku końcowego.
+- Weryfikacja joba potwierdza, że CTest obejmuje m.in. `monitor-http-server-process-tests`, który uruchamia rzeczywisty proces serwera i wykonuje test niekompletnego nagłówka z limitem odbioru 15 s.
+- Sam test timeoutu powinien zakończyć się po limicie transportu; brak końcowego statusu przez wiele godzin jest anomalią wykonania CI, a nie dowodem konkretnego błędu testu.
+- GitHub nie udostępnił archiwum logów joba (wcześniejsze pobranie zwróciło 404 `BlobNotFound`). Nie ma dowodu, że CTest zakończył się sukcesem ani porażką.
+- CI #524 dla poprzedniego SHA również pozostaje bez potwierdzonego wyniku Test.
+
+### Działanie diagnostyczne
+- Zmieniono wyłącznie rejestr prac, aby uruchomić nowy przebieg CI dla dokładnego SHA zawierającego aktualny zapis stanu.
+- Nowy przebieg ma sprawdzić, czy problem dotyczył osieroconego wykonania runnera, czy jest powtarzalny w kodzie/testach.
+- Poprzednie przebiegi #524 i #525 pozostają w historii i nie są przedstawiane jako zaliczone.
+- Nie zmieniono logiki serwera ani testów bez logów wskazujących przyczynę.
+- Nie scalono PR #2. Etap 27/utwardzanie transportu pozostaje otwarty do zielonego Configure/Build/Test dla nowego head i odczytu wyników.
+
+### Etap 28
+- Issue [#3](https://github.com/bartoszruta26-droid/Monitor/issues/3) pozostaje specyfikacją endpointu wyceny.
+- Implementacja endpointu jest zależna od zatwierdzenia transportu; nie otwieramy jej na niezweryfikowanej bazie.
+- Ograniczenia pozostają: loopback-only, bez TLS, bez dostępu zdalnego; brak projektu Android/Gradle i potwierdzonego APK.
