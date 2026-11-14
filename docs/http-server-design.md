@@ -92,3 +92,13 @@ Odpowiedzi mają `Content-Type: application/json; charset=utf-8`, jawny limit ro
 ## 6. Granica domenowa
 
 Produkt obejmuje wymianę walut FX oraz zakup, sprzedaż, wymianę i wycenę złota XAU. Serwer nie może wprowadzać obsługi akcji, brokerów akcyjnych, zleceń giełdowych ani kalendarzy sesji giełdowych.
+
+
+## 7. Proces serwera — pierwsza implementacja
+
+Dodano cel wykonywalny `monitor-http-server` oparty na routerze z sekcji 3. Konfiguracja środowiskowa:
+- `MONITOR_API_TOKEN` — wymagany token Bearer; bez niego proces odmawia startu;
+- `MONITOR_PORTFOLIO_FILE` — wymagany plik repozytorium portfela JSON;
+- `MONITOR_PORT` — opcjonalny port TCP 1–65535, domyślnie 8080.
+
+Proces nasłuchuje wyłącznie na `127.0.0.1`, obsługuje SIGINT/SIGTERM, ogranicza nagłówki do 16 KiB, body do 64 KiB i stosuje 15-sekundowy termin operacji sieciowych. Nie udostępnia opcji bind na interfejs zewnętrzny. Jest to lokalny transport HTTP bez TLS, a nie serwer gotowy do publicznego wdrożenia. Przed jakimkolwiek dostępem zdalnym wymagane są TLS, właściwe zarządzanie sekretami, testy bezpieczeństwa i przegląd wdrożenia.

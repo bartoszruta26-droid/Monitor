@@ -1373,3 +1373,16 @@ Nadal rozwijamy wyłącznie FX i XAU. Nie przywracać zadań Xetra, akcji, broke
 - Tym samym błąd konfiguracji z CI #503 został usunięty, a kompilacja i testy routera przeszły w CI #505.
 - CI #506 dla dokumentacyjnego SHA `5e30c1a0944c1b557db8b4d8983136f1c56f20f1` uruchomiło się i pozostaje w toku podczas tej aktualizacji.
 - Router uznaje się za skompilowany i przetestowany w CI. Cały Etap 27 pozostaje otwarty: nadal trzeba dostarczyć proces nasłuchujący Beast, bezpieczne uruchamianie z loopback i tokenem środowiskowym, kontrolowane zatrzymywanie oraz testy integracyjne TCP.
+
+
+## 59. Etap 27 — proces serwera Beast (2026-11-14)
+
+- Dodano `native/src/server_main.cpp` oraz cel wykonywalny `monitor-http-server`.
+- Proces wymaga `MONITOR_API_TOKEN` i `MONITOR_PORTFOLIO_FILE`; bez któregokolwiek z nich kończy start błędem.
+- `MONITOR_PORT` jest opcjonalny, domyślnie 8080 i walidowany w zakresie 1–65535.
+- Nasłuch jest na stałe ograniczony do IPv4 loopback `127.0.0.1`; nie ma parametru pozwalającego wystawić usługę na interfejs zewnętrzny.
+- Serwer obsługuje żądania HTTP/1.1 synchronicznie, z limitem nagłówków 16 KiB, limitem treści 64 KiB i 15-sekundowym terminem odczytu/zapisu. Obsługuje SIGINT/SIGTERM.
+- Nie ma TLS ani dostępu zdalnego; nie uruchamiać jako publicznej usługi. TLS i wielowątkowa obsługa połączeń pozostają osobnymi zadaniami.
+- Commit runtime: `f45d8b23001d33db0901421be0667aeaf1ef5fa2`.
+- CI #507 dla poprzedniego SHA dokumentacyjnego: Configure success; Build w toku podczas ostatniej kontroli. CI dla runtime i aktualnego rejestru musi jeszcze potwierdzić kompilację oraz testy.
+- Etap 27 nadal otwarty do zielonego CI dla procesu serwera i testów integracyjnych TCP.
