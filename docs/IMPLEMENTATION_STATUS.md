@@ -1309,3 +1309,34 @@ Zakres pierwszej, bezpiecznej iteracji:
 - Produkt nadal obejmuje wyłącznie wymianę walut FX oraz zakup, sprzedaż, wymianę i wycenę złota XAU.
 - Akcje, papiery wartościowe, brokerzy, zlecenia giełdowe i kalendarze sesji giełdowych pozostają poza zakresem.
 - `main` pozostaje nietknięty; PR #1 pozostaje otwarty i nie należy go scalać przed końcowym audytem całego zakresu.
+
+
+## 57. Weryfikacja CI #500 i decyzja technologiczna Etapu 27 — 2026-11-14
+
+### Potwierdzenie poprzedniego etapu
+- Commit `5063d06bafd61ecca989ac01ce92629423314ff0` — CI [#500](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43570168865) zakończyło się `success`.
+- Job `native-linux`: instalacja zależności, Configure, Build i Test — wszystkie kroki zakończone sukcesem.
+- Gałąź `feature/fx-xau-pricing-engine` jest 92 commity przed `main`, 0 za; wspólny punkt bazowy: `cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06`.
+- Dostępne gałęzie: `main` i `feature/fx-xau-pricing-engine`. Otwarty pozostaje PR #1; Issues otwarte: 0. Nie scalano PR i nie modyfikowano `main`.
+- Etap 26 jest zamknięty na podstawie zielonych CI #497 i #500. CI #498 potwierdziło wcześniejszy commit rejestru.
+
+### Etap 27 — decyzja projektowa
+- Wybrano Boost.Beast + Boost.Asio dla serwera HTTP/1.1 i przyszłego WebSocket, w C++20.
+- Beast jest nagłówkowy; zależność systemowa będzie instalowana jawnie jako `libboost-dev`. Minimalna wersja CMake: Boost 1.74. Należy odnotować Boost Software License 1.0.
+- Serwer będzie osobnym celem CMake; `monitor_core` pozostaje niezależny od transportu HTTP.
+- Specyfikacja endpointów, bezpieczeństwa, formatów błędów i testów: [docs/http-server-design.md](http-server-design.md).
+- Architektura została uzupełniona o tę decyzję.
+- Bezpieczeństwo: domyślny bind `127.0.0.1`; dane portfela wymagają Bearer tokenu z `MONITOR_API_TOKEN`; brak tokenu oznacza odmowę startu. Pierwsza iteracja nie włącza zdalnego nasłuchiwania bez TLS. Nie ma anonimowego dostępu do danych portfela.
+- Endpointy pierwszej iteracji: `GET /healthz`, `GET /api/v1/portfolio`, `GET /api/v1/portfolio/history`. Historia deleguje do istniejącego kontraktu Etapu 26; bez duplikowania filtrów i paginacji.
+- Nie dodano jeszcze kodu serwera ani zależności Boost do kompilacji. Etap 27 pozostaje w toku; decyzja architektoniczna i specyfikacja są wykonane, implementacja i CI pozostają kolejnymi zadaniami.
+
+### Następny podetap implementacyjny
+1. Dodać Boost 1.74+ jako jawnie sprawdzaną zależność w oddzielnym celu CMake `monitor_server`.
+2. Zaimplementować router i jawne serializatory JSON dla health, snapshot i history.
+3. Dodać walidację Bearer tokenu, parametry historii, limity HTTP i mapowanie błędów.
+4. Zaimplementować serwer Beast z bezpiecznym domyślnym adresem loopback i kontrolowanym zatrzymaniem.
+5. Dodać testy routera oraz test integracyjny przez lokalny port i tymczasowe repozytorium JSON.
+6. Uruchomić CI dla dokładnego SHA; wpisać wynik i liczbę testów po odczytaniu workflow.
+
+### Kontrola zakresu
+Nadal rozwijamy wyłącznie FX i XAU. Nie przywracać zadań Xetra, akcji, brokerów ani zleceń giełdowych. PR #1 pozostaje otwarty do czasu końcowego audytu i jawnej decyzji o scaleniu.
