@@ -109,6 +109,12 @@ int main() {
             if(ec==http::error::body_limit) {
                 send_error(stream.socket(),http::status::payload_too_large,
                     "payload_too_large","Żądanie przekracza limit.");
+            } else if(ec==http::error::header_limit) {
+                send_error(stream.socket(),http::status::request_header_fields_too_large,
+                    "headers_too_large","Nagłówki żądania przekraczają limit.");
+            } else if(ec==beast::error::timeout) {
+                send_error(stream.socket(),http::status::request_timeout,
+                    "request_timeout","Przekroczono czas oczekiwania na żądanie.");
             } else if(ec) {
                 send_error(stream.socket(),http::status::bad_request,
                     "bad_request","Nieprawidłowe żądanie HTTP.");

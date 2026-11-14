@@ -73,6 +73,22 @@ int main(int argc,char** argv) {
         }
         if(!received) throw std::runtime_error("server process did not serve authenticated portfolio");
 
+        // Verify that the transport enforces the documented HTTP header limit.
+        {
+            tcp::socket socket{context};
+            socket.connect({net::ip::address_v4::loopback(),port});
+            const std::string oversized =
+                "GET /healthz HTTP/1.1\\r\\nHost: 127.0.0.1\\r\\nX-Oversized: "+
+                std::string(17U*1024U,'a')+"\\r\\n\\r\\n";
+            net::write(socket,net::buffer(oversized));
+            beast::flat_buffer buffer;
+            http::response<http::string_body> response;
+            boost::system::error_code ec;
+            http::read(socket,buffer,response,ec);
+            if(ec||response.result()!=http::status::request_header_fields_too_large)
+                throw std::runtime_error("oversized HTTP headers were not rejected with 431");
+        }
+
         if(::kill(child,SIGTERM)!=0) throw std::runtime_error("could not send SIGTERM");
         int status{};
         if(::waitpid(child,&status,0)!=child) throw std::runtime_error("waitpid failed");

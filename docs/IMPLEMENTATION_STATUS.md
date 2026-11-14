@@ -2,7 +2,7 @@
 
 **Repozytorium:** `bartoszruta26-droid/Monitor`  
 **Gałąź:** `feature/fx-xau-pricing-engine`  
-**Ostatnia weryfikacja:** 2026-11-13 22:34 Europe/Warsaw
+**Ostatnia weryfikacja:** 2026-11-14 09:41 Europe/Warsaw
 **Zasada prowadzenia:** status etapu zmienia się na „zakończony” dopiero po sprawdzeniu kodu, testów i CI dla konkretnego SHA. Ten plik jest bieżącym rejestrem wykonania; szczegóły techniczne pozostają w dokumentach etapów.
 
 ## Bieżący stan repozytorium — 2026-11-13 22:34 Europe/Warsaw
@@ -1434,3 +1434,13 @@ Nadal rozwijamy wyłącznie FX i XAU. Nie przywracać zadań Xetra, akcji, broke
 - CI #518 dla SHA `7d84b2b559cf65795c05dd26723169f55caf112e`, obejmującego test rzeczywistego procesu, uruchomiło się; wynik Configure/Build/Test oczekuje na zakończenie.
 - CI #514 zakończyło się niepowodzeniem przed korektą jawnych include testu; zostało zastąpione poprawionym i zielonym CI #515.
 - Kryteria zamknięcia Etapu 27: zielone CI #518 dla testu procesu, zielone CI dla aktualnego rejestru, ponowna kontrola PR i potwierdzenie, że serwer nie dopuszcza bind na interfejsie zewnętrznym.
+
+
+## 62. Etap 27 — zamknięcie podstawowej implementacji i audyt transportu (2026-11-14)
+
+- CI [#518](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43571221193), SHA testu procesu `7d84b2b559cf65795c05dd26723169f55caf112e`: Configure/Build/Test — success. Test uruchamia rzeczywisty proces serwera, autoryzuje odczyt portfela przez TCP/HTTP i potwierdza poprawne zakończenie po SIGTERM.
+- CI [#519](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43571249210), SHA rejestru `fa01dca5d7a1f34db7650acc322325afd184f225`: Configure/Build/Test — success.
+- Etap 27 — podstawowy serwer REST/JSON na loopback, router, autoryzacja Bearer, odczyt portfela i historii, test routera, test TCP i test procesu — spełnił kryteria implementacyjne oraz CI. PR pozostaje otwarty.
+- Audyt kodu wykrył niedopasowanie: przekroczenie limitu nagłówków i timeout odczytu były mapowane na ogólny 400. W ramach następnego podetapu poprawiono mapowanie na 431 i 408 oraz dodano test procesu dla nadmiernego nagłówka.
+- Ograniczenia pozostające jawne: brak TLS i zdalnego dostępu, brak limitera żądań (429 jest wyłącznie przyszłym mapowaniem), serwer obsługuje połączenia sekwencyjnie, a healthz nie ma identyfikatora żądania. Nie przedstawiać tego transportu jako gotowego do publicznego wdrożenia.
+- Następny etap: audyt i utwardzenie transportu (nagłówki, timeouty, błędne żądania, start bez sekretu, obsługa awarii i zamykanie), a potem kontrakt aktualnej wyceny portfela oparty o price book FX/XAU. WebSocket i klienci pozostają dalszymi etapami.
