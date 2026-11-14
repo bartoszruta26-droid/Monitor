@@ -5,6 +5,7 @@
 #include <boost/beast/http.hpp>
 
 #include <charconv>
+#include <cerrno>
 #include <chrono>
 #include <csignal>
 #include <cstdlib>
@@ -13,6 +14,8 @@
 #include <string>
 #include <thread>
 #include <utility>
+#include <sys/socket.h>
+#include <sys/time.h>
 
 namespace net=boost::asio;
 namespace beast=boost::beast;
@@ -99,6 +102,13 @@ int main() {
                 continue;
             }
 
+            // Synchronous Beast reads do not enforce tcp_stream expiry. Apply a
+            // kernel receive timeout so an incomplete request cannot block the
+            // single-threaded server indefinitely.
+            const timeval receive_timeout{15,0};
+            if(::setsockopt(socket.native_handle(),SOL_SOCKET,SO_RCVTIMEO,
+                    &receive_timeout,sizeof(receive_timeout))!=0)
+                throw std::runtime_error("Nie można ustawić limitu czasu odczytu gniazda.");
             beast::tcp_stream stream{std::move(socket)};
             stream.expires_after(std::chrono::seconds{15});
             beast::flat_buffer buffer;
@@ -112,7 +122,8 @@ int main() {
             } else if(ec==http::error::header_limit) {
                 send_error(stream.socket(),http::status::request_header_fields_too_large,
                     "headers_too_large","Nagłówki żądania przekraczają limit.");
-            } else if(ec==beast::error::timeout) {
+            } else if(ec==beast::error::timeout||ec==net::error::would_block||
+                      ec==net::error::try_again) {
                 send_error(stream.socket(),http::status::request_timeout,
                     "request_timeout","Przekroczono czas oczekiwania na żądanie.");
             } else if(ec) {
