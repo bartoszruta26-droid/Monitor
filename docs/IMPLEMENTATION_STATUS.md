@@ -1402,3 +1402,14 @@ Nadal rozwijamy wyłącznie FX i XAU. Nie przywracać zadań Xetra, akcji, broke
 - CI #510 dla poprawki `Connection: close` w SHA `c9c20d19f9ade7e460d0196811147c2c113aff59`: Configure — success; Build w toku podczas aktualizacji.
 - CI #511 dla SHA dokumentacji `0bbf557f24aea2f2f93bcc9c834efba1212e4a73`: Configure — success; Build w toku podczas aktualizacji.
 - PR #1 pozostaje otwarty, nie scalony; GitHub zgłasza mergeable=true, mergeable_state=unstable podczas aktywnych przebiegów CI.
+
+
+## 60. Etap 27 — test integracyjny TCP (2026-11-14)
+
+- Dodano `native/tests/test_http_server_integration.cpp`: lokalny serwer TCP na porcie efemerycznym i klient HTTP Beast komunikują się przez loopback.
+- Test używa tymczasowego repozytorium JSON i tokenu testowego; sprawdza odpowiedź 200, rewizję portfela, serializację transakcji i `Cache-Control: no-store`.
+- Test jest rejestrowany jako `monitor-http-server-integration-tests` w CTest; nie łączy się z internetem ani dostawcami danych.
+- Commit testu: `8ec243b1eec7e9594faf2eeefa87e1274419ae1f`; uzupełnienie jawnych include: `12f6793aca45b37e1af00861c1ddc3289fe6e26d`.
+- CI #510 dla poprawki zamykania połączenia `c9c20d19f9ade7e460d0196811147c2c113aff59`: Configure/Build/Test — success.
+- CI #511 i #512 pozostawały w toku podczas ostatniej kontroli; CI #514 dla commitu z testem TCP uruchomiło się i oczekuje na Configure/Build/Test.
+- Etap 27 pozostaje otwarty do zielonego CI #514 dla testu TCP oraz zielonego CI aktualnego rejestru. Następnie wykonać audyt zabezpieczeń, walidacji i błędnych żądań.
