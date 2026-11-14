@@ -34,7 +34,7 @@ Wersja minimalna do ustalenia w CMake: Boost 1.74. Moduł serwera ma być osobny
 Publiczny endpoint diagnostyczny. Odpowiedź zawiera tylko `status` i `api_version`.
 
 ### `GET /api/v1/portfolio`
-Wymaga Bearer tokenu. Zwraca migawkę portfela: wersję schematu, rewizję, walutę raportowania i zagregowane pozycje. Nie zwraca ścieżki pliku repozytorium.
+Wymaga Bearer tokenu. Zwraca migawkę księgi portfela: wersję schematu, rewizję, walutę raportowania i zapisane transakcje wraz z audytem kwotowania. Nie zwraca ścieżki pliku repozytorium ani nie wylicza bieżącej wartości rynkowej; wycena wymaga osobnego kontraktu z migawką danych rynkowych.
 
 ### `GET /api/v1/portfolio/history`
 Wymaga Bearer tokenu. Parametry:
