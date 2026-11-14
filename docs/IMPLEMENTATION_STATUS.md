@@ -1340,3 +1340,28 @@ Zakres pierwszej, bezpiecznej iteracji:
 
 ### Kontrola zakresu
 Nadal rozwijamy wyłącznie FX i XAU. Nie przywracać zadań Xetra, akcji, brokerów ani zleceń giełdowych. PR #1 pozostaje otwarty do czasu końcowego audytu i jawnej decyzji o scaleniu.
+
+
+## 58. Etap 27 — implementacja routera HTTP i testy (2026-11-14)
+
+### Zmiany kodu
+- Dodano `native/include/monitor/http_api.hpp` i `native/src/http_api.cpp` z routerem HTTP opartym na Boost.Beast.
+- Router obsługuje `GET /healthz`, `GET /api/v1/portfolio` oraz `GET /api/v1/portfolio/history`.
+- Endpointy danych wymagają nagłówka Bearer; token jest przekazywany do routera z konfiguracji procesu, a pusty token jest odrzucany przez konstruktor.
+- Historia deleguje do `get_portfolio_history_page()` i istniejącego kontraktu Etapu 26; parametry filtrów i kursor nie są implementowane ponownie.
+- Dodano jawne serializowanie transakcji oraz `FxExecutionAudit`, odpowiedzi JSON, `Cache-Control: no-store` i mapowanie błędów HTTP.
+- Router odrzuca nieprawidłowe kodowanie URL, puste/powtórzone parametry, zbyt wiele parametrów, błędny rozmiar strony, nieautoryzowany dostęp, metody inne niż GET i body ponad skonfigurowany limit.
+- Dodano `native/tests/test_http_api.cpp` z testami zdrowia, autoryzacji, odczytu migawki, paginacji, filtrów, powtórzonych parametrów, 400/401/404/405/413.
+- CMake tworzy osobny cel `monitor_server`; `monitor_core` nie otrzymuje zależności HTTP. Dodano Boost 1.74+ oraz instalację `libboost-dev` w CI.
+
+### Monitoring CI
+- CI #503 dla pierwszego commitu integrującego serwer zakończyło się błędem konfiguracji CMake. Przyczyną były literalne sekwencje `\\n` wstawione w pliku CMake; zostały zamienione na rzeczywiste końce linii.
+- CI #504 dla korekty CMake: Configure — success; Build — w toku podczas ostatniej kontroli.
+- CI #505 dla aktualnej rejestracji testów routera: Install — success; Configure — success; Build — w toku podczas ostatniej kontroli.
+- Nie oznaczać routera jako zweryfikowanego, dopóki CI #505 nie zakończy Build i Test. Wynik CTest i dokładny SHA zostaną dopisane po odczytaniu zakończonego workflow.
+
+### Granice aktualnej implementacji
+- To jest router i warstwa serializacji; nie ma jeszcze procesu nasłuchującego, obsługi sygnałów, konfiguracji portu ani pełnej obsługi połączeń TCP.
+- Nie wdrożono jeszcze produkcyjnego pobierania tokenu z `MONITOR_API_TOKEN`, uruchamiania wyłącznie na loopback ani TLS. Te zabezpieczenia są kryteriami dla procesu serwera, a nie funkcją już dostarczoną przez router.
+- Nie ma endpointów zapisu, WebSocket ani zdalnego nasłuchiwania. Nie udostępniać routera poza procesem testowym bez ukończenia konfiguracji bezpieczeństwa.
+- Etap 27 pozostaje w toku. Następny podetap po zielonym CI: proces serwera Beast, bezpieczna konfiguracja loopback/token, zatrzymywanie i testy integracyjne TCP.
