@@ -1453,3 +1453,30 @@ Nadal rozwijamy wyłącznie FX i XAU. Nie przywracać zadań Xetra, akcji, broke
 - Rozpoczęto rozszerzenie testu procesu o przypadki fail-closed: brak `MONITOR_API_TOKEN`, brak `MONITOR_PORTFOLIO_FILE` i nieprawidłowy port. Wynik będzie uznany za potwierdzony dopiero po CI dla nowego SHA.
 - Audyt wykazał kolejne zadania przed uznaniem transportu za gotowy: sprawdzenie timeoutu odczytu w rzeczywistym procesie, limitu body 64 KiB, obsługi błędnego żądania, deterministycznego zamykania i ochrony przed próbą ponownego użycia portu.
 - Nadal obowiązuje ograniczenie: HTTP bez TLS, tylko loopback, brak zdalnego wdrożenia. Nie traktować tej implementacji jako publicznego endpointu.
+
+
+## 64. Etap 27 — utwardzanie transportu HTTP (2026-11-14)
+
+### Zakres w toku
+- Gałąź robocza: `feature/http-transport-hardening`; PR [#2](https://github.com/bartoszruta26-droid/Monitor/pull/2) do `main`.
+- Commit implementacyjny: `ac1b2ea721845585d46ef7b5a3a92a5afb5f5488`.
+- W `server_main.cpp` dodano systemowy limit odbioru `SO_RCVTIMEO=15 s`; synchroniczny odczyt Beast nie polega już wyłącznie na `tcp_stream::expires_after()`.
+- Błędy limitu czasu gniazda (`would_block/try_again`) są mapowane na HTTP 408.
+- Rozszerzono test procesu o: 401 bez Bearer, 413 dla Content-Length ponad 64 KiB, 400 dla niepoprawnej linii żądania, 408 dla niekompletnego żądania po 15 s oraz odmowę uruchomienia drugiego serwera na zajętym porcie.
+- Zachowano testy fail-closed dla braku tokenu, braku pliku portfela i nieprawidłowego portu, a także test czystego zamknięcia SIGTERM i limitu nagłówków 431.
+
+### Monitoring CI
+- CI #524 dla SHA `ac1b2ea721845585d46ef7b5a3a92a5afb5f5488`: uruchomione; wynik Configure/Build/Test nie jest jeszcze potwierdzony.
+- Etap pozostaje **w toku**. Nie wpisywać wyniku CTest ani statusu zakończenia, dopóki workflow dla aktualnego SHA nie zakończy się sukcesem.
+- Test timeoutu może wydłużyć CTest o około 15 sekund.
+
+### Kryteria zamknięcia podetapu
+1. Zielone Configure/Build/Test dla dokładnego SHA.
+2. Odczyt logów testu procesu i potwierdzenie odpowiedzi 401/400/408/413/431.
+3. Potwierdzenie, że druga instancja nie przejmuje zajętego portu.
+4. Zielone CI dla aktualizacji tego rejestru.
+5. Ponowny audyt PR; scalenie dopiero po zielonym CI i weryfikacji końcowego SHA.
+
+### Ograniczenia
+- Serwer nadal nasłuchuje wyłącznie na `127.0.0.1`; brak TLS i dostępu zdalnego.
+- Brak limitera częstotliwości (429), wielowątkowego modelu obsługi i WebSocket. Te funkcje nie są częścią tego podetapu.
