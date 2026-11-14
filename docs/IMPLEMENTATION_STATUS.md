@@ -1480,3 +1480,25 @@ Nadal rozwijamy wyłącznie FX i XAU. Nie przywracać zadań Xetra, akcji, broke
 ### Ograniczenia
 - Serwer nadal nasłuchuje wyłącznie na `127.0.0.1`; brak TLS i dostępu zdalnego.
 - Brak limitera częstotliwości (429), wielowątkowego modelu obsługi i WebSocket. Te funkcje nie są częścią tego podetapu.
+
+
+
+## 65. Monitoring CI PR #2 i zależność Etapu 28 (2026-11-14)
+
+### Stan PR #2 na 16:24 CET
+- PR [#2](https://github.com/bartoszruta26-droid/Monitor/pull/2) pozostaje otwarty; aktualny testowany head: `3d8bb697483e7af861261e3196fb2111369a102b`.
+- CI [#525](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43595443611) dla aktualnego head oraz CI #524 dla wcześniejszego commitu mają Configure i Build zakończone sukcesem.
+- Krok Test w obu przebiegach nadal ma status `in_progress`; brak końcowego wyniku CTest.
+- Pobranie logów jobów przez GitHub zwraca 404 `BlobNotFound`. Nie można na tej podstawie wskazać konkretnego testu blokującego.
+- Status workflow nie zmienił się od uruchomienia. To wskazuje na podejrzenie zawieszenia kroku Test, ale bez logów nie stanowi dowodu błędu kodu.
+- Nie zmieniono head PR #2 i nie scalono PR. Zachowanie niezmienionego SHA pozwala zachować jednoznaczność dotychczasowej weryfikacji.
+- Informację o blokadzie zapisano również w komentarzach PR #2 i Issue #3.
+
+### Etap 28 — zależność
+- Specyfikacja chronionego endpointu wyceny pozostaje w [Issue #3](https://github.com/bartoszruta26-droid/Monitor/issues/3).
+- Implementacja Etapu 28 jest zablokowana do czasu rozstrzygnięcia testów transportu z PR #2. Nie należy budować nowego endpointu na niezweryfikowanym transporcie ani scalać zmian zależnych przed zielonym CI.
+- Następne czynności: uzyskać końcowy status lub zatrzymać zawieszony job zgodnie z diagnostyką; uruchomić kontrolny CI; pobrać logi CTest; poprawić test lub kod tylko na podstawie ustalonej przyczyny. Po zielonym CI przeprowadzić audyt PR #2 i dopiero wtedy rozpocząć Etap 28 na bazie zatwierdzonego transportu.
+
+### Ograniczenia produktu
+- Serwer nadal jest wyłącznie loopback-only; brak TLS i zdalnego wdrożenia.
+- Brak potwierdzonego projektu Android/Gradle oraz pliku APK w repozytorium; nie publikować niezweryfikowanego artefaktu instalacyjnego.
