@@ -1273,3 +1273,39 @@ Przed każdym następnym etapem sprawdzić bieżący `main`, gałęzie, PR, Issu
 - CI [#497](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43512473432), dokładny SHA `5613b96286313227280b40bf0ffb302d34bedad2`: Configure/Build/Test success. Test paginacji oraz walidacji kursora przeszedł.
 - CI [#498](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43512614382), dokumentacyjny SHA `7987e3de86df7955b26f76732683e24a64f65138`: w toku podczas aktualizacji rejestru.
 - Etap 26 ma zielony CI dla kodu; oczekuje jeszcze na kontrolę aktualnego SHA dokumentacyjnego i końcowy audyt kontraktu.
+
+
+## 56. Audyt końcowy Etapu 26 i przygotowanie Etapu 27 — 2026-11-14
+
+### Weryfikacja stanu GitHub
+- Gałąź robocza: `feature/fx-xau-pricing-engine`; gałąź docelowa: `main`.
+- PR [#1](https://github.com/bartoszruta26-droid/Monitor/pull/1) pozostaje otwarty; nie scalono zmian.
+- Porównanie `main...feature/fx-xau-pricing-engine`: gałąź robocza jest 91 commitów przed `main`, 0 commitów za; wspólny punkt bazowy to `cebdaba6194d3e8cb4ebe65f6251b5fc6126ae06`.
+- Ostatni commit dokumentacyjny przed tym wpisem: `7987e3de86df7955b26f76732683e24a64f65138`.
+- CI #498 dla tego SHA: Configure — success; Build — success; Test — success; job `native-linux` zakończony sukcesem.
+- CI #497 dla poprawki kodu kursora `5613b96286313227280b40bf0ffb302d34bedad2`: Configure/Build/Test success; job `native-linux` zakończony sukcesem.
+- Ostatni potwierdzony wynik testów w rejestrze Etapu 25: CTest 13/13. Etap 26 ma zielone przebiegi dla kodu (#497) i aktualizacji rejestru (#498); w następnym wpisie należy dopisać dokładny SHA aktualnej gałęzi i liczbę testów z logu CI.
+
+### Zamknięcie zakresu Etapu 26
+- Kontrakt paginowanego odczytu historii portfela FX/XAU jest niezależny od transportu HTTP.
+- Kursor jest związany z rewizją migawki oraz kanonicznym zestawem filtrów; zmiana filtrów, rewizji lub nieprawidłowy format powoduje odrzucenie kursora.
+- Odpowiedź zachowuje pełne wpisy historii, parę FX, dowody cenowe i opcjonalny audyt wykonania FX.
+- Limity strony wynoszą 1–500 wpisów; porządek jest deterministyczny i kontynuacja nie powinna powodować duplikacji.
+- Poprawka podpisu filtrów została potwierdzona w CI #497, a aktualizacja rejestru w CI #498. Etap 26 uznaje się za zakończony po tych dwóch zielonych przebiegach.
+- API nie jest jeszcze serwerem HTTP: nie ma routingu REST, autoryzacji, TLS ani WebSocket. Nie przedstawiać kontraktu jako publicznie dostępnego API.
+
+### Etap 27 — serwer REST/JSON FX/XAU (następny)
+Zakres pierwszej, bezpiecznej iteracji:
+1. Przed implementacją wybrać i udokumentować bibliotekę serwera HTTP zgodną z C++20, CMake i środowiskiem Linux CI; nie dodawać zależności bez sprawdzenia sposobu instalacji i licencji.
+2. Wydzielić warstwę transportową od istniejących usług domenowych i kontraktów API v1. Kontrolery nie mogą ponownie implementować wyceny, filtrowania ani paginacji.
+3. Dodać wersjonowane endpointy tylko do odczytu: kontrola zdrowia/usługi, migawka portfela oraz historia z filtrami i kursorem Etapu 26.
+4. Zdefiniować jednolity format odpowiedzi błędów, walidację parametrów, limity rozmiaru żądania/odpowiedzi i bezpieczne logowanie bez ujawniania sekretów.
+5. Domyślnie wiązać serwer wyłącznie z loopback. Zdalne nasłuchiwanie wymaga jawnej konfiguracji TLS i uwierzytelniania; nie wystawiać danych portfela bez kontroli dostępu.
+6. Nie dodawać endpointów modyfikujących portfel w tej iteracji. Operacje zapisu wymagają osobnego projektu uprawnień, idempotencji i audytu.
+7. Dodać testy routera/serializacji, odpowiedzi błędów, autoryzacji, ograniczeń żądań, filtrów, paginacji oraz integracyjny przepływ od repozytorium JSON do odpowiedzi HTTP.
+8. Uruchomić pełne CI dla dokładnego SHA; zaktualizować rejestr dopiero po odczytaniu logów i liczby testów.
+
+### Kontrola zakresu
+- Produkt nadal obejmuje wyłącznie wymianę walut FX oraz zakup, sprzedaż, wymianę i wycenę złota XAU.
+- Akcje, papiery wartościowe, brokerzy, zlecenia giełdowe i kalendarze sesji giełdowych pozostają poza zakresem.
+- `main` pozostaje nietknięty; PR #1 pozostaje otwarty i nie należy go scalać przed końcowym audytem całego zakresu.
