@@ -1386,3 +1386,12 @@ Nadal rozwijamy wyłącznie FX i XAU. Nie przywracać zadań Xetra, akcji, broke
 - Commit runtime: `f45d8b23001d33db0901421be0667aeaf1ef5fa2`.
 - CI #507 dla poprzedniego SHA dokumentacyjnego: Configure success; Build w toku podczas ostatniej kontroli. CI dla runtime i aktualnego rejestru musi jeszcze potwierdzić kompilację oraz testy.
 - Etap 27 nadal otwarty do zielonego CI dla procesu serwera i testów integracyjnych TCP.
+
+
+### Uzupełnienie kontroli serwera — 2026-11-14
+- CI #507 dla SHA `cee94e0c4b3fe632b17ddab3b7fb556ba017005c`: Configure, Build i Test — success.
+- CI #508 dla SHA `f45d8b23001d33db0901421be0667aeaf1ef5fa2`: Configure, Build i Test — success; kompilacja celu `monitor-http-server` potwierdzona.
+- Po przeglądzie transportu poprawiono zamykanie połączenia: serwer jawnie ustawia `Connection: close`, zgodnie z jedną obsługiwaną transakcją HTTP na połączenie. Poprawka: `c9c20d19f9ade7e460d0196811147c2c113aff59`.
+- CI #509 dla dokumentacyjnego SHA `6ca747474c1bfac766466d38d28260edb355407b` oraz CI #510 dla poprawki transportu były w toku podczas ostatniej kontroli; nie przypisano im jeszcze wyniku.
+- Najnowszy commit dokumentacji po tej aktualizacji wymaga własnego zielonego CI.
+- Weryfikacja CTest dla routera pozostaje zielona w CI #505. Nie ma jeszcze osobnego testu integracyjnego uruchomionego procesu TCP; należy go dodać przed zamknięciem Etapu 27.
