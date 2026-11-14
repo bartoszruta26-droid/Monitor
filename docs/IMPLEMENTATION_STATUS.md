@@ -1365,3 +1365,11 @@ Nadal rozwijamy wyłącznie FX i XAU. Nie przywracać zadań Xetra, akcji, broke
 - Nie wdrożono jeszcze produkcyjnego pobierania tokenu z `MONITOR_API_TOKEN`, uruchamiania wyłącznie na loopback ani TLS. Te zabezpieczenia są kryteriami dla procesu serwera, a nie funkcją już dostarczoną przez router.
 - Nie ma endpointów zapisu, WebSocket ani zdalnego nasłuchiwania. Nie udostępniać routera poza procesem testowym bez ukończenia konfiguracji bezpieczeństwa.
 - Etap 27 pozostaje w toku. Następny podetap po zielonym CI: proces serwera Beast, bezpieczna konfiguracja loopback/token, zatrzymywanie i testy integracyjne TCP.
+
+
+### Uzupełnienie monitoringu CI Etapu 27 — 2026-11-14
+- CI #504 dla SHA `6f1e77273edca993baa9c471c576608d613b4981`: Configure, Build i Test — success.
+- CI #505 dla SHA `af2afdb89fe2319c54a867943bceeb8f2a0f202c`: Configure, Build i Test — success; obejmuje kompilację routera oraz zarejestrowany test `monitor-http-api-tests`.
+- Tym samym błąd konfiguracji z CI #503 został usunięty, a kompilacja i testy routera przeszły w CI #505.
+- CI #506 dla dokumentacyjnego SHA `5e30c1a0944c1b557db8b4d8983136f1c56f20f1` uruchomiło się i pozostaje w toku podczas tej aktualizacji.
+- Router uznaje się za skompilowany i przetestowany w CI. Cały Etap 27 pozostaje otwarty: nadal trzeba dostarczyć proces nasłuchujący Beast, bezpieczne uruchamianie z loopback i tokenem środowiskowym, kontrolowane zatrzymywanie oraz testy integracyjne TCP.
