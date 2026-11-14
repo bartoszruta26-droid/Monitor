@@ -1413,3 +1413,11 @@ Nadal rozwijamy wyłącznie FX i XAU. Nie przywracać zadań Xetra, akcji, broke
 - CI #510 dla poprawki zamykania połączenia `c9c20d19f9ade7e460d0196811147c2c113aff59`: Configure/Build/Test — success.
 - CI #511 i #512 pozostawały w toku podczas ostatniej kontroli; CI #514 dla commitu z testem TCP uruchomiło się i oczekuje na Configure/Build/Test.
 - Etap 27 pozostaje otwarty do zielonego CI #514 dla testu TCP oraz zielonego CI aktualnego rejestru. Następnie wykonać audyt zabezpieczeń, walidacji i błędnych żądań.
+
+
+### Potwierdzenie dodatkowych przebiegów CI — 2026-11-14
+- CI #510 dla `c9c20d19f9ade7e460d0196811147c2c113aff59`: Configure/Build/Test — success.
+- CI #511 dla `0bbf557f24aea2f2f93bcc9c834efba1212e4a73`: Configure/Build/Test — success.
+- CI #512 dla `fd4b21f64b4d147edf6e67ee12f9e2b8b427b50b`: Configure/Build/Test — success.
+- CI #513 dla `f5a9eebde308dcbc4f1725152ccc1e3e1b25b081`, #514 dla `8ec243b1eec7e9594faf2eeefa87e1274419ae1f` i #515 dla `12f6793aca45b37e1af00861c1ddc3289fe6e26` nie miały jeszcze końcowego wyniku podczas ostatniej kontroli.
+- Najnowszy test TCP jest dodany, ale nie wolno uznać go za zaliczony do czasu zielonego kroku Test w CI dla tego testu lub nowszego SHA.
