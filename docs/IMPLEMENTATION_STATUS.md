@@ -1514,3 +1514,30 @@ Nadal rozwijamy wyłącznie FX i XAU. Nie przywracać zadań Xetra, akcji, broke
 - CI #524 i #525 pozostają nierozstrzygnięte. Nie traktować ich jako zielonych ani czerwonych.
 - PR #2 pozostaje otwarty i niescalony. Decyzja o scaleniu wymaga zielonego CI #526 dla dokładnego SHA oraz audytu diff.
 - Etap 28 pozostaje zależny od rozstrzygnięcia PR #2. Issue #3 jest specyfikacją, a nie ukończoną implementacją.
+
+
+
+## 67. Ponowna kontrola CI #526 i analiza zabezpieczenia przed zawieszeniem testów — 2026-11-14
+
+### Stan zweryfikowany o 18:33 CET
+- PR [#2](https://github.com/bartoszruta26-droid/Monitor/pull/2) pozostaje otwarty, niescalony i ma head `00804ba6cc30a911acb3cc3387b336436f4e3eb2`.
+- CI [#526](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43611987594) nadal ma `status=in_progress`, `conclusion=null`; pole `updated_at` pozostaje na 2026-11-14T15:46:41Z.
+- Job `native-linux`: instalacja zależności, Configure i Build zakończone sukcesem; krok Test nadal `in_progress`; Post Checkout oczekuje.
+- Ponowna próba pobrania logów joba zakończyła się HTTP 404 `BlobNotFound`. Nie ma dostępnego logu wskazującego konkretny test ani końcowego wyniku CTest.
+- Kod PR i head nie zostały zmienione w trakcie aktywnego przebiegu.
+
+### Ustalenia z przeglądu konfiguracji testów
+- `.github/workflows/backend-tests.yml` nie deklaruje `timeout-minutes` dla joba.
+- `native/CMakeLists.txt` rejestruje `monitor-http-server-process-tests`, ale nie ustawia dla niego właściwości CTest `TIMEOUT`.
+- Test procesu zawiera oczekiwanie na odpowiedź HTTP 408 po limicie odbioru serwera wynoszącym 15 s; nie ma jednak zewnętrznego limitu czasu całego testu, który gwarantowałby zakończenie zawieszonego procesu testowego.
+- Brak limitu jest luką odporności CI/test harness. Nie dowodzi, że właśnie ten test spowodował zawieszenie #526; logi pozostają niedostępne.
+- Nie stwierdzono podstaw do zmiany logiki transportu bez wyniku testu lub odtwarzalnego błędu.
+
+### Decyzje i następne kroki
+1. Nie scalać PR #2, dopóki CI dla dokładnego head nie zakończy się sukcesem.
+2. Nie zmieniać head PR podczas aktywnego #526, aby zachować jednoznaczność bieżącego przebiegu.
+3. Po zakończeniu lub anulowaniu przebiegu dodać jawny limit czasu dla testu procesu CTest oraz limit czasu joba GitHub Actions; następnie uruchomić nowy CI i odczytać logi.
+4. Jeśli #526 pozostanie zawieszony, brak narzędzia do anulowania tego przebiegu w dostępnej integracji GitHub; nie deklarować anulowania.
+5. Etap 28 (Issue #3) nadal czeka na zamknięcie i zatwierdzenie transportu.
+6. Brak potwierdzonego projektu Android/Gradle i APK pozostaje bez zmian.
+
