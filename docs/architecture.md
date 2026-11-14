@@ -135,3 +135,8 @@ Szczegółowy audyt, priorytety, model danych i kryteria akceptacji znajdują si
 ## Agregacja i model wykresów
 
 Etap 4 dostarcza deterministyczną agregację obserwacji punktowych do świec próbkowanych OHLC, z zachowaniem częstotliwości źródłowej, granic UTC, pochodzenia i luk. Świece są jawnie oznaczane jako `SampledObservations`; nie są przedstawiane jako natywne świece OHLC dostawcy. Etap 5 dostarcza wspólny model danych wykresów liniowych, obszarowych i świecowych niezależny od GUI. Renderery, osie, zoom i interakcje pozostają częścią przyszłych klientów.
+
+
+## Serwer HTTP/REST FX/XAU — wybór technologii
+
+Projekt pierwszej iteracji serwera opisano w [docs/http-server-design.md](http-server-design.md). Wybrano Boost.Beast + Boost.Asio (C++20), jako oddzielny cel CMake niezależny od `monitor_core`. Serwer ma domyślnie nasłuchiwać wyłącznie na `127.0.0.1`, wymagać tokenu Bearer z `MONITOR_API_TOKEN` dla danych portfela i nie uruchamiać zdalnego nasłuchiwania bez odrębnie wdrożonego TLS oraz uwierzytelniania. Wybór technologii i kontrakt endpointów są decyzją projektową; implementacja serwera, testy routera i transportu pozostają do wykonania.
