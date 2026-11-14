@@ -1502,3 +1502,15 @@ Nadal rozwijamy wyłącznie FX i XAU. Nie przywracać zadań Xetra, akcji, broke
 ### Ograniczenia produktu
 - Serwer nadal jest wyłącznie loopback-only; brak TLS i zdalnego wdrożenia.
 - Brak potwierdzonego projektu Android/Gradle oraz pliku APK w repozytorium; nie publikować niezweryfikowanego artefaktu instalacyjnego.
+
+
+
+## 66. Nowy przebieg kontrolny CI po zawieszeniu #525
+
+- Aktualny head PR #2: `00804ba6cc30a911acb3cc3387b336436f4e3eb2`.
+- Uruchomiono nowy przebieg [CI #526](https://github.com/bartoszruta26-droid/Monitor/actions/runs/43611987594) dla dokładnego SHA aktualnego PR.
+- Stan odczytany po uruchomieniu: job `native-linux` jest `in_progress`; przygotowanie środowiska i instalacja zależności trwają. Configure, Build i Test są jeszcze oczekujące.
+- Zmiana, która uruchomiła CI #526, dotyczy wyłącznie `docs/IMPLEMENTATION_STATUS.md`; kod `native/src/server_main.cpp` i `native/tests/test_http_server_process.cpp` pozostał bez zmian względem poprzedniego head.
+- CI #524 i #525 pozostają nierozstrzygnięte. Nie traktować ich jako zielonych ani czerwonych.
+- PR #2 pozostaje otwarty i niescalony. Decyzja o scaleniu wymaga zielonego CI #526 dla dokładnego SHA oraz audytu diff.
+- Etap 28 pozostaje zależny od rozstrzygnięcia PR #2. Issue #3 jest specyfikacją, a nie ukończoną implementacją.
