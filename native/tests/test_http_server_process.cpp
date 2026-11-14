@@ -28,6 +28,33 @@ int main(int argc,char** argv) {
     pid_t child=-1;
     try {
         monitor::market::JsonPortfolioRepository repository{dir/"portfolio.json","PLN"};
+
+        // Startup must fail closed when required configuration is missing or invalid.
+        const auto expect_start_failure=[&](bool provide_token,bool provide_file,
+            const char* configured_port,const char* scenario,int expected_exit) {
+            const pid_t probe_child=::fork();
+            if(probe_child<0) throw std::runtime_error("fork startup validation process failed");
+            if(probe_child==0) {
+                if(provide_token) ::setenv("MONITOR_API_TOKEN","startup-test-token",1);
+                else ::unsetenv("MONITOR_API_TOKEN");
+                if(provide_file) {
+                    const auto file=(dir/"portfolio.json").string();
+                    ::setenv("MONITOR_PORTFOLIO_FILE",file.c_str(),1);
+                } else ::unsetenv("MONITOR_PORTFOLIO_FILE");
+                if(configured_port!=nullptr) ::setenv("MONITOR_PORT",configured_port,1);
+                else ::unsetenv("MONITOR_PORT");
+                ::execl(argv[1],argv[1],static_cast<char*>(nullptr));
+                ::_exit(127);
+            }
+            int probe_status{};
+            if(::waitpid(probe_child,&probe_status,0)!=probe_child)
+                throw std::runtime_error(std::string("waitpid failed for ")+scenario);
+            if(!WIFEXITED(probe_status)||WEXITSTATUS(probe_status)!=expected_exit)
+                throw std::runtime_error(std::string("unexpected startup result: ")+scenario);
+        };
+        expect_start_failure(false,true,nullptr,"missing API token",2);
+        expect_start_failure(true,false,nullptr,"missing portfolio file",2);
+        expect_start_failure(true,true,"0","invalid port",1);
         (void)repository.append(monitor::market::PortfolioTransaction{"process-eur","EUR",
             monitor::market::PortfolioAssetKind::Currency,monitor::market::TradeSide::Buy,
             100,1,4.25,0,100,"bank"},0);

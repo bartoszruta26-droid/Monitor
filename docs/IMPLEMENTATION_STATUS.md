@@ -1444,3 +1444,12 @@ Nadal rozwijamy wyłącznie FX i XAU. Nie przywracać zadań Xetra, akcji, broke
 - Audyt kodu wykrył niedopasowanie: przekroczenie limitu nagłówków i timeout odczytu były mapowane na ogólny 400. W ramach następnego podetapu poprawiono mapowanie na 431 i 408 oraz dodano test procesu dla nadmiernego nagłówka.
 - Ograniczenia pozostające jawne: brak TLS i zdalnego dostępu, brak limitera żądań (429 jest wyłącznie przyszłym mapowaniem), serwer obsługuje połączenia sekwencyjnie, a healthz nie ma identyfikatora żądania. Nie przedstawiać tego transportu jako gotowego do publicznego wdrożenia.
 - Następny etap: audyt i utwardzenie transportu (nagłówki, timeouty, błędne żądania, start bez sekretu, obsługa awarii i zamykanie), a potem kontrakt aktualnej wyceny portfela oparty o price book FX/XAU. WebSocket i klienci pozostają dalszymi etapami.
+
+
+## 63. Etap 27 — weryfikacja transportu i startu fail-closed (2026-11-14)
+
+- CI #521 dla SHA `872bb596b41bebbb95fca28faf52b10ea00e6b20`: Configure/Build/Test — success. Test procesu potwierdza odrzucenie nagłówka przekraczającego 16 KiB odpowiedzią HTTP 431.
+- CI #520 dla wcześniejszego SHA `25c56f1d1cb56b0092f2cbf1223a78b35e5aa3c1` zakończyło się niepowodzeniem w kroku Test; przebieg dotyczył wcześniejszej wersji testu z niepoprawnym zapisem CRLF. Poprawiono fixture w `872bb59`; nie ukrywać ani nie usuwać historycznego wyniku.
+- Rozpoczęto rozszerzenie testu procesu o przypadki fail-closed: brak `MONITOR_API_TOKEN`, brak `MONITOR_PORTFOLIO_FILE` i nieprawidłowy port. Wynik będzie uznany za potwierdzony dopiero po CI dla nowego SHA.
+- Audyt wykazał kolejne zadania przed uznaniem transportu za gotowy: sprawdzenie timeoutu odczytu w rzeczywistym procesie, limitu body 64 KiB, obsługi błędnego żądania, deterministycznego zamykania i ochrony przed próbą ponownego użycia portu.
+- Nadal obowiązuje ograniczenie: HTTP bez TLS, tylko loopback, brak zdalnego wdrożenia. Nie traktować tej implementacji jako publicznego endpointu.
